@@ -353,19 +353,21 @@ export function NightScreen({ game }: { game: GameHandle }) {
       );
     }
     const pool = others.filter((p) => (recruitMode ? !(tv.fellowTraitorIds.includes(p.id)) : view.settings.allowTraitorOnTraitor || !tv.fellowTraitorIds.includes(p.id)));
-    const pending = Object.entries(night.pickStatus).filter(([id]) => id !== me.playerId);
+    const statuses = Object.values(night.pickStatus);
     const confirm = playerById(view, confirmId);
     return (
       <div className="flex flex-col gap-5">
         <Heading title="Night falls" help="Tap a player. Only you see your choice." />
         <PlayerGrid
-          players={gridPlayers(game, pool, (p) => ({ note: tv.fellowTraitorIds.includes(p.id) ? "Traitor" : undefined }))}
+          players={gridPlayers(game, pool, (p) => ({
+            badge: tv.fellowTraitorIds.includes(p.id) ? <span className="block size-3 rounded-full bg-kumkum ring-2 ring-night" aria-label="fellow" /> : undefined,
+          }))}
           selectedId={recruitMode ? null : night.myPickId}
           onSelect={setConfirmId}
         />
-        {pending.length ? (
+        {statuses.length > 1 ? (
           <p className="text-center text-sm text-ink-muted">
-            {pending.map(([id, done]) => `${playerById(view, id)?.displayName} ${done ? "has picked" : "is choosing"}`).join(" · ")}
+            {statuses.filter(Boolean).length} of {statuses.length} picks in
           </p>
         ) : null}
         <div className="flex gap-2">
@@ -417,14 +419,13 @@ export function NightScreen({ game }: { game: GameHandle }) {
     return (
       <div className="flex flex-col gap-5">
         <Heading title="Night falls" help="Tap a player. Only you see your choice." />
-        <p className="text-center text-lg">Who do you suspect?</p>
         <PlayerGrid
           players={gridPlayers(game, others)}
           selectedId={me.suspectPoll.myAnswer}
           onSelect={(id) => void send({ type: "suspectAnswer", targetId: id })}
         />
         <ErrorLine message={error} />
-        <p className="text-center text-sm text-ink-muted">Answers stay secret until the final reveal.</p>
+        <p className="text-center text-sm text-ink-muted">Who do you suspect? Answers stay secret until the final reveal.</p>
       </div>
     );
   }

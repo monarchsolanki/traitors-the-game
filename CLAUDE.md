@@ -27,5 +27,6 @@ Read `PROJECT_CONTEXT.md` before doing anything. It is the source of truth for e
 | `npm test` | Run Vitest tests once |
 | `npm run test:watch` | Run Vitest in watch mode |
 | `npm run simulate` | About 2,700 bot games against the engine (2 to 3 minutes) |
+| `npm run e2e` | Database tests against the linked Supabase project (uses `.env.local`) |
 | `supabase db push` | Apply new migrations in `supabase/migrations/` to the linked project (asks first) |
 | `supabase migration new <name>` | Start a new migration file |

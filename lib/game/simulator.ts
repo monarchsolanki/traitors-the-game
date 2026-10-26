@@ -92,7 +92,7 @@ export function botMove(
   return null;
 }
 
-function hostProgress(s: GameState, rand: Rand, o: Required<Pick<SimOptions, "missionRate" | "shieldRate">>): ActionPayload[] {
+export function hostProgress(s: GameState, rand: Rand, o: Required<Pick<SimOptions, "missionRate" | "shieldRate">>): ActionPayload[] {
   const alive = aliveIds(s);
   const missionsToday = s.missions.filter((m) => m.day === s.day).length;
   const startMission = (): ActionPayload => ({

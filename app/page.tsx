@@ -8,17 +8,17 @@ export default function Home() {
     <div className="relative flex min-h-dvh flex-1 flex-col overflow-hidden">
       <Toran className="absolute inset-x-0 top-[env(safe-area-inset-top)]" />
 
-      <main className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-7 px-6 pt-20 pb-[max(2.5rem,env(safe-area-inset-bottom))] text-center short:gap-4 short:pt-14">
-        <div className="relative grid size-60 shrink-0 place-items-center short:size-48">
+      <main className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-5 px-6 pt-16 pb-[max(2.5rem,env(safe-area-inset-bottom))] text-center short:gap-4 short:pt-14">
+        <div className="relative grid size-48 shrink-0 place-items-center short:size-36">
           <Rangoli className="absolute inset-0 size-full text-gold opacity-[0.13] animate-spin-slow" />
-          <Diya className="relative size-32" />
+          <Diya className="relative size-28 short:size-24" />
         </div>
 
         <div className="flex flex-col items-center gap-1">
           <p className="text-sm font-medium uppercase tracking-[0.32em] text-marigold">
             Diwaloween
           </p>
-          <h1 className="font-display text-7xl font-semibold leading-none text-gold">
+          <h1 className="font-display text-6xl font-semibold leading-none text-gold">
             Traitors
           </h1>
           <p className="font-display text-2xl italic text-ink">The Game</p>

@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_rethrow } from "next/navigation";
 
 export class HttpError extends Error {
   status: number;
@@ -17,6 +18,8 @@ export async function handle(fn: () => Promise<Response>): Promise<Response> {
   try {
     return await fn();
   } catch (err) {
+    // Next.js signals (such as prerendering bailing out at a request-time read) must pass through.
+    unstable_rethrow(err);
     if (err instanceof HttpError) return json({ error: err.message }, err.status);
     console.error(err);
     return json({ error: "Something went wrong on the server. Try again." }, 500);

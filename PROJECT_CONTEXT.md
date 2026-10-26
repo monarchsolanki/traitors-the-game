@@ -8,7 +8,7 @@
 | --- | --- |
 | Owner | Monarch Solanki (host of the first game) |
 | Last updated | 26 October 2026 |
-| Status | Step 1 (foundation) done: rules engine, settings, `viewFor`, 230 tests and a bot simulator (2,700 games), all passing. First database migration applied to Supabase on 26 October and checked from outside: browsers can read only version pings. Next: Step 2 (minimum playable), after the owner's OK. |
+| Status | Step 2 (minimum playable) built and pushed: host screens, player screens, server routes and bot seats. Tested through the database (a full 12-bot game) and in the browser as a player. Next: the owner plays a full game with bots on the live link, then Step 3, after his OK. |
 | Live link | https://traitors-the-game.vercel.app |
 | First game | Diwali x Halloween ("Diwaloween: Lights & Frights") villa party, Saturday 31 October 2026, 12 players plus the host |
 | Planning doc | [Traitors Party App — Build Plan](https://claude.ai/artifact/4t3XeWf8tHKf7C9YoMmDqN); fully merged into this file on 26 October 2026, so this file alone is enough |
@@ -684,6 +684,7 @@ The planning doc's first, simpler data model (games, players, roles, items, vote
 - Ornament stays at the edges: a thin marigold toran (garland) at the top, a faint rangoli pattern behind the page, a diya as the mark. Never behind text that must be read.
 - Gentle motion only (a flickering diya flame); everything respects reduced-motion settings.
 - Secret screens look neutral until held; the role colour shows only while peeking.
+- Night looks the same for Traitors and Innocents at a glance: the same title and grid. A Traitor's screen marks fellow Traitors with a small dot, never the word "Traitor", and shows a pick count ("1 of 3 picks in"), never names.
 
 ---
 
@@ -860,7 +861,9 @@ Then a feature freeze, a rehearsal checklist that follows the run sheet (section
 | `tests/regressions.test.ts` | Bugs the simulator found |
 | `tests/simulator.test.ts` | Bot games across 5, 10, 11, 12 and 20 players and 9 settings profiles (including chaos with random host overrides), checking `lib/game/invariants.ts` and `lib/game/leaks.ts` after every action |
 
-Run `npm test` for everything with a quick bot sweep (about 135 games), or `npm run simulate` for about 2,700 bot games (2 to 3 minutes). The privacy checker (`findLeaks`) tests every viewer's view against 9.4 and is reused in Step 4.
+Run `npm test` for everything with a quick bot sweep (about 135 games), or `npm run simulate` for about 2,700 bot games (2 to 3 minutes).
+
+**Database tests (Step 2):** `npm run e2e` runs `tests/e2e/game.e2e.test.ts` against the linked Supabase project with the keys in `.env.local` (never part of `npm test`). It checks idempotent saves, stale host taps refused, simultaneous player actions both landing, an invalid move saving nothing, a gap-free action ledger and matching pings, then plays a full 12-bot game through the database with invariant and privacy checks; it deletes its games afterwards. `tests/e2e/drive.e2e.test.ts` is a manual driver (create a game with bots in all but some seats, press host buttons, run bots, delete) used to test the player screens in a browser. The privacy checker (`findLeaks`) tests every viewer's view against 9.4 and is reused in Step 4.
 
 ---
 
@@ -915,6 +918,7 @@ All decisions dated 26 October 2026 unless noted.
 | Server routes (26 Oct, Step 2) | One action route runs the engine for every in-game action; separate routes for creating a game, taking a seat with a PIN, host seat tools, photo uploads and bots. Host buttons send the version they saw, so a double tap is refused; player actions are retried on the newer state | Section 9.3; two taps can never both advance the game, while many players can vote at once |
 | Requests carry the access token (26 Oct, Step 2) | The browser sends its Supabase access token on each request; no cookie session or proxy | Simplest reliable setup with Cache Components on; the server verifies every request |
 | Vercel region (26 Oct, Step 2) | Server functions run in Mumbai (`bom1`, set in `vercel.json`), next to the database | Vercel's default region is in the US; every game action would otherwise cross the world twice |
+| Glance safety at night (26 Oct, Step 2) | Fellow Traitors are marked with a dot, not a word; pick status is a count, not names | Found in browser testing: a glance at a Traitor's phone named the other Traitors |
 | Bot seats (26 Oct, Step 2) | The host fills empty seats with bots for solo testing; bots act through the same engine and routes as players, at random, and never press host buttons | Owner's instruction: play a whole game alone |
 | Rules engine (26 Oct) | One pure function, `applyGameAction`, with seeded randomness (deal, tie-breaks, spins) so every game can be replayed; interpretations recorded in 5.10 | CLAUDE.md working rules; reproducible bugs |
 | Bot simulator findings (26 Oct) | The simulator found three bugs, now fixed with regression tests: a recruit offer visible to a player turned Traitor mid-night; ending the game mid-night half-resolving it; a rerun vote leaving a player with two daggers | Section 13: bot games find broken scenarios |
@@ -1026,7 +1030,7 @@ Dashboard labels change over time; confirm the current names while clicking thro
 
 **Database migrations** (Supabase CLI, owner's choice on 26 October; installed with `brew install supabase/tap/supabase`). Migrations live in `supabase/migrations/`. One-time setup, in a terminal in this folder: `supabase login` (approve in the browser), then `supabase link --project-ref sfjgircdilkllbpuwrez` (asks for the database password). After that, `supabase db push --linked` applies any new migrations; it lists them and asks before applying (`--dry-run` shows the list without applying). `supabase migration new <name>` starts a new one, and `supabase db lint --linked` checks the database functions. Recent CLI versions link without the database password by using a temporary login role.
 
-Applied so far: `20261026120000_initial_schema.sql` (26 October). Written, waiting for the owner's OK to apply: `20261026150000_seat_bots.sql` (bot flag on seats). Checked from outside with the publishable key: every private table returns 401, the save functions are hidden, `game_pings` is read-only, and the `player-photos` bucket is private.
+Applied so far: `20261026120000_initial_schema.sql` (26 October). `20261026150000_seat_bots.sql` (bot flag on seats, 26 October). The owner's host account is listed in `hosts`. Checked from outside with the publishable key: every private table returns 401, the save functions are hidden, `game_pings` is read-only, and the `player-photos` bucket is private.
 
 Versions at scaffold: Next.js 16.4, React 19.3, Tailwind 4, zod 4, Vitest 5, Node 26.
 
