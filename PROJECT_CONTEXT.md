@@ -8,7 +8,7 @@
 | --- | --- |
 | Owner | Monarch Solanki (host of the first game) |
 | Last updated | 26 October 2026 |
-| Status | Step 1 (foundation) built: rules engine, settings, `viewFor`, 230 tests and a bot simulator, all passing. First database migration written; it's applied once the owner links the Supabase CLI. Next: Step 2 (minimum playable), after the owner's OK. |
+| Status | Step 1 (foundation) done: rules engine, settings, `viewFor`, 230 tests and a bot simulator (2,700 games), all passing. First database migration applied to Supabase on 26 October and checked from outside: browsers can read only version pings. Next: Step 2 (minimum playable), after the owner's OK. |
 | Live link | https://traitors-the-game.vercel.app |
 | First game | Diwali x Halloween ("Diwaloween: Lights & Frights") villa party, Saturday 31 October 2026, 12 players plus the host |
 | Planning doc | [Traitors Party App — Build Plan](https://claude.ai/artifact/4t3XeWf8tHKf7C9YoMmDqN); fully merged into this file on 26 October 2026, so this file alone is enough |
@@ -1018,7 +1018,9 @@ Dashboard labels change over time; confirm the current names while clicking thro
 | `npm test` | Vitest, once |
 | `npm run test:watch` | Vitest, watch mode |
 
-**Database migrations** (Supabase CLI, owner's choice on 26 October; installed with `brew install supabase/tap/supabase`). Migrations live in `supabase/migrations/`. One-time setup, in a terminal in this folder: `supabase login` (approve in the browser), then `supabase link --project-ref sfjgircdilkllbpuwrez` (asks for the database password). After that, `supabase db push` applies any new migrations; it lists them and asks before applying. `supabase migration new <name>` starts a new one.
+**Database migrations** (Supabase CLI, owner's choice on 26 October; installed with `brew install supabase/tap/supabase`). Migrations live in `supabase/migrations/`. One-time setup, in a terminal in this folder: `supabase login` (approve in the browser), then `supabase link --project-ref sfjgircdilkllbpuwrez` (asks for the database password). After that, `supabase db push --linked` applies any new migrations; it lists them and asks before applying (`--dry-run` shows the list without applying). `supabase migration new <name>` starts a new one, and `supabase db lint --linked` checks the database functions. Recent CLI versions link without the database password by using a temporary login role.
+
+Applied so far: `20261026120000_initial_schema.sql` (26 October). Checked from outside with the publishable key: every private table returns 401, the save functions are hidden, `game_pings` is read-only, and the `player-photos` bucket is private.
 
 Versions at scaffold: Next.js 16.4, React 19.3, Tailwind 4, zod 4, Vitest 5, Node 26.
 
