@@ -8,12 +8,13 @@
 | --- | --- |
 | Owner | Monarch Solanki (host of the first game) |
 | Last updated | 26 October 2026 |
-| Status | Step 0 (setup) in progress: Next.js scaffold and Diwali placeholder page committed; planning doc merged into this file. Next: GitHub, Supabase and Vercel. |
+| Status | Step 0 (setup) done: Diwali placeholder live on Vercel; GitHub, Supabase and Vercel connected. Next: Step 1 (foundation), after the owner's OK. |
+| Live link | https://traitors-the-game.vercel.app |
 | First game | Diwali x Halloween ("Diwaloween: Lights & Frights") villa party, Saturday 31 October 2026, 12 players plus the host |
 | Planning doc | [Traitors Party App — Build Plan](https://claude.ai/artifact/4t3XeWf8tHKf7C9YoMmDqN); fully merged into this file on 26 October 2026, so this file alone is enough |
 | Party plan | [Diwaloween: Lights & Frights](https://claude.ai/artifact/CQQEuafHxQKbXXnHigSMes) |
 | Local folder | `/Users/monarchsolanki/Traitors-The Game` (note the space; quote the path) |
-| Repo | GitHub, private, `traitors-the-game` |
+| Repo | GitHub, private: https://github.com/monarchsolanki/traitors-the-game |
 | Hosting | Vercel (app) + Supabase (database, realtime, auth, storage) |
 
 ## Contents
@@ -893,9 +894,9 @@ From research across GitHub, Slack bots, LinkedIn, board games, live Traitors ve
 | Item | Value |
 | --- | --- |
 | Project folder | `/Users/monarchsolanki/Traitors-The Game` |
-| GitHub repo | `traitors-the-game`, private |
-| Supabase | One project in the South Asia (Mumbai) region |
-| Vercel | Imported from the repo; every push to main deploys, other branches get preview links |
+| GitHub repo | `traitors-the-game`, private: https://github.com/monarchsolanki/traitors-the-game (created 26 October with the `gh` tool, at the owner's request) |
+| Supabase | One project, `traitors-the-game`, in the South Asia (Mumbai) region; project URL `https://sfjgircdilkllbpuwrez.supabase.co` (public by design); anonymous sign-ins on |
+| Vercel | Team `monarch-1204`, project `traitors-the-game`, imported from the repo; every push to main deploys, other branches get preview links. Live: https://traitors-the-game.vercel.app (served from the Mumbai edge) |
 | Watching the build | The live Vercel link, side by side with Claude Code |
 | Party plan | [Diwaloween: Lights & Frights](https://claude.ai/artifact/CQQEuafHxQKbXXnHigSMes) |
 
@@ -921,6 +922,8 @@ Dashboard labels change over time; confirm the current names while clicking thro
 | `SUPABASE_SECRET_KEY` | Vercel, `.env.local` | **Yes: server only, never in Git, never sent to a browser** |
 
 `.env.local` is git-ignored. `.env.example` lists the names only.
+
+**Gotcha:** `NEXT_PUBLIC_SUPABASE_URL` is the bare project URL (`https://<ref>.supabase.co`), with nothing after `.supabase.co`. The dashboard also shows the data API address ending in `/rest/v1/`; pasting that breaks every request (the 26 October setup hit this).
 
 ### 18.3 Local development
 
