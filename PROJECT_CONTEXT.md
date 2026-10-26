@@ -323,7 +323,7 @@ The End Game threshold is checked only after a Circle banishment, never after a 
 | 2 players left | Reveal: Traitors win if either is a Traitor |
 | The host ends the game early | Reveal with the current state; logged as an override |
 
-**The host reveals the result (decided 27 October).** When any end condition is met, the game stops and the host sees the result privately. The big screen and every phone show only "Hold on. The host will tell you what happens next" (no winner, no roles, and nothing in the data sent to them), until the host taps **Reveal to everyone**. That gives the host room for a build-up in the room before the reveal.
+**The host reveals the result (decided 27 October).** When any end condition is met, the game stops and the host sees the result privately. The big screen and every phone show only "Hold on. The host will tell you what happens next" (no winner, no roles, and nothing in the data sent to them), until the host taps **Reveal to everyone**. That gives the host room for a build-up in the room before the reveal. Before revealing, the host can also **undo the win and keep playing**: the step that ended the game is taken back (for example the banishment), and the host carries on, for instance by rerunning the vote or correcting a ballot.
 
 **Winners include the eliminated** (`eliminatedWinWithTeam`, default on; decided 26 October): eliminated Traitors, banished or murdered, win with their team if any Traitor survives; eliminated Innocents win if the Innocents win. The finale lists every winner, alive or ghost.
 
@@ -438,7 +438,8 @@ The End Game threshold is checked only after a Circle banishment, never after a 
 **Host tools**
 - Overrides after dealing need a reason and are logged: change a frozen rule (never the Traitor count), add a player (with a role), mark eliminated (murdered, banished or left), revive, change a role (the player must peek again), give, move or remove a held item, enter or correct a ballot, rerun a vote, resolve a night by hand, end the game early.
 - Every successful action, by anyone, is logged with actor, time, day and phase. Chat messages aren't copied into the log (the host reads the chat itself).
-- Not yet built: undo the last step (Step 4, restoring the saved snapshot) and the ghost games (Tier 2).
+- **Undo (built 27 October, pulled forward from Step 4):** "Undo last step" takes the game back to exactly how it was before the host's (or the timer's) last step, by restoring that saved snapshot as a new version. The full action log is kept, with an "Undid: …" entry and a required reason; events from the undone step disappear (a public "the host took back the last step" line appears instead); timers get back the time they had. Tapping again walks back further. Undo stops at a player's move (so it never silently erases a vote or pick; use the Fix tab), refuses seat, PIN and photo steps, and is off once the final result is revealed.
+- Not yet built: the ghost games (Tier 2).
 
 ---
 
@@ -865,6 +866,7 @@ Then a feature freeze, a rehearsal checklist that follows the run sheet (section
 | `tests/engine.host.test.ts` | Pause and resume, timers, every override, the action log, and every edge case in 5.9 |
 | `tests/view.test.ts` | `viewFor` for the host, co-host, Innocent, Traitor, ghost and big screen, including the hidden murder victim before the reveal |
 | `tests/regressions.test.ts` | Bugs the simulator found |
+| `tests/undo.test.ts` | Undoing a win and carrying on, timers restored, needs a reason, off after the reveal (plus a database test in `tests/e2e/game.e2e.test.ts`: walking back, stopping at a player's move, undoing a win, stale taps) |
 | `tests/client.test.ts` | The paper fallback (every role, statuses, items, slips, safe names) and the connection-badge rule |
 | `tests/simulator.test.ts` | Bot games across 5, 10, 11, 12 and 20 players and 9 settings profiles (including chaos with random host overrides), checking `lib/game/invariants.ts` and `lib/game/leaks.ts` after every action |
 
@@ -926,6 +928,7 @@ All decisions dated 26 October 2026 unless noted.
 | Requests carry the access token (26 Oct, Step 2) | The browser sends its Supabase access token on each request; no cookie session or proxy | Simplest reliable setup with Cache Components on; the server verifies every request |
 | Vercel region (26 Oct, Step 2; updated 27 Oct) | Server functions run in Mumbai (`bom1`), next to the database, set in the Vercel project settings (Settings → Functions). A `vercel.json` with `regions` stopped Vercel creating deployments at all on 26 October, so it was removed | Vercel's default region is in the US; every game action would otherwise cross the world twice |
 | Big screen holds results (27 Oct, Step 3) | A banishment, murder reveal or End Game result stays on the big screen for 20 seconds, and a spin plays for 4.5 seconds, timed from when the screen first sees it (a screen opened later doesn't replay old results). Phones show "X was banished" for a minute after | The engine moves straight to night after a banishment, so without this the room would never see who went |
+| Undo, including a win (27 Oct) | The host can undo their last step, again and again, back to a player's move; before the final reveal that includes the step that ended the game ("Undo the win and keep playing"). Each undo needs a reason and is logged | Owner's instruction: a win can be taken back and play can continue; undo was planned for Step 4 anyway |
 | Host reveals the result (27 Oct) | When the game is decided, only the host sees the winner; everyone else sees "Hold on" until the host taps Reveal to everyone. Closing the game needs the reveal first | Owner's instruction: the host controls the moment of the dramatic final reveal |
 | Stuck tie fixed (27 Oct) | If only one tied player is still in the game (the others left), they're banished; if none are, the host reruns the vote. The host can always decide a tie by hand (logged) | The bot simulator found a game stuck in the reveal after a tied player left |
 | Tie rule (27 Oct, replaces "revote, then spin") | Ties go to a revote between the tied players; a tied revote gets another revote; after the third tie in a row the host chooses a spin or another revote, each time. New setting `tieRevotesBeforeChoice` (default 2) | Owner's instruction: no spin unless the room keeps tying, and then only if the host wants it |

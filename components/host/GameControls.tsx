@@ -15,6 +15,7 @@ import { ErrorLine, gridPlayers, playerById } from "@/components/player/shared";
 import { downloadPaperFallback } from "@/lib/client/paper";
 import { OverrideSheet } from "./FixPanel";
 import { presence } from "./SeatDot";
+import { UndoButton } from "./UndoButton";
 
 const MISSION_IDEAS: Array<{ name: string; kind: MissionKind }> = [
   { name: "Bhoot-Bollywood Dumb Charades", kind: "team" },
@@ -649,6 +650,7 @@ function FinaleControls({ game }: { game: GameHandle }) {
       {!revealed ? (
         <>
           <Button onClick={() => setConfirm(true)}>Reveal to everyone</Button>
+          <UndoButton game={game} label="Undo the win and keep playing" variant="secondary" />
           <Notice>Take your time: do the build-up in the room first. The big screen and every phone show the final reveal the moment you tap.</Notice>
           <Confirm
             open={confirm}
@@ -745,6 +747,7 @@ export function GameControls({ game }: { game: GameHandle }) {
     <div className="flex flex-col gap-4">
       <TimerControls game={game} />
       {body}
+      {view.startingPlayerCount && !(view.phase === "FINALE") ? <UndoButton game={game} /> : null}
       <BotRunner game={game} />
       <RolesList game={game} />
     </div>

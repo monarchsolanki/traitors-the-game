@@ -51,6 +51,8 @@ export function describeEvent(e: EventView, view: GameView): string | null {
       return "You joined the Traitors.";
     case "newTraitor":
       return `${name(d.playerId)} joined the Traitors.`;
+    case "undone":
+      return "The host took back the last step.";
     case "roleChanged":
       return "The host changed your role. Hold your role card to check it.";
     default:

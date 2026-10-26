@@ -142,3 +142,53 @@ describe("a full game with 12 bots, through the database", () => {
     );
   });
 });
+
+describe("undo through the database (owner, 27 October)", () => {
+  it("walks back host steps, stops at a player's move, undoes a win, and is off after the reveal", async () => {
+    const { undoPlan, applyUndo } = await import("@/lib/server/undo");
+    const g = await newGame();
+    await fillBots(g);
+    const key = (s: string) => `e2e-undo-${s}-${Date.now()}`;
+    let game = await loadGame(g.code);
+    expect((await runAction(g.code, HOST, { type: "dealRoles" }, key("deal"))).ok).toBe(true);
+    expect((await runAction(g.code, HOST, { type: "openCircle" }, key("circle"))).ok).toBe(true);
+    game = await loadGame(g.code);
+    expect(game.state.phase).toBe("CIRCLE_DEBATE");
+
+    // Undo the Circle, then undo the deal.
+    let r = await applyUndo(g.code, key("u1"), game.state.version, "Too early");
+    expect(r.ok).toBe(true);
+    game = await loadGame(g.code);
+    expect(game.state.phase).toBe("ROLES");
+    r = await applyUndo(g.code, key("u2"), game.state.version, "Re-deal");
+    expect(r.ok).toBe(true);
+    game = await loadGame(g.code);
+    expect(game.state.phase).toBe("LOBBY");
+
+    // A player's move stops undo.
+    await runAction(g.code, HOST, { type: "dealRoles" }, key("deal2"));
+    await runAction(g.code, { kind: "player", playerId: "p1" }, { type: "acknowledgeRole" }, key("ack"));
+    game = await loadGame(g.code);
+    const blocked = await undoPlan(game);
+    expect(blocked.available).toBe(false);
+
+    // Undo a win before it's revealed; then it's off after a reveal.
+    await runAction(g.code, HOST, { type: "endGameEarly", reason: "Test" }, key("end"));
+    game = await loadGame(g.code);
+    expect(game.state.phase).toBe("FINALE");
+    r = await applyUndo(g.code, key("u3"), game.state.version, "Keep playing");
+    expect(r.ok).toBe(true);
+    game = await loadGame(g.code);
+    expect(game.state.phase).toBe("ROLES");
+    expect(game.state.finale).toBeNull();
+    await runAction(g.code, HOST, { type: "endGameEarly", reason: "Test" }, key("end2"));
+    await runAction(g.code, HOST, { type: "revealFinale" }, key("reveal"));
+    game = await loadGame(g.code);
+    expect((await undoPlan(game)).available).toBe(false);
+
+    // A stale undo is refused.
+    const stale = await applyUndo(g.code, key("u4"), game.state.version - 1, "Old screen");
+    expect(stale.ok).toBe(false);
+    await ledgerIsContiguous(game.id, game.state.version);
+  });
+});

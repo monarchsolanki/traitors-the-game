@@ -1667,3 +1667,47 @@ function finale(ctx: Ctx, reason: string, early = false): void {
   // Only the host learns the result now; everyone else sees it when the host reveals it.
   emit(ctx, "gameOver", HOST, { winner, reason, early });
 }
+
+// ---------------------------------------------------------------------------
+// Undo (section 4.3: the host can undo the last step)
+
+/** Steps the host may not undo, because they changed things outside the game state (PINs, photos). */
+export const NOT_UNDOABLE: ReadonlySet<string> = new Set(["claimSeat", "resetSeat", "setPhoto", "revealFinale", "closeGame"]);
+
+/**
+ * Builds the next state for an undo: the game exactly as it was at `target`, but as a new version,
+ * with the full action log kept plus an entry for the undo. Timers resume with the time they had then.
+ * Pure: the server supplies both states and how long ago `target` was saved.
+ */
+export function undoState(
+  current: GameState,
+  target: GameState,
+  o: { at: number; reason: string; summary: string; targetSavedAt: number },
+): GameState {
+  if (current.finale?.revealed) throw new Error("The result is revealed; undo is off.");
+  const reason = o.reason.trim();
+  if (!reason) throw new Error("Give a reason; it goes in the action log.");
+  const next = structuredClone(target);
+  next.version = current.version + 1;
+  next.nextId = Math.max(current.nextId, target.nextId);
+  const shift = Math.max(0, o.at - o.targetSavedAt);
+  if (next.deadline !== null) next.deadline += shift;
+  const n = next.nights[next.nights.length - 1];
+  if (n?.recruit && !n.recruit.answer) n.recruit.deadline += shift;
+  next.log = [
+    ...structuredClone(current.log),
+    {
+      id: `l${next.nextId++}`,
+      at: o.at,
+      day: next.day,
+      phase: current.phase,
+      actor: { kind: "host" },
+      action: "undo",
+      summary: `Undid: ${o.summary}`,
+      reason: reason.slice(0, 300),
+      override: true,
+    },
+  ];
+  next.events.push({ id: `e${next.nextId++}`, at: o.at, day: next.day, audience: { kind: "public" }, type: "undone", data: {} });
+  return next;
+}
