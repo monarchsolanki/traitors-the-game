@@ -8,7 +8,7 @@
 | --- | --- |
 | Owner | Monarch Solanki (host of the first game) |
 | Last updated | 26 October 2026 |
-| Status | Step 0 (setup) done: Diwali placeholder live on Vercel; GitHub, Supabase and Vercel connected. Next: Step 1 (foundation), after the owner's OK. |
+| Status | Step 1 (foundation) built: rules engine, settings, `viewFor`, 230 tests and a bot simulator, all passing. First database migration written; it's applied once the owner links the Supabase CLI. Next: Step 2 (minimum playable), after the owner's OK. |
 | Live link | https://traitors-the-game.vercel.app |
 | First game | Diwali x Halloween ("Diwaloween: Lights & Frights") villa party, Saturday 31 October 2026, 12 players plus the host |
 | Planning doc | [Traitors Party App — Build Plan](https://claude.ai/artifact/4t3XeWf8tHKf7C9YoMmDqN); fully merged into this file on 26 October 2026, so this file alone is enough |
@@ -595,7 +595,7 @@ One web app, three synced views, all updated live: the host's control panel, eac
 
 ### 9.5 Identity
 
-- The host creates the game and signs in separately from players (host passcode or account; Claude Code to finalize).
+- The host creates the game and signs in separately from players. Finalized in Step 1: the host signs in with a Supabase Auth email and password account and must be listed in the `hosts` table; players use anonymous sign-in. The owner creates his own host account in the Supabase dashboard.
 - The host pre-loads the roster with names and photos. Each player taps their own photo and sets a 4-digit PIN. The host confirms every seat before dealing.
 - PINs are stored hashed. `pinMaxAttempts` (default 5) wrong tries lock the seat until the host unlocks it.
 - Every override and hand-entered vote is logged with who, when and why.
@@ -610,7 +610,23 @@ The main risks on the night are an accidental leak or a stuck game, not an attac
 - **Paper fallback:** when roles are dealt, the host can save an offline copy of roles. If the internet drops for everyone, the game continues on paper ballots and results are entered later.
 - The app needs internet at the villa: villa Wi-Fi or one phone's hotspot. If a single phone drops, the host can enter that player's vote by hand (logged).
 
-### 9.7 Data model (proposed; Claude Code finalizes in migrations)
+### 9.7 Data model
+
+**Final design (Step 1, 26 October; migration `supabase/migrations/20261026120000_initial_schema.sql`).** The engine works on one `GameState` object (`lib/game/types.ts`), so the database stores that whole object as JSON in a server-only table and saves it in one version-checked update. That makes every write one atomic step and keeps `viewFor` the only way out. The per-entity tables proposed below became fields inside the state (roles, items, rounds and ballots, nights and picks, missions, chat, events, log), and the database adds what the engine can't do itself: sessions and PINs, idempotency, snapshots, and realtime pings.
+
+| Table | Holds | Who can read it |
+| --- | --- | --- |
+| `hosts` | Users allowed to create games (host sign-in is Supabase Auth email and password) | Server only |
+| `games` | Room code, phase, day, version, status, and the full engine `state` (JSON). Check constraints keep `state.version`, `state.code` and `state.phase` equal to the columns; a trigger rejects any update that doesn't raise the version | Server only |
+| `seats` | Player ↔ phone (anonymous auth user), hashed PIN, failed attempts, locked flag, last seen; one seat per phone per game | Server only |
+| `game_actions` | Append-only ledger: idempotency key (unique per game), actor, action, versions before and after (exactly one apart, unique per game), and the state after every action (for undo and recovery) | Server only |
+| `game_pings` | Room code and version only | Everyone (read-only), and sent over Supabase Realtime |
+| `presets` | Saved settings and rosters (tier 2) | Server only |
+| Storage bucket `player-photos` | Player photos (private, 5 MB, JPEG, PNG, WebP, HEIC) | Server only; screens get short-lived signed links |
+
+Writes go through two database functions, callable only with the secret key: `create_game` (inserts the game and its ping) and `apply_game_action(game, expected version, idempotency key, actor, action, next state)`. The second runs in one transaction: a repeated key returns `duplicate`; a version that moved on returns `stale` (the `update … where version = expected` touched no row); otherwise it saves the state, writes the ledger row and bumps the ping. Row Level Security is on for every table; only `game_pings` has a read policy, and `anon` and `authenticated` have no other grants.
+
+**Original proposal (superseded by the design above; kept for reference):**
 
 | Table | Holds | Who can read it |
 | --- | --- | --- |
@@ -632,7 +648,7 @@ The main risks on the night are an accidental leak or a stuck game, not an attac
 | `action_log` | Every vote, pick, award, phase change and override, with actor, time and reason | The host |
 | `presets` | Saved settings and rosters for reuse | The host |
 
-**Constraints:** one seat per player; one ballot per eligible voter per round; one ghost vote per ghost per game; valid item states only; valid role transitions only; the version number only increases.
+**Constraints:** one seat per player; one ballot per eligible voter per round; one ghost vote per ghost per game; valid item states only; valid role transitions only; the version number only increases. In the final design the database enforces one seat per player and per phone, one action per idempotency key, one action per version, and versions that only increase; the engine enforces the rest (ballots, ghost votes, item states, roles) and `lib/game/invariants.ts` checks them after every simulated action.
 
 The planning doc's first, simpler data model (games, players, roles, items, votes, missions, events, traitor_chat, suspect_poll) is fully covered by the table above. Its `players` row held the PIN, which now lives hashed in `seats`; its `votes` row also held murder votes, which now live in `night_picks`.
 
@@ -891,6 +907,9 @@ All decisions dated 26 October 2026 unless noted.
 | Build schedule (26 Oct) | Not a constraint: build the full scope properly. Unfinished work at the freeze is still switched off, never half-shipped | Owner's instruction |
 | Player names and photos (26 Oct) | Uploaded later by the host in the roster editor, any time; initials avatars until then | Owner's instruction |
 | Look (26 Oct) | Diwali-led theme: elegant, uncluttered, mobile-first, easy for non-technical players; Omertà as a reference (section 9.8) | Owner's instruction |
+| Data model (26 Oct, finalizes 9.7) | The full engine state is stored as JSON in a server-only `games` table, saved by one version-checked database function with an idempotency ledger and per-action snapshots; browsers can read only room-code version pings | One atomic write per action; `viewFor` stays the only way out; no client ever touches a secret table; snapshots make undo and recovery simple |
+| Host sign-in (26 Oct, finalizes 9.5) | Supabase Auth email and password, allowed only if listed in `hosts` | No extra passcode system; works on the host's phone and laptop |
+| Migrations (26 Oct) | Supabase CLI, applied with `supabase db push` | Owner's choice |
 | Rules engine (26 Oct) | One pure function, `applyGameAction`, with seeded randomness (deal, tie-breaks, spins) so every game can be replayed; interpretations recorded in 5.10 | CLAUDE.md working rules; reproducible bugs |
 | Bot simulator findings (26 Oct) | The simulator found three bugs, now fixed with regression tests: a recruit offer visible to a player turned Traitor mid-night; ending the game mid-night half-resolving it; a rerun vote leaving a player with two daggers | Section 13: bot games find broken scenarios |
 | One context file (26 Oct) | The planning doc ("Traitors Party App — Build Plan.docx") is merged into this file with nothing left out, and the .docx is removed from the repo (it stays in the first commit's history) | Owner's instruction: one file holds everything |
@@ -999,7 +1018,9 @@ Dashboard labels change over time; confirm the current names while clicking thro
 | `npm test` | Vitest, once |
 | `npm run test:watch` | Vitest, watch mode |
 
-Supabase migrations are added in Step 1 (CLI or SQL editor, owner's choice). Versions at scaffold: Next.js 16.4, React 19.3, Tailwind 4, zod 4, Vitest 5, Node 26.
+**Database migrations** (Supabase CLI, owner's choice on 26 October; installed with `brew install supabase/tap/supabase`). Migrations live in `supabase/migrations/`. One-time setup, in a terminal in this folder: `supabase login` (approve in the browser), then `supabase link --project-ref sfjgircdilkllbpuwrez` (asks for the database password). After that, `supabase db push` applies any new migrations; it lists them and asks before applying. `supabase migration new <name>` starts a new one.
+
+Versions at scaffold: Next.js 16.4, React 19.3, Tailwind 4, zod 4, Vitest 5, Node 26.
 
 ---
 
