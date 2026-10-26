@@ -1,65 +1,43 @@
+import { Diya } from "@/components/ui/Diya";
+import { Rangoli } from "@/components/ui/Rangoli";
+import { Toran } from "@/components/ui/Toran";
+
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center px-4">
-      <main className="flex flex-col items-center gap-8 text-center max-w-md">
-        {/* Flame icon */}
-        <div className="relative">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-b from-gold-light to-orange flex items-center justify-center shadow-[0_0_60px_rgba(212,160,23,0.3)]">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              className="w-12 h-12"
-              aria-hidden="true"
-            >
-              <path
-                d="M12 2C6.5 8 4 12 4 15a8 8 0 0016 0c0-3-2.5-7-8-13z"
-                fill="url(#flame-grad)"
-              />
-              <path
-                d="M12 9c-2 3-3 5-3 7a3 3 0 006 0c0-2-1-4-3-7z"
-                fill="#0c0a09"
-                opacity="0.6"
-              />
-              <defs>
-                <linearGradient
-                  id="flame-grad"
-                  x1="12"
-                  y1="2"
-                  x2="12"
-                  y2="23"
-                  gradientUnits="userSpaceOnUse"
-                >
-                  <stop stopColor="#f5c842" />
-                  <stop offset="1" stopColor="#ea580c" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-          <div className="absolute inset-0 w-24 h-24 rounded-full bg-gold/20 animate-ping" />
+    <div className="relative flex min-h-dvh flex-1 flex-col overflow-hidden">
+      <Toran className="absolute inset-x-0 top-[env(safe-area-inset-top)]" />
+
+      <main className="relative mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-7 px-6 pt-20 pb-[max(2.5rem,env(safe-area-inset-bottom))] text-center short:gap-4 short:pt-14">
+        <div className="relative grid size-60 shrink-0 place-items-center short:size-48">
+          <Rangoli className="absolute inset-0 size-full text-gold opacity-[0.13] animate-spin-slow" />
+          <Diya className="relative size-32" />
         </div>
 
-        <div className="flex flex-col gap-3">
-          <h1 className="text-4xl font-bold tracking-tight">
-            <span className="bg-gradient-to-r from-gold-light via-gold to-orange bg-clip-text text-transparent">
-              Traitors
-            </span>
-          </h1>
-          <p className="text-lg text-muted tracking-widest uppercase font-medium">
-            The Game
+        <div className="flex flex-col items-center gap-1">
+          <p className="text-sm font-medium uppercase tracking-[0.32em] text-marigold">
+            Diwaloween
           </p>
+          <h1 className="font-display text-7xl font-semibold leading-none text-gold">
+            Traitors
+          </h1>
+          <p className="font-display text-2xl italic text-ink">The Game</p>
         </div>
 
-        <div className="w-16 h-px bg-gradient-to-r from-transparent via-gold to-transparent" />
+        <div className="flex items-center gap-3 text-gold/70" aria-hidden="true">
+          <span className="h-px w-12 bg-gradient-to-r from-transparent to-current" />
+          <span className="size-1.5 rotate-45 bg-current" />
+          <span className="h-px w-12 bg-gradient-to-l from-transparent to-current" />
+        </div>
 
-        <p className="text-muted text-sm leading-relaxed">
-          Diwaloween: Lights &amp; Frights
+        <p className="text-lg text-ink-muted">
+          Lights &amp; Frights
           <br />
-          <span className="text-gold/80">31 October 2026</span>
+          Saturday 31 October
         </p>
 
-        <div className="mt-4 px-6 py-3 rounded-full border border-gold/30 bg-surface text-gold text-sm font-medium">
-          Coming soon
-        </div>
+        <p className="rounded-full border border-gold/30 bg-surface/80 px-6 py-3 text-base text-ink">
+          The game opens on party night
+        </p>
       </main>
     </div>
   );

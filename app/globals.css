@@ -1,33 +1,83 @@
 @import "tailwindcss";
 
+@custom-variant short (@media (max-height: 700px));
+
 :root {
-  --background: #0c0a09;
-  --foreground: #fafaf9;
-  --gold: #d4a017;
-  --gold-light: #f5c842;
-  --orange: #ea580c;
-  --orange-light: #fb923c;
-  --surface: #1c1917;
-  --surface-light: #292524;
-  --muted: #78716c;
+  --night: #140a0f;
+  --surface: #1f1218;
+  --surface-2: #2b1a22;
+  --ink: #fbf3e4;
+  --ink-muted: #c8b6a2;
+  --gold: #f2c14e;
+  --gold-deep: #a8701a;
+  --marigold: #f08a24;
+  --kumkum: #c8283e;
+  --leaf: #6b8f3a;
+  --ghost: #a99bc4;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-gold: var(--gold);
-  --color-gold-light: var(--gold-light);
-  --color-orange: var(--orange);
-  --color-orange-light: var(--orange-light);
+  --color-night: var(--night);
   --color-surface: var(--surface);
-  --color-surface-light: var(--surface-light);
-  --color-muted: var(--muted);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-gold: var(--gold);
+  --color-gold-deep: var(--gold-deep);
+  --color-marigold: var(--marigold);
+  --color-kumkum: var(--kumkum);
+  --color-leaf: var(--leaf);
+  --color-ghost: var(--ghost);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-cormorant);
+
+  --animate-flicker: flicker 2.6s ease-in-out infinite;
+  --animate-glow: glow 3.2s ease-in-out infinite;
+  --animate-spin-slow: spin 180s linear infinite;
+
+  @keyframes flicker {
+    0%, 100% { transform: scale(1, 1) skewX(0deg); }
+    25% { transform: scale(0.97, 1.04) skewX(-1.5deg); }
+    50% { transform: scale(1.02, 0.97) skewX(1deg); }
+    75% { transform: scale(0.98, 1.03) skewX(-0.5deg); }
+  }
+
+  @keyframes glow {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 0.85; }
+  }
+}
+
+html {
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--night);
+  background-image: radial-gradient(
+    ellipse 90% 55% at 50% 32%,
+    rgb(240 138 36 / 0.13),
+    transparent 70%
+  );
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 18px;
+  line-height: 1.5;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.flame {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-flicker,
+  .animate-glow,
+  .animate-spin-slow {
+    animation: none;
+  }
 }
