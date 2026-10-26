@@ -18,4 +18,11 @@ Read `PROJECT_CONTEXT.md` before doing anything. It is the source of truth for e
 
 ## Commands
 
-Fill these in once the app is scaffolded: install, dev server, tests, lint, build, Supabase migrations.
+| Command | What it does |
+| --- | --- |
+| `npm install` | Install dependencies |
+| `npm run dev` | Start the dev server (Turbopack, port 3000) |
+| `npm run build` | Production build |
+| `npm run lint` | Run ESLint |
+| `npm test` | Run Vitest tests once |
+| `npm run test:watch` | Run Vitest in watch mode |
