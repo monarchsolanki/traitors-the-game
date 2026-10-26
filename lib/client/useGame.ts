@@ -133,7 +133,7 @@ export function useGame(code: string, kind: GameKind): GameHandle {
     const t = setTimeout(() => {
       api<ActionResponse>(`/api/games/${code}/action`, {
         kind,
-        body: { as: kind === "screen" ? "system" : kind, key: `v${version}`, action: { type: "tick" } },
+        body: { as: kind === "screen" ? "system" : kind, key: `tick-version-${version}`, action: { type: "tick" } },
       })
         .then(accept)
         .catch(() => void refresh());

@@ -87,7 +87,8 @@ export async function runAction(
   key: string,
   expectedVersion?: number,
 ): Promise<RunResult> {
-  for (let attempt = 0; attempt < 5; attempt++) {
+  for (let attempt = 0; attempt < 40; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, Math.random() * Math.min(400, 25 * attempt)));
     const game = await loadGame(code);
     if (await alreadyApplied(game.id, key)) return { ok: true, game, duplicate: true };
     if (expectedVersion !== undefined && game.state.version !== expectedVersion) {
