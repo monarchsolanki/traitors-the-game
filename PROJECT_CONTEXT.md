@@ -8,7 +8,7 @@
 | --- | --- |
 | Owner | Monarch Solanki (host of the first game) |
 | Last updated | 26 October 2026 |
-| Status | Step 2 (minimum playable) built and pushed: host screens, player screens, server routes and bot seats. Tested through the database (a full 12-bot game) and in the browser as a player. Next: the owner plays a full game with bots on the live link, then Step 3, after his OK. |
+| Status | Step 3 (full loop) built: big screen, connection badges, the host's Fix and Log tabs, the paper fallback, and the new tie rule. Next: the owner plays a full game on 3 real phones plus the laptop, then Step 4, after his OK. |
 | Live link | https://traitors-the-game.vercel.app |
 | First game | Diwali x Halloween ("Diwaloween: Lights & Frights") villa party, Saturday 31 October 2026, 12 players plus the host |
 | Planning doc | [Traitors Party App — Build Plan](https://claude.ai/artifact/4t3XeWf8tHKf7C9YoMmDqN); fully merged into this file on 26 October 2026, so this file alone is enough |
@@ -176,7 +176,8 @@ The keys are final as of Step 1 and live in `lib/game/settings.ts` (each with it
 | Traitor chat | `traitorChat` | on | on, off | Override |
 | Recruitment | `recruitment` | `off` | `off`, `lastTraitor` | Override |
 | Role reveal on elimination | `revealOnElimination` | off (hidden) | off, on | Override |
-| Tie rule | `tieRule` | `revoteThenSpin` | `revoteThenSpin`, `spin`, `hostDecides` | Override |
+| Tie rule | `tieRule` | `revote` | `revote` (revotes between the tied players, then the host chooses), `spin` (a spin at once), `hostDecides` | Override |
+| Revotes before the host may spin | `tieRevotesBeforeChoice` | 2 | 1 to 5 | Override |
 | Decoy suspect poll | `suspectPoll` | on | on, off | Any time |
 | Ghost games | `ghostGames` | all on: `bhootBets`, `crystalBall`, `liveReactions`, `bhootBingo` | any combination, including none | Any time |
 | Ghost vote | `ghostVote` | on | on, off | Override |
@@ -207,6 +208,8 @@ Timer defaults are proposals. The run sheet's 5-minute night slot leaves room fo
 | Game | Save settings as a preset, end early, start a new game with the same roster |
 
 Every change after dealing gets a confirm step and an action-log entry (who, when, what, why). Only the host view ever shows secrets.
+
+**How it's built (Step 3, 27 October).** The host screen has five tabs: Game, Players, Fix, Log, Settings. **Fix** (after dealing) holds every override, each with a required reason: a player (mark out as murdered, banished or left; bring back; change role; give, move or remove a shield or dagger), the current vote (enter or correct a ballot; rerun it), tonight (decide the night by hand, or nobody), a frozen rule, a late player (with a role), end the game now, and the paper fallback. **Log** lists every action newest first with time, day, phase, who and the reason, with a filter for host fixes. Undo is Step 4.
 
 ### 4.4 Default roster for 31 October
 
@@ -249,7 +252,7 @@ By default we play the Indian format with 3 Traitors among 10 to 12 players and 
 3. If the victim holds a shield, the murder fails and the reveal says nobody died.
 4. Murdered and banished players become ghosts. They stay at the party and see the event feed, but never learn who the Traitors are until the final reveal. Each ghost has one ghost vote for a later Circle.
 5. At the Circle of Shaq, players debate for about 12 minutes, then vote privately on their phones. The host reveals votes one by one on the big screen.
-6. The player with the most votes is banished. Their role stays hidden from everyone, ghosts included, until the final reveal. A tie goes to a revote between the tied players; a second tie is settled by a spin on the big screen.
+6. The player with the most votes is banished. Their role stays hidden from everyone, ghosts included, until the final reveal. A tie goes to a revote between the tied players. If the revote ties too, they vote again. After the third tie in a row, the host chooses: a spin on the big screen, or another revote (changed 27 October; previously a second tie went straight to a spin).
 7. If the host has switched recruitment on, the last Traitor may recruit an Innocent that night instead of murdering. The recruit gets a private offer and can refuse; a refusal means nobody dies that night.
 8. The End Game starts once the End Game threshold or fewer remain at a Circle (default half the starting players, rounded down: 5 for 10 or 11 players, 6 for 12). Everyone votes End or Banish; anything short of a unanimous End means one more banishment, until it's unanimous or 2 players are left.
 9. Innocents win if every Traitor is gone; if the last Traitor is banished before the End Game, the game ends there. If any Traitor survives, the Traitors win. Eliminated players win with their team.
@@ -289,7 +292,7 @@ Proposed phase names for the engine are in `CODE_CASE`.
 | `MURDER_REVEAL` | Host | Plays the breakfast entrance, then chooses whether to run a mission | The host chooses | Post-murder check (5.2), then `MISSION` or `CIRCLE_DEBATE`, as the host chooses |
 | `ENDGAME_VOTE` | Living players | Vote End or Banish | All votes are in | `FINALE` if unanimous End, else `ENDGAME_BANISH` |
 | `ENDGAME_BANISH` | Living players | One ballot each, no dagger | One player is banished | Win check (5.2) |
-| `FINALE` | App | Reveals every role, the winners, the suspicion meter and ghost scores | The host closes the game | None |
+| `FINALE` | Host, then everyone | The result is decided. Only the host sees it at first; every other screen shows "Hold on". When the host taps Reveal, every screen shows every role, the winners, the suspicion meter and ghost scores (decided 27 October) | The host closes the game (after revealing) | None |
 
 A **pause** is a flag on the game, not a phase: timers stop and players see "Paused".
 
@@ -320,6 +323,8 @@ The End Game threshold is checked only after a Circle banishment, never after a 
 | 2 players left | Reveal: Traitors win if either is a Traitor |
 | The host ends the game early | Reveal with the current state; logged as an override |
 
+**The host reveals the result (decided 27 October).** When any end condition is met, the game stops and the host sees the result privately. The big screen and every phone show only "Hold on. The host will tell you what happens next" (no winner, no roles, and nothing in the data sent to them), until the host taps **Reveal to everyone**. That gives the host room for a build-up in the room before the reveal.
+
 **Winners include the eliminated** (`eliminatedWinWithTeam`, default on; decided 26 October): eliminated Traitors, banished or murdered, win with their team if any Traitor survives; eliminated Innocents win if the Innocents win. The finale lists every winner, alive or ghost.
 
 ### 5.4 Night resolution
@@ -343,7 +348,7 @@ The End Game threshold is checked only after a Circle banishment, never after a 
 - The dagger holder ticks "use dagger" on their ballot, which then counts `daggerWeight` times (default 2).
 - The reveal shows each ballot with its voter's photo; a dagger ballot carries a "×2" (or "×3") badge.
 - The most weighted votes means banishment.
-- Ties follow `tieRule`. Default `revoteThenSpin`: a revote between the tied players, by all eligible voters, without daggers; a second tie is settled by a random spin on the big screen. `spin` skips the revote. `hostDecides` lets the host pick among the tied players (logged).
+- Ties follow `tieRule` (changed 27 October, owner's instruction). Default `revote`: a revote between the tied players, by all eligible voters, without daggers or ghost votes. Each further tie gets another revote, up to `tieRevotesBeforeChoice` revotes (default 2). After that (the third tie in a row by default), the host chooses each time: a random spin on the big screen, or another revote. `spin` settles any tie with a spin at once. `hostDecides` lets the host pick among the tied players (logged). The original default was `revoteThenSpin` (one revote, then a spin).
 - End Game votes are End or Banish, with no daggers. An End Game banishment follows the same tie rules, without daggers.
 
 ### 5.6 Items
@@ -563,7 +568,7 @@ One web app, three synced views, all updated live: the host's control panel, eac
 | Host control | `/host/[code]` and `/host/[code]/settings` | The host, on a phone or laptop | Lobby, settings and roster editor, God view of all roles, phase controls with timers and a "waiting on" checklist, run-or-skip mission choice and awards to one or more players, vote reveal button, undo, edit-anything panel, action log |
 | Player phone | `/play/[code]` | Each player (10 to 12 at the party) | Tap your photo to join, PIN, hold-to-peek role card, current phase, voting, my items (shield, dagger), night screen (Traitor picks or suspect poll), ghost mode |
 | Traitors' tower | inside `/play/[code]` | Traitors only | Private chat, private victim pick, recruitment choice and the recruit's offer |
-| Big screen | `/screen/[code]` | A laptop or TV everyone can see | QR join code, phase title and timer, breakfast entrance, murder reveal, vote-by-vote reveal, photo wall alive and gone, final reveal |
+| Big screen | `/screen/[code]` (built in Step 3; public, no sign-in) | A laptop or TV everyone can see | QR join code and photo wall in the lobby, phase title and timer, mission card, vote count, vote-by-vote reveal with ×2/×3 and ghost badges and a running tally, tie screen, spin animation, banishment and murder cards (held for 20 seconds after they happen), night screen, final reveal with every role and the suspicion meter; keeps the screen awake; full-screen button. Breakfast entrance is tier 2 |
 | Co-host (tier 2) | `/cohost/[code]` | Optional helper | Mission results and big-screen controls; no roles |
 
 ### 9.3 Server authority
@@ -609,7 +614,8 @@ The main risks on the night are an accidental leak or a stuck game, not an attac
 
 - Every phone shows a connection badge, reconnects on its own and resyncs from the server.
 - The host always sees what's pending ("waiting on 3 votes") and gets a confirm step before any reveal, elimination or override.
-- **Paper fallback:** when roles are dealt, the host can save an offline copy of roles. If the internet drops for everyone, the game continues on paper ballots and results are entered later.
+- **Connection badges (Step 3):** each phone reports in while open (every 15 to 30 seconds); the host's Players tab and "waiting on" lists show a green dot (connected), red (phone off, quiet for 75 seconds) or lilac (bot), and "(phone off)" after names in the waiting list.
+- **Paper fallback:** when roles are dealt, the host can save an offline copy of roles. If the internet drops for everyone, the game continues on paper ballots and results are entered later. Built in Step 3: "Save the offline copy of roles" (on the Game tab right after dealing, and in the Fix tab any time) downloads a self-contained page with every role, status and held item, the rules in short, what to do if the internet drops, and blank ballot slips for every living player. Names are escaped.
 - The app needs internet at the villa: villa Wi-Fi or one phone's hotspot. If a single phone drops, the host can enter that player's vote by hand (logged).
 
 ### 9.7 Data model
@@ -859,6 +865,7 @@ Then a feature freeze, a rehearsal checklist that follows the run sheet (section
 | `tests/engine.host.test.ts` | Pause and resume, timers, every override, the action log, and every edge case in 5.9 |
 | `tests/view.test.ts` | `viewFor` for the host, co-host, Innocent, Traitor, ghost and big screen, including the hidden murder victim before the reveal |
 | `tests/regressions.test.ts` | Bugs the simulator found |
+| `tests/client.test.ts` | The paper fallback (every role, statuses, items, slips, safe names) and the connection-badge rule |
 | `tests/simulator.test.ts` | Bot games across 5, 10, 11, 12 and 20 players and 9 settings profiles (including chaos with random host overrides), checking `lib/game/invariants.ts` and `lib/game/leaks.ts` after every action |
 
 Run `npm test` for everything with a quick bot sweep (about 135 games), or `npm run simulate` for about 2,700 bot games (2 to 3 minutes).
@@ -918,6 +925,10 @@ All decisions dated 26 October 2026 unless noted.
 | Server routes (26 Oct, Step 2) | One action route runs the engine for every in-game action; separate routes for creating a game, taking a seat with a PIN, host seat tools, photo uploads and bots. Host buttons send the version they saw, so a double tap is refused; player actions are retried on the newer state | Section 9.3; two taps can never both advance the game, while many players can vote at once |
 | Requests carry the access token (26 Oct, Step 2) | The browser sends its Supabase access token on each request; no cookie session or proxy | Simplest reliable setup with Cache Components on; the server verifies every request |
 | Vercel region (26 Oct, Step 2; updated 27 Oct) | Server functions run in Mumbai (`bom1`), next to the database, set in the Vercel project settings (Settings → Functions). A `vercel.json` with `regions` stopped Vercel creating deployments at all on 26 October, so it was removed | Vercel's default region is in the US; every game action would otherwise cross the world twice |
+| Big screen holds results (27 Oct, Step 3) | A banishment, murder reveal or End Game result stays on the big screen for 20 seconds, and a spin plays for 4.5 seconds, timed from when the screen first sees it (a screen opened later doesn't replay old results). Phones show "X was banished" for a minute after | The engine moves straight to night after a banishment, so without this the room would never see who went |
+| Host reveals the result (27 Oct) | When the game is decided, only the host sees the winner; everyone else sees "Hold on" until the host taps Reveal to everyone. Closing the game needs the reveal first | Owner's instruction: the host controls the moment of the dramatic final reveal |
+| Stuck tie fixed (27 Oct) | If only one tied player is still in the game (the others left), they're banished; if none are, the host reruns the vote. The host can always decide a tie by hand (logged) | The bot simulator found a game stuck in the reveal after a tied player left |
+| Tie rule (27 Oct, replaces "revote, then spin") | Ties go to a revote between the tied players; a tied revote gets another revote; after the third tie in a row the host chooses a spin or another revote, each time. New setting `tieRevotesBeforeChoice` (default 2) | Owner's instruction: no spin unless the room keeps tying, and then only if the host wants it |
 | Glance safety at night (26 Oct, Step 2) | Fellow Traitors are marked with a dot, not a word; pick status is a count, not names | Found in browser testing: a glance at a Traitor's phone named the other Traitors |
 | Bot seats (26 Oct, Step 2) | The host fills empty seats with bots for solo testing; bots act through the same engine and routes as players, at random, and never press host buttons | Owner's instruction: play a whole game alone |
 | Rules engine (26 Oct) | One pure function, `applyGameAction`, with seeded randomness (deal, tie-breaks, spins) so every game can be replayed; interpretations recorded in 5.10 | CLAUDE.md working rules; reproducible bugs |

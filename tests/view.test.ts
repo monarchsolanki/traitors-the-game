@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { allViewers, findLeaks } from "@/lib/game/leaks";
 import { viewFor } from "@/lib/game/view";
-import { dealt, lobby } from "./helpers";
+import { HOST, as, dealt, lobby } from "./helpers";
 
 const noLeaks = (g: ReturnType<typeof dealt>) => {
   for (const v of allViewers(g.state)) expect(findLeaks(g.state, v)).toEqual([]);
@@ -132,10 +132,31 @@ describe("viewFor (section 9.4)", () => {
     noLeaks(shown);
   });
 
+  it("the result stays with the host until the host reveals it (decided 27 October)", () => {
+    const g = dealt(12);
+    g.circle();
+    g.banish("p12");
+    g.host({ type: "endGameEarly", reason: "Test" });
+    for (const viewer of [{ kind: "screen" as const }, { kind: "player" as const, playerId: "p5" }, { kind: "player" as const, playerId: "p12" }]) {
+      const v = viewFor(g.state, viewer);
+      expect(v.finale).toBeNull();
+      expect(v.finalePending).toBe(true);
+      expect(v.players.every((p) => p.role === null)).toBe(true);
+      expect(v.events.some((e) => e.type === "finale" || e.type === "gameOver")).toBe(false);
+    }
+    const host = viewFor(g.state, { kind: "host" });
+    expect(host.finale).toMatchObject({ winner: "traitors" });
+    noLeaks(g);
+    expect(g.no(as("p5"), { type: "revealFinale" })).toMatch(/Only the host/);
+  });
+
   it("the final reveal shows every role, the winners and the suspicion meter", () => {
     const g = dealt(12);
     g.host({ type: "endGameEarly", reason: "Test" });
+    g.host({ type: "revealFinale" });
+    expect(g.no(HOST, { type: "revealFinale" })).toMatch(/already revealed/);
     const v = viewFor(g.state, { kind: "screen" });
+    expect(v.finalePending).toBe(false);
     expect(v.players.every((p) => p.role !== null)).toBe(true);
     expect(v.finale).toMatchObject({ winner: "traitors" });
     noLeaks(g);

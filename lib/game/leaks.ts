@@ -14,7 +14,8 @@ export function findLeaks(s: GameState, viewer: Viewer): string[] {
   if (s.seed && json.includes(`"${s.seed}"`)) add("the random seed leaked");
   if (viewer.kind === "host") return problems;
 
-  const finale = s.phase === "FINALE";
+  const finale = s.phase === "FINALE" && !!s.finale?.revealed;
+  if (!finale && v.finale) add("result shown before the host revealed it");
   const lastNight = s.nights[s.nights.length - 1];
   const pendingVictim = !finale && lastNight?.resolved && !lastNight.revealed ? lastNight.victimId : null;
   const me = viewer.kind === "player" ? viewer.playerId : null;

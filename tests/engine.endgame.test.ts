@@ -108,7 +108,7 @@ describe("End Game (sections 5.1, 5.3, 5.5)", () => {
     expect(g.phase).toBe("ENDGAME_BANISH");
   });
 
-  it("End Game banishment ties follow the tie rule, with a revote and then a spin", () => {
+  it("End Game banishment ties follow the tie rule: revotes, then the host's choice", () => {
     const g = atEndgame();
     const alive = g.alive();
     alive.forEach((id) => g.by(id, { type: "castEndgameVote", choice: "banish" }));
@@ -121,7 +121,12 @@ describe("End Game (sections 5.1, 5.3, 5.5)", () => {
     expect(g.phase).toBe("ENDGAME_BANISH");
     g.vote({ [alive[0]]: alive[2], [alive[1]]: alive[3] });
     g.reveal();
-    expect(g.round().result).toMatchObject({ method: "spin" });
+    expect(g.round().result).toMatchObject({ method: "revote" });
+    g.host({ type: "startRevote" });
+    expect(g.round().kind).toBe("endgameRevote");
+    g.vote({ [alive[0]]: alive[2], [alive[1]]: alive[3] });
+    g.reveal();
+    expect(g.round().result).toMatchObject({ method: "choose" });
     g.host({ type: "spinTie" });
     expect(["ENDGAME_VOTE", "FINALE"]).toContain(g.phase);
   });
@@ -183,8 +188,10 @@ describe("winners (section 5.3, decided 26 October)", () => {
     const g = dealt(12);
     expect(g.no(HOST, { type: "endGameEarly", reason: "" })).toMatch(/reason/);
     g.host({ type: "endGameEarly", reason: "Housie time" });
-    expect(g.state.finale).toMatchObject({ winner: "traitors", early: true });
+    expect(g.state.finale).toMatchObject({ winner: "traitors", early: true, revealed: false });
     expect(g.state.log[g.state.log.length - 1]).toMatchObject({ override: true, reason: "Housie time" });
+    expect(g.no(HOST, { type: "closeGame" })).toMatch(/Reveal the result first/);
+    g.host({ type: "revealFinale" });
     g.host({ type: "closeGame" });
     expect(g.no(HOST, { type: "pause" })).toMatch(/closed/);
   });

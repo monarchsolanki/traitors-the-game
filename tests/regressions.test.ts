@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { checkInvariants } from "@/lib/game/invariants";
 import { findLeaks } from "@/lib/game/leaks";
 import { viewFor } from "@/lib/game/view";
-import { dealt } from "./helpers";
+import { dealt, HOST } from "./helpers";
 
 /** Bugs the bot simulator found on 26 October, kept as tests. */
 describe("simulator regressions", () => {
@@ -38,5 +38,31 @@ describe("simulator regressions", () => {
     g.host({ type: "rerunVote", reason: "Mix-up" });
     expect(g.items("p4", "dagger").filter((i) => i.state === "held")).toHaveLength(1);
     expect(checkInvariants(g.state)).toEqual([]);
+  });
+});
+
+describe("simulator regressions, 27 October", () => {
+  it("a tie where one tied player has left banishes the one still in, instead of getting stuck", () => {
+    const g = dealt(12);
+    g.circle();
+    g.vote({ p1: "p5", p2: "p6" });
+    g.reveal();
+    expect(g.round().result).toMatchObject({ outcome: "tie", method: "revote" });
+    g.host({ type: "eliminatePlayer", playerId: "p6", status: "left", reason: "Went home" });
+    g.host({ type: "startRevote" });
+    expect(g.p("p5").status).toBe("banished");
+    expect(checkInvariants(g.state)).toEqual([]);
+  });
+
+  it("a tie where every tied player has left can be rerun", () => {
+    const g = dealt(12);
+    g.circle();
+    g.vote({ p1: "p5", p2: "p6" });
+    g.reveal();
+    g.host({ type: "eliminatePlayer", playerId: "p5", status: "left", reason: "Went home" });
+    g.host({ type: "eliminatePlayer", playerId: "p6", status: "left", reason: "Went home" });
+    expect(g.no(HOST, { type: "startRevote" })).toMatch(/Rerun the vote/);
+    g.host({ type: "rerunVote", reason: "Both tied players left" });
+    expect(g.phase).toBe("CIRCLE_VOTE");
   });
 });

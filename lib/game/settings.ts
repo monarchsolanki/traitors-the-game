@@ -19,7 +19,8 @@ export const settingSchemas = {
   traitorChat: z.boolean(),
   recruitment: z.enum(["off", "lastTraitor"]),
   revealOnElimination: z.boolean(),
-  tieRule: z.enum(["revoteThenSpin", "spin", "hostDecides"]),
+  tieRule: z.enum(["revote", "spin", "hostDecides"]),
+  tieRevotesBeforeChoice: z.number().int().min(1).max(5),
   suspectPoll: z.boolean(),
   ghostGames: z
     .object({
@@ -93,7 +94,12 @@ export const SETTING_META: Record<
   },
   tieRule: {
     label: "Tie rule",
-    help: "Revote then spin, spin only, or the host decides.",
+    help: "Revote: the tied players face a revote; after enough tied revotes the host chooses a spin or another revote. Spin: a random spin at once. Host decides: the host picks.",
+    afterDealing: "override",
+  },
+  tieRevotesBeforeChoice: {
+    label: "Revotes before the host may spin",
+    help: "With the revote rule: how many tied revotes happen before the host chooses between a spin and another revote.",
     afterDealing: "override",
   },
   suspectPoll: {
@@ -145,7 +151,8 @@ export const DEFAULT_SETTINGS: GameSettings = {
   traitorChat: true,
   recruitment: "off",
   revealOnElimination: false,
-  tieRule: "revoteThenSpin",
+  tieRule: "revote",
+  tieRevotesBeforeChoice: 2,
   suspectPoll: true,
   ghostGames: { bhootBets: true, crystalBall: true, liveReactions: true, bhootBingo: true },
   ghostVote: true,

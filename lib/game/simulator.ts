@@ -139,6 +139,7 @@ export function hostProgress(s: GameState, rand: Rand, o: Required<Pick<SimOptio
       if (r.status === "tied" && r.result?.outcome === "tie") {
         const tied = r.result.tiedIds.filter((id) => alive.includes(id));
         if (r.result.method === "revote") return [{ type: "startRevote" }];
+        if (r.result.method === "choose") return [rand() < 0.5 ? { type: "spinTie" } : { type: "startRevote" }];
         if (r.result.method === "spin") return [{ type: "spinTie" }];
         return tied.length ? [{ type: "decideTie", playerId: pickOne(tied, rand) }] : [];
       }
@@ -146,6 +147,8 @@ export function hostProgress(s: GameState, rand: Rand, o: Required<Pick<SimOptio
     }
     case "NIGHT":
       return rand() < 0.03 ? [{ type: "resolveNight" }] : [];
+    case "FINALE":
+      return s.finale?.revealed ? [] : [{ type: "revealFinale" }];
     default:
       return [];
   }
@@ -291,14 +294,23 @@ export function simulate(opts: SimOptions): SimResult {
       if (apply(SYSTEM, { type: "tick" })) continue;
     }
     // Nothing moved and no timer to wait for: give the host the forcing moves a real host has.
-    const forcing: ActionPayload[] = [{ type: "lockVoting" }, { type: "lockRewardVote" }, { type: "resolveNight" }, { type: "finishReveal" }];
+    const forcing: ActionPayload[] = [
+      { type: "lockVoting" },
+      { type: "lockRewardVote" },
+      { type: "resolveNight" },
+      { type: "finishReveal" },
+      { type: "rerunVote", reason: "Recovering a stuck tie" },
+    ];
     if (forcing.some((f) => apply(HOST, f))) continue;
     throw new SimFailure(`Stuck in ${s.phase}: no player or host move works`, s, history);
   }
   if (s.phase !== "FINALE" || !s.finale) throw new SimFailure(`Did not finish within ${o.maxSteps} steps`, s, history);
-  for (const v of allViewers(s)) {
-    const leaks = findLeaks(s, v);
-    if (leaks.length) throw new SimFailure(`Privacy failure at the finale: ${leaks.join("; ")}`, s, history);
+  for (let pass = 0; pass < 2; pass++) {
+    for (const v of allViewers(s)) {
+      const leaks = findLeaks(s, v);
+      if (leaks.length) throw new SimFailure(`Privacy failure at the finale: ${leaks.join("; ")}`, s, history);
+    }
+    if (pass === 0 && !apply(HOST, { type: "revealFinale" })) throw new SimFailure("Couldn't reveal the result", s, history);
   }
   return {
     steps: s.version,

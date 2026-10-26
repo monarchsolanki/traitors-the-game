@@ -23,6 +23,32 @@ import {
   VoteScreen,
 } from "./PhaseScreens";
 import { RoleCard } from "./RoleCard";
+import { playerById } from "./shared";
+
+/** A banishment moves the game straight on, so phones say who went for a minute afterwards. */
+function RecentNews({ game }: { game: ReturnType<typeof useGame> }) {
+  const view = game.view!;
+  const e = [...view.events].reverse().find((x) => x.type === "banished");
+  if (!e || game.now() - e.at > 60_000 || view.phase === "CIRCLE_REVEAL" || view.phase === "FINALE") return null;
+  const p = playerById(view, e.data.playerId as string);
+  if (!p) return null;
+  return (
+    <div className="mb-4">
+      <Notice title={`${p.displayName} was banished`}>
+        {e.data.role ? (e.data.role === "traitor" ? "They were a Traitor." : "They were Innocent.") : "Their role stays secret until the final reveal."}
+      </Notice>
+    </div>
+  );
+}
+
+function HoldOn() {
+  return (
+    <div className="flex flex-col items-center gap-3 pt-10 text-center">
+      <p className="font-display text-4xl font-semibold text-gold">Hold on</p>
+      <p className="text-lg text-ink-muted">The host will tell you what happens next.</p>
+    </div>
+  );
+}
 
 export function PlayerApp({ code }: { code: string }) {
   const game = useGame(code.toUpperCase(), "player");
@@ -50,11 +76,12 @@ export function PlayerApp({ code }: { code: string }) {
 
   const me = view.me;
   const dealt = view.startingPlayerCount !== null;
-  const title = !game.seated ? "Join the game" : PHASE_TITLE[view.phase];
+  const title = !game.seated ? "Join the game" : view.finalePending ? "Hold on" : PHASE_TITLE[view.phase];
   const subtitle = `Room ${view.code}${dealt && view.phase !== "FINALE" ? ` · Day ${view.day}` : ""}`;
 
   let body: React.ReactNode;
   if (!game.seated || !me) body = <JoinScreen game={game} code={view.code} />;
+  else if (view.finalePending) body = <HoldOn />;
   else if (view.phase === "FINALE") body = <FinaleScreen game={game} />;
   else if (me.isGhost) body = <GhostScreen game={game} />;
   else {
@@ -114,6 +141,7 @@ export function PlayerApp({ code }: { code: string }) {
             <Notice title="The game is paused">Hang tight; the host will resume it.</Notice>
           </div>
         ) : null}
+        {game.seated ? <RecentNews game={game} /> : null}
         {body}
       </main>
       {me && dealt ? (

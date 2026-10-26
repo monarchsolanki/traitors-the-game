@@ -140,7 +140,7 @@ describe("daggers (sections 5.5, 5.6)", () => {
 });
 
 describe("ties (section 5.5)", () => {
-  it("revoteThenSpin: a revote between the tied players by all voters, then a spin", () => {
+  it("revote (default): revotes between the tied players; after the 3rd tie the host chooses spin or revote", () => {
     const g = base();
     g.vote({ p1: "p5", p2: "p6" });
     g.reveal();
@@ -151,14 +151,52 @@ describe("ties (section 5.5)", () => {
     expect(g.round()).toMatchObject({ kind: "revote", candidateIds: ["p5", "p6"] });
     expect(g.round().eligibleVoterIds).toHaveLength(12);
     expect(g.no(as("p1"), { type: "castVote", targetId: "p7" })).toMatch(/on the ballot/);
+    // 2nd tie: still an automatic revote, and it's a normal Circle revote (not an End Game one).
     g.vote({ p1: "p5", p2: "p6" });
     g.reveal();
-    expect(g.round().result).toMatchObject({ outcome: "tie", method: "spin" });
+    expect(g.round().result).toMatchObject({ outcome: "tie", method: "revote" });
+    expect(g.no(HOST, { type: "spinTie" })).toMatch(/isn't settled by a spin/);
+    g.host({ type: "startRevote" });
+    expect(g.round().kind).toBe("revote");
+    expect(g.phase).toBe("CIRCLE_VOTE");
+    // 3rd tie: the host chooses.
+    g.vote({ p1: "p5", p2: "p6" });
+    g.reveal();
+    expect(g.round().result).toMatchObject({ outcome: "tie", method: "choose" });
     g.host({ type: "spinTie" });
     const banished = g.state.players.filter((p) => p.status === "banished").map((p) => p.id);
     expect(banished).toHaveLength(1);
     expect(["p5", "p6"]).toContain(banished[0]);
     expect(g.phase).toBe("NIGHT");
+  });
+
+  it("revote: when the host chooses to vote again, it stays the host's choice after every further tie", () => {
+    const g = base();
+    for (let i = 0; i < 3; i++) {
+      g.vote({ p1: "p5", p2: "p6" });
+      g.reveal();
+      if (i < 2) g.host({ type: "startRevote" });
+    }
+    expect(g.round().result).toMatchObject({ method: "choose" });
+    g.host({ type: "startRevote" });
+    g.vote({ p1: "p5", p2: "p6" });
+    g.reveal();
+    expect(g.round().result).toMatchObject({ method: "choose" });
+    g.host({ type: "startRevote" });
+    g.vote({ p1: "p5", p2: "p5", p3: "p6" });
+    g.reveal();
+    expect(g.p("p5").status).toBe("banished");
+  });
+
+  it("revote: the number of revotes before the host's choice is a setting", () => {
+    const g = base({ settings: { tieRevotesBeforeChoice: 1 } });
+    g.vote({ p1: "p5", p2: "p6" });
+    g.reveal();
+    expect(g.round().result).toMatchObject({ method: "revote" });
+    g.host({ type: "startRevote" });
+    g.vote({ p1: "p5", p2: "p6" });
+    g.reveal();
+    expect(g.round().result).toMatchObject({ method: "choose" });
   });
 
   it("a revote with a clear winner banishes them", () => {

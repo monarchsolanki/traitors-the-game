@@ -200,6 +200,7 @@ function dispatch(ctx: Ctx): void {
     case "revivePlayer": return revivePlayer(ctx, a);
     case "setRole": return setRole(ctx, a);
     case "endGameEarly": return endGameEarly(ctx, a);
+    case "revealFinale": return revealFinale(ctx);
     case "closeGame": return closeGame(ctx);
     default: {
       const unknown: never = a;
@@ -1095,13 +1096,24 @@ function finishReveal(ctx: Ctx): void {
       ? "host"
       : s.settings.tieRule === "spin"
         ? "spin"
-        : r.kind === "circle" || r.kind === "endgameBanish"
+        : tiesInChain(s, r) <= s.settings.tieRevotesBeforeChoice
           ? "revote"
-          : "spin";
+          : "choose";
   r.status = "tied";
   r.result = { outcome: "tie", tiedIds: top, method };
   emit(ctx, "tie", PUBLIC, { roundId: r.id, tiedIds: top, method });
   log(ctx, `Tie between ${names(s, top)}; next: ${method}`);
+}
+
+/** How many tied votes in a row this tie is: the original vote plus each revote after it. */
+function tiesInChain(s: GameState, r: VoteRound): number {
+  let n = 1;
+  let parent = r.parentRoundId;
+  while (parent) {
+    n += 1;
+    parent = s.rounds.find((x) => x.id === parent)?.parentRoundId ?? null;
+  }
+  return n;
 }
 
 function requireTiedRound(ctx: Ctx): VoteRound & { result: { outcome: "tie"; tiedIds: string[]; method: TieMethod } } {
@@ -1114,11 +1126,17 @@ function startRevote(ctx: Ctx): void {
   requireHost(ctx);
   const { s } = ctx;
   const r = requireTiedRound(ctx);
-  if (r.result.method !== "revote") fail("This tie isn't settled by a revote.");
+  if (r.result.method !== "revote" && r.result.method !== "choose") fail("This tie isn't settled by a revote.");
   const candidates = r.result.tiedIds.filter((id) => isAlive(getPlayer(s, id)));
-  if (candidates.length < 2) fail("Fewer than two tied players are left. Decide the tie by hand.");
+  if (candidates.length === 1) {
+    // The others in the tie have left the game, so the one still in had the most votes among those left.
+    log(ctx, `Only ${nameOf(s, candidates[0])} is left of the tie`);
+    banish(ctx, r, candidates[0], "votes", r.result.tiedIds);
+    return;
+  }
+  if (candidates.length === 0) fail("Nobody in the tie is still in the game. Rerun the vote from the Fix tab.");
   r.status = "done";
-  const kind: VoteKind = r.kind === "circle" ? "revote" : "endgameRevote";
+  const kind: VoteKind = r.kind === "circle" || r.kind === "revote" ? "revote" : "endgameRevote";
   const next = openRound(ctx, kind, {
     voters: aliveIds(s),
     candidates,
@@ -1134,7 +1152,7 @@ function spinTie(ctx: Ctx): void {
   requireHost(ctx);
   const { s } = ctx;
   const r = requireTiedRound(ctx);
-  if (r.result.method !== "spin") fail("This tie isn't settled by a spin.");
+  if (r.result.method !== "spin" && r.result.method !== "choose") fail("This tie isn't settled by a spin.");
   const tied = r.result.tiedIds;
   const candidates = tied.filter((id) => isAlive(getPlayer(s, id)));
   if (!candidates.length) fail("Nobody in the tie is still in the game.");
@@ -1601,9 +1619,20 @@ function endGameEarly(ctx: Ctx, a: ActionOf<"endGameEarly">): void {
   finale(ctx, "The host ended the game early.", true);
 }
 
+function revealFinale(ctx: Ctx): void {
+  requireHost(ctx);
+  requirePhase(ctx, "FINALE");
+  const f = ctx.s.finale!;
+  if (f.revealed) fail("The result is already revealed.");
+  f.revealed = true;
+  emit(ctx, "finale", PUBLIC, { winner: f.winner, winnerIds: f.winnerIds, reason: f.reason, early: f.early });
+  log(ctx, `Revealed the result: the ${f.winner === "traitors" ? "Traitors" : "Innocents"} win`);
+}
+
 function closeGame(ctx: Ctx): void {
   requireHost(ctx);
   requirePhase(ctx, "FINALE");
+  if (!ctx.s.finale?.revealed) fail("Reveal the result first.");
   ctx.s.closed = true;
   emit(ctx, "closed", PUBLIC, {});
   log(ctx, "Closed the game");
@@ -1630,10 +1659,11 @@ function finale(ctx: Ctx, reason: string, early = false): void {
   closeMission(ctx);
   const n = lastNight(s);
   if (n?.resolved) n.revealed = true;
-  s.finale = { winner, winnerIds, reason, early, endedAt: ctx.at, suspicion };
+  s.finale = { revealed: false, winner, winnerIds, reason, early, endedAt: ctx.at, suspicion };
   s.phase = "FINALE";
   s.paused = false;
   s.pausedAt = null;
   setTimer(s, ctx.at, null);
-  emit(ctx, "finale", PUBLIC, { winner, winnerIds, reason, early });
+  // Only the host learns the result now; everyone else sees it when the host reveals it.
+  emit(ctx, "gameOver", HOST, { winner, reason, early });
 }

@@ -32,7 +32,8 @@ export type MissionKind = "team" | "individual";
  */
 export type VoteKind = "circle" | "revote" | "endgame" | "endgameBanish" | "endgameRevote" | "reward";
 export type RoundStatus = "open" | "revealing" | "tied" | "done";
-export type TieMethod = "revote" | "spin" | "host";
+/** revote: another vote between the tied; choose: the host picks a spin or another revote. */
+export type TieMethod = "revote" | "spin" | "host" | "choose";
 export type EndgameChoice = "end" | "banish";
 
 export interface Player {
@@ -180,6 +181,8 @@ export interface LogEntry {
 }
 
 export interface Finale {
+  /** The game is decided; screens show the result only once the host reveals it. */
+  revealed: boolean;
   winner: Team;
   winnerIds: string[];
   reason: string;
@@ -277,6 +280,7 @@ export type ActionPayload =
   | ({ type: "revivePlayer"; playerId: string } & WithReason)
   | ({ type: "setRole"; playerId: string; role: Role } & WithReason)
   | ({ type: "endGameEarly" } & WithReason)
+  | { type: "revealFinale" }
   | { type: "closeGame" };
 
 export type ActionType = ActionPayload["type"];

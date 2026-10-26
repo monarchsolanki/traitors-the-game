@@ -26,7 +26,8 @@ export function Avatar({
 }: {
   name: string;
   url: string | null;
-  size?: number;
+  /** Pixels, or any CSS length (e.g. "min(8vw,7.5rem)") for screens that scale with the room. */
+  size?: number | string;
   ghost?: boolean;
   ring?: boolean;
   className?: string;
@@ -42,7 +43,7 @@ export function Avatar({
       ) : (
         <span
           className="absolute inset-0 grid place-items-center font-display font-semibold text-gold"
-          style={{ fontSize: size * 0.38 }}
+          style={{ fontSize: typeof size === "number" ? size * 0.38 : `calc(${size} * 0.38)` }}
         >
           {initials(name)}
         </span>

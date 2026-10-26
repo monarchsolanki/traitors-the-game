@@ -206,7 +206,7 @@ function RoundOutcome({ game, round }: { game: GameHandle; round: RoundView }) {
   if (r.outcome === "tie") {
     return (
       <Notice title="It's a tie">
-        Between {r.tiedIds.map(name).join(" and ")}. {r.method === "revote" ? "A revote is next." : r.method === "spin" ? "A spin decides." : "The host decides."}
+        Between {r.tiedIds.map(name).join(" and ")}. {r.method === "revote" ? "A revote is next." : r.method === "spin" ? "A spin decides." : r.method === "choose" ? "The host chooses: a spin or another revote." : "The host decides."}
       </Notice>
     );
   }

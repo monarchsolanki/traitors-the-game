@@ -10,6 +10,7 @@ import { Card, TextField } from "@/components/ui/Field";
 import { Sheet } from "@/components/ui/Sheet";
 import { ErrorLine } from "@/components/player/shared";
 import { useHostSend } from "./GameControls";
+import { presence, SeatDot } from "./SeatDot";
 
 async function loadImage(file: File): Promise<CanvasImageSource & { width: number; height: number }> {
   try {
@@ -160,6 +161,11 @@ export function PlayersPanel({ game }: { game: GameHandle }) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-ink-muted">Tap a player to add their photo, rename them, or fix their seat.</p>
+      <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-muted">
+        <span className="flex items-center gap-1.5"><SeatDot state="online" /> phone connected</span>
+        <span className="flex items-center gap-1.5"><SeatDot state="offline" /> not connected</span>
+        <span className="flex items-center gap-1.5"><SeatDot state="bot" /> bot</span>
+      </p>
       <Card className="p-2">
         <ul className="flex flex-col divide-y divide-gold/10">
           {view.players.map((p) => {
@@ -169,7 +175,10 @@ export function PlayersPanel({ game }: { game: GameHandle }) {
                 <button type="button" onClick={() => setEditing(p.id)} className="flex w-full items-center gap-3 px-2 py-3 text-left">
                   <Avatar name={p.displayName} url={game.photoFor(p.photoPath)} size={52} ghost={p.status !== "alive"} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-lg">{p.displayName}</span>
+                    <span className="flex items-center gap-2 text-lg">
+                      <span className="truncate">{p.displayName}</span>
+                      <SeatDot state={presence(game.seats.find((x) => x.playerId === p.id), game.now())} />
+                    </span>
                     <span className={`text-sm ${seat.tone}`}>
                       {p.status !== "alive" ? `${p.status === "left" ? "Left" : p.status === "murdered" ? "Murdered" : "Banished"} · ` : ""}
                       {seat.text}

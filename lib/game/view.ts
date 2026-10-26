@@ -117,6 +117,8 @@ export interface PublicView {
   night: NightView | null;
   events: EventView[];
   finale: FinaleView | null;
+  /** The game is decided but the host hasn't revealed the result yet. */
+  finalePending: boolean;
 }
 
 export interface MeView {
@@ -207,7 +209,7 @@ function buildPublic(
   viewer: Viewer["kind"],
   o: { mask: boolean; allRoles: boolean; events: EventFilter },
 ): PublicView {
-  const finale = s.phase === "FINALE";
+  const finale = s.phase === "FINALE" && !!s.finale?.revealed;
   const victim = o.mask ? pendingVictimId(s) : null;
   const players: PlayerView[] = s.players.map((p) => {
     const status = p.id === victim ? "alive" : p.status;
@@ -267,7 +269,9 @@ function buildPublic(
     events: s.events
       .filter((e) => o.events(e.audience))
       .map((e) => ({ id: e.id, at: e.at, day: e.day, type: e.type, data: structuredClone(e.data) })),
-    finale: s.finale
+    finalePending: s.phase === "FINALE" && !s.finale?.revealed,
+    finale:
+      s.finale && (s.finale.revealed || o.allRoles)
       ? {
           winner: s.finale.winner,
           winnerIds: [...s.finale.winnerIds],

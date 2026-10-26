@@ -63,6 +63,7 @@ export const clientActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("revivePlayer"), playerId: id, reason }),
   z.object({ type: z.literal("setRole"), playerId: id, role, reason }),
   z.object({ type: z.literal("endGameEarly"), reason }),
+  z.object({ type: z.literal("revealFinale") }),
   z.object({ type: z.literal("closeGame") }),
 ]);
 

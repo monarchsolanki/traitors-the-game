@@ -20,6 +20,8 @@ export interface GameHandle {
   /** Server time now, in ms (for countdowns). */
   now: () => number;
   photoFor: (path: string | null) => string | null;
+  /** Server time when this screen first saw an event (for timing reveals that arrive late). */
+  seenAt: (eventId: string) => number | null;
   refresh: () => Promise<void>;
   /** Sends an action. strict = refuse if the game moved on since this screen loaded (host buttons). */
   act: (action: ClientAction, o?: { strict?: boolean }) => Promise<{ ok: boolean; error?: string }>;
@@ -29,13 +31,14 @@ export interface GameHandle {
 const TICK_GRACE: Record<GameKind, number> = { host: 400, screen: 900, player: 2500 };
 
 export function useGame(code: string, kind: GameKind): GameHandle {
-  const [data, setData] = useState<ViewResponse | null>(null);
+  const [data, setData] = useState<(ViewResponse & { seenAt: Record<string, number> }) | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [connection, setConnection] = useState<Connection>("connecting");
   const offset = useRef(0);
   const photos = useRef<Record<string, string>>({});
   const versionRef = useRef(-1);
+  const seen = useRef<Record<string, number>>({});
   const inflight = useRef<Promise<void> | null>(null);
 
   const accept = useCallback((r: Partial<ViewResponse>) => {
@@ -43,8 +46,16 @@ export function useGame(code: string, kind: GameKind): GameHandle {
     if (typeof r.serverNow === "number") offset.current = r.serverNow - Date.now();
     if (r.photoUrls) photos.current = { ...photos.current, ...r.photoUrls };
     if (r.view.version < versionRef.current) return;
+    const firstLoad = versionRef.current < 0;
     versionRef.current = r.view.version;
+    const serverNow = r.serverNow ?? Date.now() + offset.current;
+    // On first load everything is old news (no replays); later events are timed from when they arrive.
+    for (const e of r.view.events) {
+      if (!(e.id in seen.current)) seen.current[e.id] = firstLoad ? e.at : Math.max(e.at, serverNow - 1_000);
+    }
+    const seenAt = { ...seen.current };
     setData((prev) => ({
+      seenAt,
       view: r.view!,
       serverNow: r.serverNow ?? prev?.serverNow ?? Date.now(),
       photoUrls: photos.current,
@@ -157,6 +168,8 @@ export function useGame(code: string, kind: GameKind): GameHandle {
 
   const now = useCallback(() => Date.now() + offset.current, []);
   const photoFor = useCallback((path: string | null) => (path ? photos.current[path] ?? null : null), []);
+  const seenMap = data?.seenAt;
+  const seenAt = useCallback((id: string) => seenMap?.[id] ?? null, [seenMap]);
 
   return useMemo(
     () => ({
@@ -168,10 +181,11 @@ export function useGame(code: string, kind: GameKind): GameHandle {
       connection,
       now,
       photoFor,
+      seenAt,
       refresh,
       act,
       accept,
     }),
-    [act, accept, connection, data, error, notFound, now, photoFor, refresh],
+    [act, accept, connection, data, error, notFound, now, photoFor, refresh, seenAt],
   );
 }

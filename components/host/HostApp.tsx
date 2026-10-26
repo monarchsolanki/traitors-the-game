@@ -5,11 +5,13 @@ import Link from "next/link";
 import { PHASE_TITLE } from "@/lib/client/labels";
 import { useGame } from "@/lib/client/useGame";
 import { TopBar } from "@/components/ui/TopBar";
+import { FixPanel } from "./FixPanel";
 import { GameControls } from "./GameControls";
+import { LogPanel } from "./LogPanel";
 import { PlayersPanel } from "./PlayersPanel";
 import { SettingsPanel } from "./SettingsPanel";
 
-type Tab = "game" | "players" | "settings";
+type Tab = "game" | "players" | "fix" | "log" | "settings";
 
 export function HostApp({ code }: { code: string }) {
   const game = useGame(code.toUpperCase(), "host");
@@ -32,6 +34,8 @@ export function HostApp({ code }: { code: string }) {
   const tabs: Array<{ id: Tab; label: string }> = [
     { id: "game", label: "Game" },
     { id: "players", label: "Players" },
+    { id: "fix", label: "Fix" },
+    { id: "log", label: "Log" },
     { id: "settings", label: "Settings" },
   ];
 
@@ -49,6 +53,8 @@ export function HostApp({ code }: { code: string }) {
       <main className="mx-auto w-full max-w-xl flex-1 px-4 pt-5 pb-32">
         {tab === "game" ? <GameControls game={game} /> : null}
         {tab === "players" ? <PlayersPanel game={game} /> : null}
+        {tab === "fix" ? <FixPanel game={game} /> : null}
+        {tab === "log" ? <LogPanel game={game} /> : null}
         {tab === "settings" ? <SettingsPanel game={game} /> : null}
       </main>
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-gold/15 bg-night/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">

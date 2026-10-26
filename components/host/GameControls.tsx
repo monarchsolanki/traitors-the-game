@@ -12,6 +12,9 @@ import { Card, Notice, Segmented, TextField, Toggle } from "@/components/ui/Fiel
 import { PlayerGrid } from "@/components/ui/PlayerGrid";
 import { Sheet } from "@/components/ui/Sheet";
 import { ErrorLine, gridPlayers, playerById } from "@/components/player/shared";
+import { downloadPaperFallback } from "@/lib/client/paper";
+import { OverrideSheet } from "./FixPanel";
+import { presence } from "./SeatDot";
 
 const MISSION_IDEAS: Array<{ name: string; kind: MissionKind }> = [
   { name: "Bhoot-Bollywood Dumb Charades", kind: "team" },
@@ -79,6 +82,17 @@ function Confirm({
 
 function names(game: GameHandle, ids: string[]): string {
   return ids.map((id) => playerById(game.view!, id)?.displayName ?? id).join(", ");
+}
+
+/** Names with "(phone off)" after anyone whose phone isn't connected, for the waiting-on lists. */
+function namesWithPresence(game: GameHandle, ids: string[]): string {
+  const now = game.now();
+  return ids
+    .map((id) => {
+      const n = playerById(game.view!, id)?.displayName ?? id;
+      return presence(game.seats.find((s) => s.playerId === id), now) === "offline" ? `${n} (phone off)` : n;
+    })
+    .join(", ");
 }
 
 function TimerControls({ game }: { game: GameHandle }) {
@@ -321,7 +335,7 @@ function VotingControls({ game, round }: { game: GameHandle; round: VoteRound })
           <span className="font-semibold text-gold">{living.length - waiting.length}</span> of {living.length} living players have voted
           {round.ballots.some((b) => b.ghost) ? ` (+${round.ballots.filter((b) => b.ghost).length} ghost)` : ""}.
         </p>
-        <p className="mt-1 text-ink-muted">{waiting.length ? `Waiting on: ${names(game, waiting)}` : "Every living vote is in."}</p>
+        <p className="mt-1 text-ink-muted">{waiting.length ? `Waiting on: ${namesWithPresence(game, waiting)}` : "Every living vote is in."}</p>
         {ghostsLeft.length ? (
           <p className="mt-1 text-sm text-ink-muted">Ghosts who could still use their one vote: {names(game, ghostsLeft)}</p>
         ) : null}
@@ -345,6 +359,8 @@ function RevealControls({ game, round }: { game: GameHandle; round: VoteRound })
   const view = game.view!;
   const { busy, error, send } = useHostSend(game);
   const [pick, setPick] = useState<string | null>(null);
+  const [byHand, setByHand] = useState(false);
+  const [handPick, setHandPick] = useState<string | null>(null);
   const shown = round.revealOrder.slice(0, round.revealedCount).map((id) => round.ballots.find((b) => b.voterId === id)!);
   const name = (id: string | null) => playerById(view, id)?.displayName ?? "";
   const tie = round.status === "tied" && round.result?.outcome === "tie" ? round.result : null;
@@ -372,11 +388,47 @@ function RevealControls({ game, round }: { game: GameHandle; round: VoteRound })
               Start the revote
             </Button>
           ) : null}
+          {tie.method === "choose" ? (
+            <>
+              <p className="text-ink-muted">Still tied after {view.settings.tieRevotesBeforeChoice} {view.settings.tieRevotesBeforeChoice === 1 ? "revote" : "revotes"}. Your call:</p>
+              <Button busy={busy} onClick={() => send({ type: "startRevote" })}>
+                Vote again
+              </Button>
+              <Button variant="secondary" busy={busy} onClick={() => send({ type: "spinTie" }, true)}>
+                Spin
+              </Button>
+            </>
+          ) : null}
           {tie.method === "spin" ? (
             <Button busy={busy} onClick={() => send({ type: "spinTie" }, true)}>
               Spin
             </Button>
           ) : null}
+          {tie.method !== "host" ? (
+            <Button variant="quiet" size="md" onClick={() => setByHand(true)}>
+              Decide by hand instead
+            </Button>
+          ) : null}
+          <OverrideSheet
+            game={game}
+            open={byHand}
+            title="Decide the tie by hand"
+            label={handPick ? `Banish ${name(handPick)}` : "Pick a player"}
+            danger
+            disabled={!handPick}
+            onClose={() => {
+              setByHand(false);
+              setHandPick(null);
+            }}
+            action={(reason) => (handPick ? { type: "decideTie", playerId: handPick, reason } : null)}
+          >
+            <PlayerGrid
+              players={gridPlayers(game, view.players.filter((p) => tie.tiedIds.includes(p.id) && p.status === "alive"))}
+              selectedId={handPick}
+              onSelect={setHandPick}
+              size={56}
+            />
+          </OverrideSheet>
           {tie.method === "host" ? (
             <>
               <PlayerGrid players={gridPlayers(game, view.players.filter((p) => tie.tiedIds.includes(p.id)))} selectedId={pick} onSelect={setPick} size={56} />
@@ -533,6 +585,9 @@ function LobbyControls({ game }: { game: GameHandle; }) {
         <p className="font-mono text-base break-all text-ink">{joinUrl}</p>
         <p className="text-ink-muted">or go to the home page and enter the room code</p>
         <p className="font-mono text-5xl tracking-[0.25em] text-gold">{view.code}</p>
+        <a href={`/screen/${view.code}`} target="_blank" rel="noreferrer" className="mt-2 text-gold underline underline-offset-4">
+          Open the big screen (QR code for everyone)
+        </a>
       </Card>
       <Card>
         <p className="text-lg">
@@ -540,6 +595,11 @@ function LobbyControls({ game }: { game: GameHandle; }) {
           <span className="font-semibold text-gold">{claimed.length - unconfirmed.length}</span> confirmed.
         </p>
         {open.length ? <p className="mt-1 text-ink-muted">Waiting on: {names(game, open.map((p) => p.id))}</p> : null}
+        {claimed.length ? (
+          <p className="mt-1 text-sm text-ink-muted">
+            Phones connected: {claimed.filter((p) => presence(game.seats.find((s) => s.playerId === p.id), game.now()) !== "offline").length} of {claimed.length}
+          </p>
+        ) : null}
         {unconfirmed.length ? <p className="mt-1 text-ink-muted">To confirm: {names(game, unconfirmed.map((p) => p.id))}</p> : null}
       </Card>
       {unconfirmed.length ? (
@@ -573,17 +633,35 @@ function LobbyControls({ game }: { game: GameHandle; }) {
 function FinaleControls({ game }: { game: GameHandle }) {
   const view = game.view!;
   const { busy, error, send } = useHostSend(game);
+  const [confirm, setConfirm] = useState(false);
   const f = view.finale!;
+  const revealed = !view.finalePending;
   return (
     <div className="flex flex-col gap-4">
       <Card className="text-center">
+        {!revealed ? <p className="text-sm text-ink-muted">Only you see this. Everyone else sees &ldquo;Hold on&rdquo;.</p> : null}
         <p className={`font-display text-4xl ${f.winner === "traitors" ? "text-kumkum" : "text-gold"}`}>
           {f.winner === "traitors" ? "The Traitors win" : "The Innocents win"}
         </p>
         <p className="text-ink-muted">{f.reason}</p>
         <p className="mt-2">Winners: {names(game, f.winnerIds)}</p>
       </Card>
-      {!view.closed ? (
+      {!revealed ? (
+        <>
+          <Button onClick={() => setConfirm(true)}>Reveal to everyone</Button>
+          <Notice>Take your time: do the build-up in the room first. The big screen and every phone show the final reveal the moment you tap.</Notice>
+          <Confirm
+            open={confirm}
+            title="Reveal the result?"
+            body="The big screen and every phone show who won and every role."
+            action="Reveal now"
+            busy={busy}
+            error={error}
+            onConfirm={async () => (await send({ type: "revealFinale" }, true)) && setConfirm(false)}
+            onClose={() => setConfirm(false)}
+          />
+        </>
+      ) : !view.closed ? (
         <Button variant="secondary" busy={busy} onClick={() => send({ type: "closeGame" })}>
           Close the game
         </Button>
@@ -634,6 +712,9 @@ export function GameControls({ game }: { game: GameHandle }) {
       body = (
         <ChoicePoint game={game}>
           <Notice>{unseen.length ? `Still to open their role: ${names(game, unseen)}` : "Everyone has opened their role."}</Notice>
+          <Button variant="secondary" onClick={() => downloadPaperFallback(view)}>
+            Save the offline copy of roles
+          </Button>
         </ChoicePoint>
       );
       break;
