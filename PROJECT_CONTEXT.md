@@ -1015,7 +1015,13 @@ Dashboard labels change over time; confirm the current names while clicking thro
 
 `.env.local` is git-ignored. `.env.example` lists the names only.
 
-**Gotcha:** `NEXT_PUBLIC_SUPABASE_URL` is the bare project URL (`https://<ref>.supabase.co`), with nothing after `.supabase.co`. The dashboard also shows the data API address ending in `/rest/v1/`; pasting that breaks every request (the 26 October setup hit this).
+**Gotcha:** `NEXT_PUBLIC_SUPABASE_URL` is the bare project URL (`https://<ref>.supabase.co`), with nothing after `.supabase.co`. The dashboard also shows the data API address ending in `/rest/v1/`; pasting that breaks every request (the 26 October setup hit this, locally and again in Vercel on 27 October).
+
+**Vercel variable types (27 October):** the two `NEXT_PUBLIC_` variables must be type **Config** (they're public by design and built into the page). Vercel refuses to save a **Secret** with a `NEXT_PUBLIC_` prefix and can't turn a secret into Config, so a wrong one is removed and added again. `SUPABASE_SECRET_KEY` stays a **Secret**. A `NEXT_PUBLIC_` change needs a redeploy, because the value is built into the app.
+
+**Health check:** `https://traitors-the-game.vercel.app/api/health` reports whether each variable is present and well-formed, whether the database answers, and the server region (never the values). Every line should say `ok` and the region `bom1`.
+
+**Function region:** Vercel → Settings → Functions → Function Region → Mumbai, India (`bom1`), next to the database (set 27 October).
 
 ### 18.3 Local development
 

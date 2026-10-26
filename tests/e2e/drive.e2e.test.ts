@@ -1,4 +1,6 @@
 import { describe, it } from "vitest";
+import { seededRand } from "@/lib/game/random";
+import { hostProgress } from "@/lib/game/simulator";
 import type { ActionPayload } from "@/lib/game/types";
 import { runBots } from "@/lib/server/bots";
 import { createStoredGame, loadGame, runAction, runActionOrThrow } from "@/lib/server/games";
@@ -45,6 +47,28 @@ describe.skipIf(!mode)("manual driver", () => {
         game = r.game;
       }
       console.log(`DRIVE bots moved ${total}`);
+    }
+    if (mode === "autoplay") {
+      // Plays the game to the end: host moves from the simulator, bots for everyone else.
+      const rand = seededRand("autoplay", code);
+      let game = await loadGame(code);
+      for (let step = 0; step < 800 && game.state.phase !== "FINALE"; step++) {
+        let moved = false;
+        for (const m of hostProgress(game.state, rand, { missionRate: 0.5, shieldRate: 0.5 })) {
+          if ((await runAction(code, { kind: "host" }, m, `drv-auto-${game.state.version}-${m.type}`)).ok) {
+            moved = true;
+            break;
+          }
+        }
+        if (!moved) moved = (await runBots(game, 4)).moves > 0;
+        if (!moved) {
+          for (const f of [{ type: "lockVoting" }, { type: "lockRewardVote" }, { type: "resolveNight" }, { type: "finishReveal" }] as ActionPayload[]) {
+            if ((await runAction(code, { kind: "host" }, f, `drv-force-${game.state.version}-${f.type}`)).ok) break;
+          }
+        }
+        game = await loadGame(code);
+      }
+      console.log(`DRIVE autoplay finished: ${game.state.finale?.winner ?? "unfinished"} after ${game.state.day} days`);
     }
     if (mode === "delete") {
       await db.from("games").delete().eq("code", code);
