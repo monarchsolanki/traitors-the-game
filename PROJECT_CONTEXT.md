@@ -162,7 +162,7 @@ It merges the earlier planning doc ("Traitors Party App — Build Plan", 26 Octo
 
 ### 4.2 Settings
 
-Keys are proposals; Claude Code may rename them but must keep this table in sync.
+The keys are final as of Step 1 and live in `lib/game/settings.ts` (each with its default, allowed range, zod validation, label, help text and its after-dealing rule). Keep this table in sync with that file.
 
 | Setting | Key | Default | Allowed | After dealing |
 | --- | --- | --- | --- | --- |
@@ -394,6 +394,46 @@ The End Game threshold is checked only after a Circle banishment, never after a 
 | Every living ballot is in but a ghost hasn't decided | Voting stays open until the host locks it or the timer ends; an unused ghost vote carries over |
 | Two taps arrive at once | The version check accepts the first and rejects the second as stale |
 | The internet drops for everyone | Paper fallback: the host's offline copy of roles, paper ballots, results entered later |
+| A ghost tries to vote twice in a game | Rejected: the ghost vote is once per game, and the first ghost ballot is final |
+| A ghost votes at the Circle where they were banished | Not allowed: their ghost vote opens at the next standard Circle |
+| Every living ballot is in but a ghost hasn't decided | Voting stays open until the host locks it or the timer ends; an unused ghost vote carries over |
+| The host reruns a vote | Every ballot is cleared; daggers and ghost votes used in it are given back (a dagger expires instead if the player was handed another one meanwhile) |
+| The host ends the game in the middle of a night | The night is left unresolved; nobody dies; the final reveal uses the current state |
+
+### 5.10 How the engine applies these rules (Step 1, 26 October)
+
+`lib/game/engine.ts` implements 5.1 to 5.9. Where the text above left room, the engine does the following. Items marked **flag** are interpretations Monarch should confirm (also listed in section 16); each has a safe default that is already built.
+
+**Phases and checks**
+- **Flag: 2 players left.** 5.2 says "in the End Game with 2 players left", but 5.3 says "2 players left" ends the game at any point. The engine follows 5.3: after any banishment (or a host elimination) that leaves 2 or fewer alive, it goes straight to the final reveal, even if the End Game hadn't started. It only matters when the threshold is very low.
+- Once the End Game starts it never goes back to nights, even if the host revives someone.
+- After a host override that leaves no Traitors alive, or 2 or fewer players, the game goes to the final reveal at once.
+- A timer running out is applied by a `tick` action that any screen may send; the engine checks the server deadline and ignores early ticks. Debate timeout opens voting; vote timeout locks voting; night timeout resolves the night; reward-vote timeout settles the reward.
+- Pause: timers stop, and votes, picks, poll answers, recruit answers and reward votes wait. The host can still act, players can still open their role, and Traitors can still chat. A pending recruit offer's timer stops too.
+
+**Night**
+- A Traitor's pick can change until every living Traitor has picked. The moment the last one picks, the night ends (5.1 "all picks are in").
+- **Flag: unanimous murder rule.** Every living Traitor must pick the same player. For a Traitor-on-Traitor murder under `unanimous`, the target's own pick is ignored (they can't pick themselves), so a sacrifice works when every other Traitor agrees. A missing pick means nobody dies.
+- A shield protects during the first night that ends after it was given, then expires. A shield the host gives at breakfast protects that coming night.
+- At breakfast the murder victim still shows as alive on every screen, including their own phone, until the host reveals the murder. Then their phone switches to the ghost screen.
+- Fellow Traitors see whether each other has picked, not whom (the chat is for agreeing). A recruited Traitor sees the whole chat history from the night they join.
+- Ghosts who were Traitors no longer see the Traitor chat or the list of fellow Traitors (9.4: ghosts never see anyone else's role).
+
+**Voting**
+- Ballots are revealed in a random order fixed when voting locks; the host reveals them one by one, then settles the result.
+- If nobody votes, every player on the ballot is tied.
+- Deciding a tie by hand when the tie rule isn't `hostDecides` is allowed as a logged override with a reason (for recovery, such as a tied player leaving).
+- **Flag: End Game abstentions.** A unanimous End needs every living player to vote End; a missing ballot counts as not-End, so one more banishment follows.
+- End Game ballots (End or Banish) are revealed one by one too, inside the End Game phase.
+
+**Missions and awards**
+- Mission winners and every award are private to the host and the recipient (5.6 "holdings are private" wins over 9.7's "events feed of awards"). The public sees each mission's name, type, win rule and tie rule.
+- In a reward vote, the mission winners vote; nobody votes for themselves; only winners not already holding that ability can receive it, and at least two must be free. A tie, or no votes, is settled at random. Only the recipient learns the result.
+
+**Host tools**
+- Overrides after dealing need a reason and are logged: change a frozen rule (never the Traitor count), add a player (with a role), mark eliminated (murdered, banished or left), revive, change a role (the player must peek again), give, move or remove a held item, enter or correct a ballot, rerun a vote, resolve a night by hand, end the game early.
+- Every successful action, by anyone, is logged with actor, time, day and phase. Chat messages aren't copied into the log (the host reads the chat itself).
+- Not yet built: undo the last step (Step 4, restoring the saved snapshot) and the ghost games (Tier 2).
 
 ---
 
@@ -786,6 +826,24 @@ Then a feature freeze, a rehearsal checklist that follows the run sheet (section
 - **Concurrency tests:** two taps at once, stale requests, duplicate idempotency keys.
 - **A full rehearsal** on real phones following the run sheet before game night. Persuasion and social balance still need human judgment.
 
+**What exists (Step 1, 26 October)**
+
+| File | Covers |
+| --- | --- |
+| `tests/settings.test.ts` | Every default in 4.2, every allowed range (good and bad values), the after-dealing rule for each setting, the cross-field checks, the default roster, no day-limit setting |
+| `tests/engine.lobby.test.ts` | Roster editing, photos, seats, the settings editor, freezing at dealing, overrides, dealing (counts, seeded randomness, threshold), versioning |
+| `tests/engine.voting.test.ts` | Circle flow, timers, ballots, abstentions, reveal order, daggers (weight 2 and 3, several at once, not in revotes, lost on elimination), every tie rule, host ballot tools, the ghost vote |
+| `tests/engine.night.test.ts` | Picks, majority and unanimous, random tie-break, Traitor-on-Traitor on and off, shields, suspect poll, Traitor chat, murder reveal and the post-murder check |
+| `tests/engine.recruitment.test.ts` | The recruitment gate: accept, refuse, timeout, the role change, the new Traitor's next night, the win check afterwards, privacy of the offer |
+| `tests/engine.missions.test.ts` | Optional missions, awards to several players, no doubles, ghosts can't receive, change and undo awards, the private reward vote |
+| `tests/engine.endgame.test.ts` | Win check, threshold only after a Circle, no day limit (a 16-day game), End Game vote, banishment loop, ties, 2 players left, winners with and without eliminated players, ending early |
+| `tests/engine.host.test.ts` | Pause and resume, timers, every override, the action log, and every edge case in 5.9 |
+| `tests/view.test.ts` | `viewFor` for the host, co-host, Innocent, Traitor, ghost and big screen, including the hidden murder victim before the reveal |
+| `tests/regressions.test.ts` | Bugs the simulator found |
+| `tests/simulator.test.ts` | Bot games across 5, 10, 11, 12 and 20 players and 9 settings profiles (including chaos with random host overrides), checking `lib/game/invariants.ts` and `lib/game/leaks.ts` after every action |
+
+Run `npm test` for everything with a quick bot sweep (about 135 games), or `npm run simulate` for about 2,700 bot games (2 to 3 minutes). The privacy checker (`findLeaks`) tests every viewer's view against 9.4 and is reused in Step 4.
+
 ---
 
 ## 14. Decision log
@@ -833,6 +891,8 @@ All decisions dated 26 October 2026 unless noted.
 | Build schedule (26 Oct) | Not a constraint: build the full scope properly. Unfinished work at the freeze is still switched off, never half-shipped | Owner's instruction |
 | Player names and photos (26 Oct) | Uploaded later by the host in the roster editor, any time; initials avatars until then | Owner's instruction |
 | Look (26 Oct) | Diwali-led theme: elegant, uncluttered, mobile-first, easy for non-technical players; Omertà as a reference (section 9.8) | Owner's instruction |
+| Rules engine (26 Oct) | One pure function, `applyGameAction`, with seeded randomness (deal, tie-breaks, spins) so every game can be replayed; interpretations recorded in 5.10 | CLAUDE.md working rules; reproducible bugs |
+| Bot simulator findings (26 Oct) | The simulator found three bugs, now fixed with regression tests: a recruit offer visible to a player turned Traitor mid-night; ending the game mid-night half-resolving it; a rerun vote leaving a player with two daggers | Section 13: bot games find broken scenarios |
 | One context file (26 Oct) | The planning doc ("Traitors Party App — Build Plan.docx") is merged into this file with nothing left out, and the .docx is removed from the repo (it stays in the first commit's history) | Owner's instruction: one file holds everything |
 
 ---
@@ -858,6 +918,9 @@ Each has a safe default, so the build doesn't wait on them.
 - [x] Player photos: the host uploads names and photos later in the roster editor (decided 26 October)
 - [x] Eliminated Traitors still win if any Traitor survives: yes (decided 26 October)
 - [ ] Ghost vote details: usable in revotes or the End Game? (default: no to both)
+- [ ] 2 players left after a standard Circle: final reveal at once, as 5.3 says? (default: yes; see 5.10)
+- [ ] Unanimous murder rule with a Traitor sacrifice: ignore the target Traitor's own pick? (default: yes; see 5.10)
+- [ ] End Game: does a missing ballot block a unanimous End? (default: yes; see 5.10)
 - [ ] Run sheet buffer: 15 to 20 minutes after 11:05 PM, with Housie moving back if used
 - [ ] Run sheet: final approval
 

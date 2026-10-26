@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "simulate": "SIM_GAMES_PER=60 vitest run tests/simulator.test.ts --silent=false"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
