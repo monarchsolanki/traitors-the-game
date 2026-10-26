@@ -1,6 +1,7 @@
 import { Diya } from "@/components/ui/Diya";
 import { Rangoli } from "@/components/ui/Rangoli";
 import { Toran } from "@/components/ui/Toran";
+import { JoinForm } from "@/components/JoinForm";
 
 export default function Home() {
   return (
@@ -35,9 +36,7 @@ export default function Home() {
           Saturday 31 October
         </p>
 
-        <p className="rounded-full border border-gold/30 bg-surface/80 px-6 py-3 text-base text-ink">
-          The game opens on party night
-        </p>
+        <JoinForm />
       </main>
     </div>
   );

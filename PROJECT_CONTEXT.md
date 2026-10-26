@@ -600,6 +600,8 @@ One web app, three synced views, all updated live: the host's control panel, eac
 - PINs are stored hashed. `pinMaxAttempts` (default 5) wrong tries lock the seat until the host unlocks it.
 - Every override and hand-entered vote is logged with who, when and why.
 - A seat is bound to a session; a refresh or a new tab rejoins with the PIN.
+- **How it's built (Step 2, 26 October).** Each phone signs in anonymously with Supabase Auth the first time it opens a game; the session lives in the browser's local storage, separately for the host and for players, so one laptop can be the host in one tab and a player in another. Every request to the server sends the session's access token; the server verifies it (`getClaims`) and works out who is asking: the game's host, a seated player (looked up in `seats`), or nobody. There are no cookies and no proxy.
+- **Taking a seat:** tap your photo, choose a 4-digit PIN and type it again. If the seat is already taken, entering its PIN moves the seat to this phone (a refresh, a new phone, a closed tab). Wrong PINs count; at `pinMaxAttempts` the seat locks until the host unlocks it. One phone holds at most one seat per game. The host can reset a seat (clears the phone and the PIN).
 
 ### 9.6 Reliability
 
@@ -618,7 +620,7 @@ The main risks on the night are an accidental leak or a stuck game, not an attac
 | --- | --- | --- |
 | `hosts` | Users allowed to create games (host sign-in is Supabase Auth email and password) | Server only |
 | `games` | Room code, phase, day, version, status, and the full engine `state` (JSON). Check constraints keep `state.version`, `state.code` and `state.phase` equal to the columns; a trigger rejects any update that doesn't raise the version | Server only |
-| `seats` | Player ↔ phone (anonymous auth user), hashed PIN, failed attempts, locked flag, last seen; one seat per phone per game | Server only |
+| `seats` | Player ↔ phone (anonymous auth user), hashed PIN (scrypt), failed attempts, locked flag, last seen, bot flag (Step 2: a bot seat has no phone and no PIN); one seat per phone per game | Server only |
 | `game_actions` | Append-only ledger: idempotency key (unique per game), actor, action, versions before and after (exactly one apart, unique per game), and the state after every action (for undo and recovery) | Server only |
 | `game_pings` | Room code and version only | Everyone (read-only), and sent over Supabase Realtime |
 | `presets` | Saved settings and rosters (tier 2) | Server only |
@@ -910,6 +912,10 @@ All decisions dated 26 October 2026 unless noted.
 | Data model (26 Oct, finalizes 9.7) | The full engine state is stored as JSON in a server-only `games` table, saved by one version-checked database function with an idempotency ledger and per-action snapshots; browsers can read only room-code version pings | One atomic write per action; `viewFor` stays the only way out; no client ever touches a secret table; snapshots make undo and recovery simple |
 | Host sign-in (26 Oct, finalizes 9.5) | Supabase Auth email and password, allowed only if listed in `hosts` | No extra passcode system; works on the host's phone and laptop |
 | Migrations (26 Oct) | Supabase CLI, applied with `supabase db push` | Owner's choice |
+| Server routes (26 Oct, Step 2) | One action route runs the engine for every in-game action; separate routes for creating a game, taking a seat with a PIN, host seat tools, photo uploads and bots. Host buttons send the version they saw, so a double tap is refused; player actions are retried on the newer state | Section 9.3; two taps can never both advance the game, while many players can vote at once |
+| Requests carry the access token (26 Oct, Step 2) | The browser sends its Supabase access token on each request; no cookie session or proxy | Simplest reliable setup with Cache Components on; the server verifies every request |
+| Vercel region (26 Oct, Step 2) | Server functions run in Mumbai (`bom1`, set in `vercel.json`), next to the database | Vercel's default region is in the US; every game action would otherwise cross the world twice |
+| Bot seats (26 Oct, Step 2) | The host fills empty seats with bots for solo testing; bots act through the same engine and routes as players, at random, and never press host buttons | Owner's instruction: play a whole game alone |
 | Rules engine (26 Oct) | One pure function, `applyGameAction`, with seeded randomness (deal, tie-breaks, spins) so every game can be replayed; interpretations recorded in 5.10 | CLAUDE.md working rules; reproducible bugs |
 | Bot simulator findings (26 Oct) | The simulator found three bugs, now fixed with regression tests: a recruit offer visible to a player turned Traitor mid-night; ending the game mid-night half-resolving it; a rerun vote leaving a player with two daggers | Section 13: bot games find broken scenarios |
 | One context file (26 Oct) | The planning doc ("Traitors Party App — Build Plan.docx") is merged into this file with nothing left out, and the .docx is removed from the repo (it stays in the first commit's history) | Owner's instruction: one file holds everything |
@@ -1020,7 +1026,7 @@ Dashboard labels change over time; confirm the current names while clicking thro
 
 **Database migrations** (Supabase CLI, owner's choice on 26 October; installed with `brew install supabase/tap/supabase`). Migrations live in `supabase/migrations/`. One-time setup, in a terminal in this folder: `supabase login` (approve in the browser), then `supabase link --project-ref sfjgircdilkllbpuwrez` (asks for the database password). After that, `supabase db push --linked` applies any new migrations; it lists them and asks before applying (`--dry-run` shows the list without applying). `supabase migration new <name>` starts a new one, and `supabase db lint --linked` checks the database functions. Recent CLI versions link without the database password by using a temporary login role.
 
-Applied so far: `20261026120000_initial_schema.sql` (26 October). Checked from outside with the publishable key: every private table returns 401, the save functions are hidden, `game_pings` is read-only, and the `player-photos` bucket is private.
+Applied so far: `20261026120000_initial_schema.sql` (26 October). Written, waiting for the owner's OK to apply: `20261026150000_seat_bots.sql` (bot flag on seats). Checked from outside with the publishable key: every private table returns 401, the save functions are hidden, `game_pings` is read-only, and the `player-photos` bucket is private.
 
 Versions at scaffold: Next.js 16.4, React 19.3, Tailwind 4, zod 4, Vitest 5, Node 26.
 

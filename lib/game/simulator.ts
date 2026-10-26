@@ -24,7 +24,12 @@ const lastNight = (s: GameState) => s.nights[s.nights.length - 1] ?? null;
  * A random but legal-looking move for one player, or null if they have nothing to do.
  * Used by the simulator now and by bot seats later. Bots don't persuade, so this proves nothing about balance.
  */
-export function botMove(s: GameState, playerId: string, rand: Rand, o: { endChance?: number } = {}): ActionPayload | null {
+export function botMove(
+  s: GameState,
+  playerId: string,
+  rand: Rand,
+  o: { endChance?: number; chatLines?: readonly string[] } = {},
+): ActionPayload | null {
   const p = s.players.find((x) => x.id === playerId);
   if (!p || s.phase === "FINALE") return null;
   if (!p.seatClaimed) return { type: "claimSeat" };
@@ -66,7 +71,8 @@ export function botMove(s: GameState, playerId: string, rand: Rand, o: { endChan
     if (night.recruit?.targetId === playerId && !night.recruit.answer) return { type: "answerRecruit", accept: rand() < 0.5 };
     if (s.roles[playerId] === "traitor") {
       if (s.settings.traitorChat && rand() < 0.15) {
-        return { type: "sendChat", text: `chat-${playerId}-${Math.floor(rand() * 1e9)}` };
+        const text = o.chatLines?.length ? pickOne(o.chatLines, rand) : `chat-${playerId}-${Math.floor(rand() * 1e9)}`;
+        return { type: "sendChat", text };
       }
       if (night.recruit || !others.length) return null;
       if (!night.picks[playerId] || rand() < 0.1) {
