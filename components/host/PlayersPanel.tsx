@@ -145,6 +145,22 @@ function EditPlayer({ game, player, onClose }: { game: GameHandle; player: Playe
           </Button>
         ) : null}
       </div>
+      {!view.closed ? (
+        <div className="flex flex-col gap-2 rounded-2xl bg-surface-2 p-4">
+          <p className="font-semibold text-gold">{view.host!.cohostId === player.id ? `${player.displayName} is the co-host` : "Co-host"}</p>
+          <p className="text-sm text-ink-muted">
+            The co-host runs missions, rewards and the big-screen message from their own phone. They never see roles, picks or who holds what.
+          </p>
+          <Button
+            variant="secondary"
+            size="md"
+            busy={busy}
+            onClick={() => send({ type: "setCohost", playerId: view.host!.cohostId === player.id ? null : player.id })}
+          >
+            {view.host!.cohostId === player.id ? "Stop being co-host" : `Make ${player.displayName} co-host`}
+          </Button>
+        </div>
+      ) : null}
       <ErrorLine message={error} />
     </div>
   );
@@ -177,6 +193,7 @@ export function PlayersPanel({ game }: { game: GameHandle }) {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2 text-lg">
                       <span className="truncate">{p.displayName}</span>
+                      {view.host?.cohostId === p.id ? <span className="rounded-full bg-gold/15 px-2 text-xs text-gold">co-host</span> : null}
                       <SeatDot state={presence(game.seats.find((x) => x.playerId === p.id), game.now())} />
                     </span>
                     <span className={`text-sm ${seat.tone}`}>

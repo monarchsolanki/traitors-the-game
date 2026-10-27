@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/client/api";
+import { usePresets } from "./PresetsCard";
 import { PHASE_TITLE } from "@/lib/client/labels";
 import { browserClient } from "@/lib/client/supabase";
 import type { Phase } from "@/lib/game/types";
@@ -63,11 +64,11 @@ export function HostHome() {
     await check();
   };
 
-  const create = async () => {
+  const create = async (presetId?: string) => {
     setBusy(true);
     setError(null);
     try {
-      const r = await api<{ code: string }>("/api/games", { kind: "host", body: {} });
+      const r = await api<{ code: string }>("/api/games", { kind: "host", body: presetId ? { presetId } : {} });
       router.push(`/host/${r.code}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't create the game.");
@@ -112,9 +113,10 @@ export function HostHome() {
       ) : null}
       {state === "host" ? (
         <>
-          <Button onClick={create} busy={busy}>
+          <Button onClick={() => create()} busy={busy}>
             Create a new game
           </Button>
+          <PresetStarter busy={busy} onStart={(id) => create(id)} />
           <ErrorLine message={error} />
           {games.length ? (
             <Card>
@@ -140,5 +142,25 @@ export function HostHome() {
         </>
       ) : null}
     </main>
+  );
+}
+
+/** Start a game from a saved preset: its players and photos, settings and missions. */
+function PresetStarter({ busy, onStart }: { busy: boolean; onStart: (presetId: string) => void }) {
+  const { presets } = usePresets();
+  if (!presets?.length) return null;
+  return (
+    <Card>
+      <p className="mb-3 font-semibold text-gold">Or start from a preset</p>
+      <ul className="flex flex-col gap-2">
+        {presets.map((p) => (
+          <li key={p.id}>
+            <Button variant="secondary" size="md" className="w-full" busy={busy} onClick={() => onStart(p.id)}>
+              {p.name} · {p.players} players
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }

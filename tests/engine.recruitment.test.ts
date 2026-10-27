@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { allViewers, findLeaks } from "@/lib/game/leaks";
 import { viewFor } from "@/lib/game/view";
 import { HOST, as, dealt } from "./helpers";
 
@@ -49,6 +50,22 @@ describe("recruitment gate tests", () => {
     expect(g.phase).toBe("MURDER_REVEAL");
     expect(g.night()).toMatchObject({ victimId: null, reason: "recruitAccepted" });
     expect(g.alive()).toHaveLength(11);
+  });
+
+  it("with ghost games: nothing leaks while the offer waits, and a bet on 'nobody dies' pays without saying why", () => {
+    const g = lastTraitorNight();
+    // p2, the banished Traitor, is a ghost; give the ghosts an Innocent too.
+    g.host({ type: "eliminatePlayer", playerId: "p12", status: "left", reason: "Went home" });
+    g.by("p12", { type: "ghostBet", kind: "murder", targetId: null });
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    for (const v of allViewers(g.state)) expect(findLeaks(g.state, v)).toEqual([]);
+    expect(viewFor(g.state, { kind: "player", playerId: "p12" }).me!.ghostGames!.bets!.murder).toEqual({ pick: null });
+    g.by("p5", { type: "answerRecruit", accept: true });
+    g.host({ type: "revealMurder" });
+    expect(viewFor(g.state, { kind: "player", playerId: "p12" }).me!.ghostGames!.bets!.history).toEqual([
+      { kind: "murder", pick: null, correct: true, day: 1 },
+    ]);
+    for (const v of allViewers(g.state)) expect(findLeaks(g.state, v)).toEqual([]);
   });
 
   it("refuse: nobody dies, no role changes", () => {

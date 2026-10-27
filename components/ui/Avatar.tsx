@@ -34,7 +34,7 @@ export function Avatar({
 }) {
   return (
     <div
-      className={`relative shrink-0 overflow-hidden rounded-full ${ring ? "ring-3 ring-gold ring-offset-2 ring-offset-night" : "ring-1 ring-gold/25"} ${ghost ? "opacity-45 grayscale" : ""} ${className}`}
+      className={`relative shrink-0 overflow-hidden rounded-full ${ring ? "ring-3 ring-gold ring-offset-2 ring-offset-night" : "ring-1 ring-gold/25"} transition-[opacity,filter] duration-1000 ${ghost ? "opacity-45 grayscale" : ""} ${className}`}
       style={{ width: size, height: size, backgroundColor: url ? undefined : tone(name) }}
     >
       {url ? (

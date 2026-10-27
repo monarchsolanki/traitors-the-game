@@ -8,7 +8,7 @@ import { api, ApiError, newKey, withRetries } from "./api";
 import { browserClient } from "./supabase";
 
 export type Connection = "live" | "connecting" | "offline";
-export type GameKind = "host" | "player" | "screen";
+export type GameKind = "host" | "cohost" | "player" | "screen";
 
 export interface GameHandle {
   view: GameView | null;
@@ -28,9 +28,11 @@ export interface GameHandle {
   accept: (r: Partial<ViewResponse>) => void;
 }
 
-const TICK_GRACE: Record<GameKind, number> = { host: 400, screen: 900, player: 2500 };
+const TICK_GRACE: Record<GameKind, number> = { host: 400, screen: 900, cohost: 1500, player: 2500 };
 
 export function useGame(code: string, kind: GameKind): GameHandle {
+  // The co-host is a player's phone: it signs in with the player session but asks for the co-host view.
+  const session = kind === "cohost" ? "player" : kind;
   const [data, setData] = useState<(ViewResponse & { seenAt: Record<string, number> }) | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -68,7 +70,7 @@ export function useGame(code: string, kind: GameKind): GameHandle {
     if (inflight.current) return inflight.current;
     inflight.current = (async () => {
       try {
-        const r = await api<ViewResponse>(`/api/games/${code}/view?as=${kind}`, { kind });
+        const r = await api<ViewResponse>(`/api/games/${code}/view?as=${kind}`, { kind: session });
         accept(r);
         setError(null);
         setConnection((c) => (c === "offline" ? "connecting" : c));
@@ -81,7 +83,7 @@ export function useGame(code: string, kind: GameKind): GameHandle {
       }
     })();
     return inflight.current;
-  }, [accept, code, kind]);
+  }, [accept, code, kind, session]);
 
   // First load, realtime pings, and a polling fallback.
   useEffect(() => {
@@ -136,7 +138,7 @@ export function useGame(code: string, kind: GameKind): GameHandle {
     let t: ReturnType<typeof setTimeout>;
     const nudge = () => {
       api<ActionResponse>(`/api/games/${code}/action`, {
-        kind,
+        kind: session,
         body: { as: kind === "screen" ? "system" : kind, key: `tick-version-${version}`, action: { type: "tick" } },
       })
         .then(accept)
@@ -148,14 +150,14 @@ export function useGame(code: string, kind: GameKind): GameHandle {
     };
     t = setTimeout(nudge, wait);
     return () => clearTimeout(t);
-  }, [accept, code, deadline, kind, refresh, version]);
+  }, [accept, code, deadline, kind, refresh, session, version]);
 
   const act = useCallback<GameHandle["act"]>(
     async (action, o = {}) => {
       // One key for every try: a resent move that already landed comes back as a duplicate.
       const body = { as: kind, key: newKey(), expectedVersion: o.strict ? versionRef.current : undefined, action };
       try {
-        const r = await withRetries(() => api<ActionResponse>(`/api/games/${code}/action`, { kind, body }));
+        const r = await withRetries(() => api<ActionResponse>(`/api/games/${code}/action`, { kind: session, body }));
         accept(r);
         return { ok: true };
       } catch (err) {
@@ -167,7 +169,7 @@ export function useGame(code: string, kind: GameKind): GameHandle {
         return { ok: false, error: "Something went wrong." };
       }
     },
-    [accept, code, kind],
+    [accept, code, kind, session],
   );
 
   const now = useCallback(() => Date.now() + offset.current, []);

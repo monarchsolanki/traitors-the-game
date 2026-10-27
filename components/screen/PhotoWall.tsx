@@ -10,20 +10,27 @@ export function PhotoWall({
   players,
   size = "md",
   lobby = false,
+  flip = false,
 }: {
   game: GameHandle;
   players: PlayerView[];
   size?: "sm" | "md" | "lg";
   lobby?: boolean;
+  /** The final reveal: each card turns over in turn to show the role. */
+  flip?: boolean;
 }) {
   const px = size === "lg" ? "min(11vw,10rem)" : size === "md" ? "min(8vw,7.5rem)" : "min(5.5vw,5rem)";
   return (
     <ul className="flex flex-wrap justify-center gap-x-[2vw] gap-y-[2.5vh]">
-      {players.map((p) => {
+      {players.map((p, i) => {
         const gone = p.status !== "alive";
         const dim = lobby ? !p.seatClaimed : gone;
         return (
-          <li key={p.id} className="flex flex-col items-center gap-[0.8vh]" style={{ width: `calc(${px} + 1.5rem)` }}>
+          <li
+            key={p.id}
+            className={`flex flex-col items-center gap-[0.8vh] ${flip ? "animate-flip-in" : ""}`}
+            style={{ width: `calc(${px} + 1.5rem)`, animationDelay: flip ? `${i * 350}ms` : undefined }}
+          >
             <div className={`rounded-full ${p.role === "traitor" ? "ring-[0.35vw] ring-kumkum" : ""}`}>
               <Avatar name={p.displayName} url={game.photoFor(p.photoPath)} size={px} ghost={dim} />
             </div>

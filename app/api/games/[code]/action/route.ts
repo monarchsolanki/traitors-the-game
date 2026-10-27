@@ -23,9 +23,10 @@ export async function POST(req: Request, ctx: RouteContext<"/api/games/[code]/ac
       key = `tick:${body.key}`;
       const user = await requestUser(req);
       if (user && body.as === "host" && game.hostUserId === user.id) viewer = { kind: "host" };
-      if (user && body.as === "player") {
+      if (user && (body.as === "player" || body.as === "cohost")) {
         const seat = await seatForUser(game.id, user.id);
-        if (seat) viewer = { kind: "player", playerId: seat.player_id };
+        if (seat && body.as === "cohost" && game.state.cohostId === seat.player_id) viewer = { kind: "cohost" };
+        else if (seat && body.as === "player") viewer = { kind: "player", playerId: seat.player_id };
       }
     } else {
       const user = await requireUser(req);

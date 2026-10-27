@@ -1,27 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { PHASE_TITLE } from "@/lib/client/labels";
 import { useGame, type GameHandle } from "@/lib/client/useGame";
+import { useTicker } from "@/lib/client/useTicker";
 import type { EventView, GameView, PlayerView, RoundView } from "@/lib/game/view";
 import { Avatar } from "@/components/ui/Avatar";
 import { Countdown } from "@/components/ui/Countdown";
 import { Diya } from "@/components/ui/Diya";
 import { Toran } from "@/components/ui/Toran";
+import { Entrance } from "./Entrance";
 import { PhotoWall } from "./PhotoWall";
 import { QrCode } from "./QrCode";
+import { Reactions } from "./Reactions";
+import { useScreenSounds } from "./useScreenSounds";
 
 /** How long a result stays on the big screen after it happens, even though the game has moved on. */
 const HOLD_MS = 20_000;
 const SPIN_MS = 4_500;
-
-function useTicker(ms = 250) {
-  const [, set] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => set((x) => x + 1), ms);
-    return () => clearInterval(t);
-  }, [ms]);
-}
 
 /** Keeps a TV or laptop awake while the big screen is open. */
 function useWakeLock() {
@@ -62,7 +58,7 @@ function Lobby({ game }: { game: GameHandle }) {
   return (
     <div className="grid w-full flex-1 grid-cols-1 items-center gap-[4vw] lg:grid-cols-[auto_1fr]">
       <div className="flex flex-col items-center gap-[2vh]">
-        <p className="text-[min(2.4vw,2.4rem)] text-ink">Scan to join</p>
+        <p className="text-[min(2.4vw,2.4rem)] text-ink">{view.settings.narration.lobby || "Scan to join"}</p>
         <QrCode value={url} className="size-[min(32vh,26vw)]" />
         <p className="text-[min(1.6vw,1.6rem)] text-ink-muted">or open {url.replace(/^https?:\/\//, "").replace(/\/play\/.*/, "")} and enter</p>
         <p className="font-mono text-[min(7vw,7rem)] leading-none tracking-[0.2em] text-gold">{view.code}</p>
@@ -221,19 +217,72 @@ function Finale({ game }: { game: GameHandle }) {
   const f = view.finale!;
   const suspects = Object.entries(f.suspicion)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
+    .slice(0, 5);
+  const most = Math.max(1, ...suspects.map(([, n]) => n));
+  const ghosts = f.ghostScores.filter((g) => g.total > 0).slice(0, 3);
   return (
-    <div className="flex w-full flex-1 flex-col items-center gap-[4vh]">
+    <div className="flex w-full flex-1 flex-col items-center gap-[3vh]">
       <div className="text-center">
-        <p className="text-[min(2vw,2rem)] tracking-[0.3em] text-ink-muted uppercase">The final reveal</p>
+        <p className="text-[min(2vw,2rem)] tracking-[0.3em] text-ink-muted uppercase">{view.settings.narration.finale || "The final reveal"}</p>
         <Big className={f.winner === "traitors" ? "!text-kumkum" : ""}>{f.winner === "traitors" ? "The Traitors win" : "The Innocents win"}</Big>
       </div>
-      <PhotoWall game={game} players={view.players} />
-      {suspects.length ? (
-        <p className="text-[min(2vw,2rem)] text-ink-muted">
-          Most suspected at night: {suspects.map(([id, n]) => `${byId(view, id)?.displayName} (${n})`).join(" · ")}
-        </p>
-      ) : null}
+      <PhotoWall game={game} players={view.players} size="sm" flip />
+      <div className="grid w-full max-w-[80vw] grid-cols-1 gap-[3vw] lg:grid-cols-2">
+        {suspects.length ? (
+          <div className="flex flex-col gap-[1vh]">
+            <p className="text-[min(2vw,2rem)] text-gold">The suspicion meter</p>
+            {suspects.map(([id, n]) => (
+              <div key={id} className="flex items-center gap-[1vw]">
+                <span className="w-[12vw] truncate text-[min(1.8vw,1.8rem)]">{byId(view, id)?.displayName}</span>
+                <span className="h-[2.4vh] flex-1 overflow-hidden rounded-full bg-surface-2">
+                  <span className={`block h-full rounded-full ${byId(view, id)?.role === "traitor" ? "bg-kumkum" : "bg-gold"}`} style={{ width: `${(n / most) * 100}%` }} />
+                </span>
+                <span className="w-[3vw] text-right font-mono text-[min(1.8vw,1.8rem)] text-gold">{n}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {ghosts.length ? (
+          <div className="flex flex-col gap-[1vh]">
+            <p className="text-[min(2vw,2rem)] text-gold">Best Ghost</p>
+            {ghosts.map((g, i) => {
+              const p = byId(view, g.playerId);
+              return (
+                <div key={g.playerId} className="flex items-center gap-[1vw]">
+                  <span className="w-[2vw] font-mono text-[min(1.8vw,1.8rem)] text-ink-muted">{i + 1}</span>
+                  {p ? <Avatar name={p.displayName} url={game.photoFor(p.photoPath)} size="min(4vw,4rem)" /> : null}
+                  <span className="flex-1 truncate text-[min(1.8vw,1.8rem)]">{p?.displayName}</span>
+                  <span className="font-mono text-[min(2vw,2rem)] text-gold">{g.total}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** A Bhoot Bingo winner, announced for a few seconds. */
+function BingoToast({ game }: { game: GameHandle }) {
+  const view = game.view!;
+  const e = [...view.events].reverse().find((x) => x.type === "bingo");
+  if (!e || game.now() - (game.seenAt(e.id) ?? e.at) > 8_000) return null;
+  return (
+    <div className="absolute inset-x-0 top-[9vh] z-20 flex justify-center">
+      <p className="animate-arrive rounded-full bg-ghost/20 px-[3vw] py-[1.2vh] text-[min(2.6vw,2.6rem)] text-ink ring-1 ring-ghost/50">
+        👻 {byId(view, e.data.playerId)?.displayName} got Bhoot Bingo!
+      </p>
+    </div>
+  );
+}
+
+function ScreenMessage({ game }: { game: GameHandle }) {
+  const m = game.view!.screenMessage;
+  if (!m) return null;
+  return (
+    <div className="relative z-20 mx-auto mb-[1vh] max-w-[85vw] animate-arrive rounded-3xl bg-surface/90 px-[3vw] py-[1.6vh] text-center ring-1 ring-gold/40">
+      <p className="font-display text-[min(3.4vw,3.6rem)] leading-tight text-gold">{m.text}</p>
     </div>
   );
 }
@@ -247,10 +296,14 @@ function Stage({ game }: { game: GameHandle }) {
   const startOf = (e: EventView) => game.seenAt(e.id) ?? e.at;
   const recent = useMemo(() => [...view.events].reverse().filter((e) => now - e.at < 60_000), [view.events, now]);
   const spin = recent.find((e) => e.type === "spin" && now - startOf(e) < SPIN_MS);
+  const entranceMs = (e: EventView) => (e.type === "murderRevealed" && typeof e.data.entranceMs === "number" ? e.data.entranceMs : 0);
   const held = recent.find(
-    (e) => ["banished", "murderRevealed", "endgameResult", "playerEliminated"].includes(e.type) && now - startOf(e) < HOLD_MS + (spin ? SPIN_MS : 0),
+    (e) =>
+      ["banished", "murderRevealed", "endgameResult", "playerEliminated"].includes(e.type) &&
+      now - startOf(e) < HOLD_MS + (spin ? SPIN_MS : 0) + entranceMs(e),
   );
-  if (view.finalePending && (!held || now - startOf(held) > HOLD_MS)) {
+  if (held && entranceMs(held) && now - startOf(held) < entranceMs(held)) return <Entrance game={game} event={held} start={startOf(held)} />;
+  if (view.finalePending && (!held || now - startOf(held) > HOLD_MS + entranceMs(held))) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-[3vh] text-center">
         <Diya className="size-[min(22vh,18vw)]" />
@@ -259,7 +312,7 @@ function Stage({ game }: { game: GameHandle }) {
       </div>
     );
   }
-  if (view.phase === "FINALE" && view.finale && (!held || now - startOf(held) > 8_000)) return <Finale game={game} />;
+  if (view.phase === "FINALE" && view.finale && (!held || now - startOf(held) > 8_000 + entranceMs(held))) return <Finale game={game} />;
   if (spin) return <Spin game={game} event={spin} start={startOf(spin)} />;
   if (held && view.phase !== "CIRCLE_VOTE" && view.phase !== "ENDGAME_BANISH") return <ResultCard game={game} event={held} />;
 
@@ -272,7 +325,7 @@ function Stage({ game }: { game: GameHandle }) {
       return (
         <div className="flex flex-1 flex-col items-center justify-center gap-[4vh]">
           <Big>Roles are dealt</Big>
-          <Sub>Check your phone. Hold to peek, and keep it to yourself.</Sub>
+          <Sub>{view.settings.narration.roles}</Sub>
           <PhotoWall game={game} players={alive} size="sm" />
         </div>
       );
@@ -282,6 +335,7 @@ function Stage({ game }: { game: GameHandle }) {
         <div className="flex flex-1 flex-col items-center justify-center gap-[3vh] text-center">
           <p className="text-[min(2.2vw,2.2rem)] tracking-[0.3em] text-marigold uppercase">{m?.kind === "team" ? "Team mission" : "Mission"}</p>
           <Big>{m?.name ?? "Mission"}</Big>
+          <Sub>{m?.howItWorks || view.settings.narration.mission}</Sub>
           {m?.winRule ? <Sub>To win: {m.winRule}</Sub> : null}
           {m?.tieRule ? <Sub>If it&apos;s a tie: {m.tieRule}</Sub> : null}
         </div>
@@ -291,7 +345,7 @@ function Stage({ game }: { game: GameHandle }) {
       return (
         <div className="flex flex-1 flex-col items-center justify-center gap-[3vh]">
           <Big>Circle of Shaq</Big>
-          <Sub>Who is lying? Talk it out.</Sub>
+          <Sub>{view.settings.narration.debate}</Sub>
           <Countdown deadline={view.deadline} pausedRemainingMs={view.pausedRemainingMs} now={game.now} className="text-[min(10vw,10rem)]" />
           <PhotoWall game={game} players={alive} size="sm" />
         </div>
@@ -321,11 +375,7 @@ function Stage({ game }: { game: GameHandle }) {
         <div className="flex flex-1 flex-col items-center justify-center gap-[3vh] text-center">
           <Big>{endgame ? "End Game" : revote ? "Revote" : "Vote now"}</Big>
           <Sub>
-            {endgame
-              ? "Vote End or Banish on your phones. Everyone must vote End to finish."
-              : revote
-                ? "Only the tied players are on the ballot."
-                : "Vote on your phones. Votes stay hidden until the reveal."}
+            {endgame ? view.settings.narration.endgame : revote ? "Only the tied players are on the ballot." : view.settings.narration.vote}
           </Sub>
           {round ? (
             <p className="font-mono text-[min(5vw,5rem)] text-gold">
@@ -341,7 +391,7 @@ function Stage({ game }: { game: GameHandle }) {
         <div className="flex flex-1 flex-col items-center justify-center gap-[4vh]">
           <Diya className="size-[min(22vh,18vw)] opacity-80" />
           <Big>Night falls</Big>
-          <Sub>Traitors, make your choice. Everyone else, answer on your phones.</Sub>
+          <Sub>{view.settings.narration.night}</Sub>
           <Countdown deadline={view.deadline} pausedRemainingMs={view.pausedRemainingMs} now={game.now} className="text-[min(5vw,5rem)]" />
         </div>
       );
@@ -349,7 +399,7 @@ function Stage({ game }: { game: GameHandle }) {
       return (
         <div className="flex flex-1 flex-col items-center justify-center gap-[4vh]">
           <Big>Breakfast</Big>
-          <Sub>{view.night?.revealed ? "Mission or Circle next." : "Everyone to the table. What happened in the night?"}</Sub>
+          <Sub>{view.night?.revealed ? "Mission or Circle next." : view.settings.narration.breakfast}</Sub>
           <PhotoWall game={game} players={alive} size="sm" />
         </div>
       );
@@ -361,6 +411,7 @@ function Stage({ game }: { game: GameHandle }) {
 export function ScreenApp({ code }: { code: string }) {
   const game = useGame(code.toUpperCase(), "screen");
   useWakeLock();
+  const sound = useScreenSounds(game);
   const view = game.view;
   if (game.notFound) {
     return <main className="flex min-h-dvh items-center justify-center font-display text-[4vw] text-gold">No game called {code.toUpperCase()}</main>;
@@ -377,6 +428,9 @@ export function ScreenApp({ code }: { code: string }) {
         <span className="flex items-center gap-3">
           {view.finalePending ? "Hold on" : PHASE_TITLE[view.phase]}
           <span className={`inline-block size-3 rounded-full ${game.connection === "live" ? "bg-leaf" : game.connection === "offline" ? "bg-kumkum" : "bg-marigold"}`} />
+          <button type="button" onClick={sound.toggle} className="rounded-lg px-3 py-1 text-[min(1.4vw,1.2rem)] ring-1 ring-gold/30">
+            {sound.on ? "Sound on" : "Sound off"}
+          </button>
           <button
             type="button"
             onClick={() => void document.documentElement.requestFullscreen?.().catch(() => undefined)}
@@ -389,6 +443,9 @@ export function ScreenApp({ code }: { code: string }) {
       <main className="flex flex-1 flex-col items-center justify-center py-[3vh]">
         <Stage game={game} />
       </main>
+      <ScreenMessage game={game} />
+      <BingoToast game={game} />
+      <Reactions code={view.code} active={view.phase === "CIRCLE_DEBATE" && view.settings.ghostGames.liveReactions} />
       {view.paused ? (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-night/85">
           <Big>Paused</Big>

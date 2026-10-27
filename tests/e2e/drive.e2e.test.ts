@@ -12,6 +12,7 @@ import { adminClient } from "@/lib/server/supabase";
  *   E2E_DRIVE=create E2E_OPEN=p1          new game, bots in every seat except the listed ones
  *   E2E_DRIVE=host E2E_CODE=X E2E_ACTION='{"type":"dealRoles"}'
  *   E2E_DRIVE=bots E2E_CODE=X E2E_MOVES=20
+ *   E2E_DRIVE=autoplay E2E_CODE=X E2E_UNTIL=MURDER_REVEAL   (stops on reaching that phase)
  *   E2E_DRIVE=delete E2E_CODE=X
  */
 const mode = process.env.E2E_DRIVE;
@@ -52,7 +53,8 @@ describe.skipIf(!mode)("manual driver", () => {
       // Plays the game to the end: host moves from the simulator, bots for everyone else.
       const rand = seededRand("autoplay", code);
       let game = await loadGame(code);
-      for (let step = 0; step < 800 && game.state.phase !== "FINALE"; step++) {
+      const until = process.env.E2E_UNTIL ?? "FINALE";
+      for (let step = 0; step < 800 && game.state.phase !== "FINALE" && game.state.phase !== until; step++) {
         let moved = false;
         for (const m of hostProgress(game.state, rand, { missionRate: 0.5, shieldRate: 0.5 })) {
           if ((await runAction(code, { kind: "host" }, m, `drv-auto-${game.state.version}-${m.type}`)).ok) {

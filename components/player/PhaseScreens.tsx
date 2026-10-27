@@ -7,9 +7,10 @@ import type { RoundView } from "@/lib/game/view";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Countdown } from "@/components/ui/Countdown";
-import { Card, Notice, Toggle } from "@/components/ui/Field";
+import { Card, Notice, Segmented, Toggle } from "@/components/ui/Field";
 import { PlayerGrid } from "@/components/ui/PlayerGrid";
 import { Sheet } from "@/components/ui/Sheet";
+import { GhostGames } from "./GhostGames";
 import { RoleCard } from "./RoleCard";
 import { ErrorLine, gridPlayers, playerById } from "./shared";
 
@@ -538,6 +539,22 @@ export function FinaleScreen({ game }: { game: GameHandle }) {
           ))}
         </ul>
       </Card>
+      {f.ghostScores.length ? (
+        <Card>
+          <p className="mb-2 font-semibold text-gold">Best Ghost</p>
+          <ol className="flex flex-col gap-1">
+            {f.ghostScores.slice(0, 5).map((g, i) => (
+              <li key={g.playerId} className="flex justify-between gap-2">
+                <span>
+                  {i + 1}. {playerById(view, g.playerId)?.displayName}
+                  {g.playerId === view.me?.playerId ? " (you)" : ""}
+                </span>
+                <span className="font-mono text-gold">{g.total}</span>
+              </li>
+            ))}
+          </ol>
+        </Card>
+      ) : null}
       {suspects.length ? (
         <Card>
           <p className="mb-2 font-semibold text-gold">Most suspected at night</p>
@@ -557,6 +574,7 @@ export function FinaleScreen({ game }: { game: GameHandle }) {
 export function GhostScreen({ game }: { game: GameHandle }) {
   const view = game.view!;
   const me = view.me!;
+  const [tab, setTab] = useState<"games" | "feed">("games");
   const canGhostVote = view.phase === "CIRCLE_VOTE" && !!me.vote?.canVote && me.vote.asGhost;
   const feed = view.events
     .map((e) => ({ id: e.id, text: describeEvent(e, view) }))
@@ -574,16 +592,50 @@ export function GhostScreen({ game }: { game: GameHandle }) {
       </div>
       {canGhostVote ? <VoteScreen game={game} /> : null}
       {view.phase === "CIRCLE_REVEAL" ? <RevealScreen game={game} /> : null}
-      <Card>
-        <p className="mb-2 font-semibold text-gold">What&apos;s happening</p>
-        <ul className="flex flex-col gap-2 text-base">
-          {feed.map((e) => (
-            <li key={e.id} className="text-ink">
-              {e.text}
-            </li>
-          ))}
-        </ul>
-      </Card>
+      {me.ghostGames ? (
+        <Segmented
+          label="Show"
+          value={tab}
+          options={[
+            { value: "games", label: "Ghost games" },
+            { value: "feed", label: "What's happening" },
+          ]}
+          onChange={setTab}
+        />
+      ) : null}
+      {me.ghostGames && tab === "games" ? (
+        <GhostGames game={game} />
+      ) : (
+        <Card>
+          <p className="mb-2 font-semibold text-gold">What&apos;s happening</p>
+          <ul className="flex flex-col gap-2 text-base">
+            {feed.map((e) => (
+              <li key={e.id} className="text-ink">
+                {e.text}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/** Time left before phones show the night's result, so the big screen's breakfast entrance plays first. */
+export function entranceLeft(game: GameHandle): number {
+  const view = game.view!;
+  if (view.phase !== "MURDER_REVEAL" || !view.night?.revealed) return 0;
+  const e = [...view.events].reverse().find((x) => x.type === "murderRevealed");
+  const ms = typeof e?.data.entranceMs === "number" ? e.data.entranceMs : 0;
+  if (!e || !ms) return 0;
+  return Math.max(0, (game.seenAt(e.id) ?? e.at) + ms - game.now());
+}
+
+export function EntranceHold({ game }: { game: GameHandle }) {
+  return (
+    <div className="flex flex-col items-center gap-4 text-center">
+      <Heading title="Breakfast is served" help="Watch the big screen: everyone is walking in, one by one." />
+      <p className="font-mono text-3xl text-gold">{Math.ceil(entranceLeft(game) / 1000)}</p>
     </div>
   );
 }

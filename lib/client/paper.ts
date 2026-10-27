@@ -57,10 +57,17 @@ export function paperFallbackHtml(view: GameView, generatedAt: Date): string {
   .slips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; page-break-before: always; }
   .slip { border: 1px dashed #999; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
   .slip p { margin: 6px 0; }
-  @media print { .warn { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  .print { font: inherit; padding: 10px 18px; border-radius: 10px; border: 1px solid #111; background: #fff; cursor: pointer; }
+  @media print {
+    body { margin: 0; }
+    .print { display: none; }
+    .warn, .traitor { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tr, .slip { break-inside: avoid; }
+  }
 </style>
 </head>
 <body>
+<button class="print" onclick="window.print()">Print this page</button>
 <h1>Traitors: The Game, room ${esc(view.code)}</h1>
 <p class="muted">Offline copy saved ${esc(when)}, day ${view.day}. Rules: ${view.settings.traitorCount} Traitors, dagger counts ×${view.settings.daggerWeight}, End Game at ${view.endGameThreshold} players or fewer.</p>
 <p class="warn"><strong>Secret.</strong> This page shows every role. Keep it on the host's device or folded in a pocket. Use it only if the internet drops for everyone.</p>

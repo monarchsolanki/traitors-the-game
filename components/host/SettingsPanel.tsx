@@ -1,11 +1,45 @@
 "use client";
 
-import { MAX_PLAYERS, SETTING_META, defaultEndGameThreshold, maxTraitors, type GameSettings, type SettingKey } from "@/lib/game/settings";
+import { useState } from "react";
+import {
+  BINGO_SIDE,
+  MAX_PLAYERS,
+  NARRATION_KEYS,
+  SETTING_META,
+  defaultEndGameThreshold,
+  maxTraitors,
+  type GameSettings,
+  type NarrationKey,
+  type SettingKey,
+} from "@/lib/game/settings";
 import type { GameHandle } from "@/lib/client/useGame";
-import { Card, Segmented, Stepper, Toggle } from "@/components/ui/Field";
+import { Button } from "@/components/ui/Button";
+import { Card, Segmented, Stepper, TextField, Toggle } from "@/components/ui/Field";
 import { formatClock } from "@/components/ui/Countdown";
 import { ErrorLine } from "@/components/player/shared";
 import { useHostSend } from "./GameControls";
+import { TextArea } from "./MissionCatalogue";
+import { PresetsCard } from "./PresetsCard";
+
+const GHOST_GAME_LABELS = [
+  ["bhootBets", "Bhoot Bets", "Ghosts bet on each banishment and murder, and call who was a Traitor."],
+  ["crystalBall", "Crystal Ball", "At each Circle, ghosts guess the Traitors. Scored at the final reveal."],
+  ["liveReactions", "Live reactions", "Ghosts float emoji across the big screen during the debate."],
+  ["bhootBingo", "Bhoot Bingo", "A card of moments; the first full line wins."],
+] as const;
+
+const NARRATION_LABELS: Record<NarrationKey, string> = {
+  lobby: "Lobby",
+  roles: "Roles dealt",
+  mission: "Mission",
+  debate: "Debate",
+  vote: "Voting",
+  reveal: "Vote reveal",
+  night: "Night",
+  breakfast: "Breakfast",
+  endgame: "End Game",
+  finale: "Final reveal",
+};
 
 export function SettingsPanel({ game }: { game: GameHandle }) {
   const view = game.view!;
@@ -57,16 +91,18 @@ export function SettingsPanel({ game }: { game: GameHandle }) {
         <p className="mb-1 font-semibold text-gold">Night and ghosts</p>
         <Toggle label={SETTING_META.suspectPoll.label} hint={help("suspectPoll")} checked={s.suspectPoll} onChange={(v) => set("suspectPoll", v)} />
         <Toggle label={SETTING_META.ghostVote.label} hint={help("ghostVote")} checked={s.ghostVote} disabled={locked("ghostVote")} onChange={(v) => set("ghostVote", v)} />
-        {(
-          [
-            ["bhootBets", "Bhoot Bets"],
-            ["crystalBall", "Crystal Ball"],
-            ["liveReactions", "Live reactions"],
-            ["bhootBingo", "Bhoot Bingo"],
-          ] as const
-        ).map(([k, label]) => (
-          <Toggle key={k} label={label} hint="Ghost game; arrives in a later step." checked={s.ghostGames[k]} onChange={(v) => set("ghostGames", { ...s.ghostGames, [k]: v })} />
+        {GHOST_GAME_LABELS.map(([k, label, hint]) => (
+          <Toggle key={k} label={label} hint={hint} checked={s.ghostGames[k]} onChange={(v) => set("ghostGames", { ...s.ghostGames, [k]: v })} />
         ))}
+      </Card>
+      <GhostScoring game={game} />
+      <Card>
+        <p className="mb-1 font-semibold text-gold">Big screen</p>
+        <Toggle label={SETTING_META.breakfastEntrance.label} hint={SETTING_META.breakfastEntrance.help} checked={s.breakfastEntrance} onChange={(v) => set("breakfastEntrance", v)} />
+        {s.breakfastEntrance ? (
+          <Stepper label={SETTING_META.entranceSeconds.label} value={s.entranceSeconds} min={5} max={60} step={5} format={(v) => `${v} s`} onChange={(v) => set("entranceSeconds", v)} />
+        ) : null}
+        <Narration game={game} />
       </Card>
       <Card>
         <p className="mb-1 font-semibold text-gold">Timers (change any time)</p>
@@ -77,6 +113,64 @@ export function SettingsPanel({ game }: { game: GameHandle }) {
         <Stepper label={SETTING_META.rewardVoteSeconds.label} value={s.rewardVoteSeconds} min={30} max={300} step={30} format={clock} onChange={(v) => set("rewardVoteSeconds", v)} />
         <Stepper label={SETTING_META.pinMaxAttempts.label} value={s.pinMaxAttempts} min={3} max={10} onChange={(v) => set("pinMaxAttempts", v)} />
       </Card>
+      <PresetsCard game={game} />
+    </div>
+  );
+}
+
+function GhostScoring({ game }: { game: GameHandle }) {
+  const s = game.view!.settings;
+  const { busy, error, send } = useHostSend(game);
+  const [moments, setMoments] = useState(s.bingoMoments.join("\n"));
+  const lines = moments.split("\n").map((l) => l.trim()).filter(Boolean);
+  const points = (k: keyof GameSettings["ghostPoints"], v: number) => send({ type: "updateSettings", patch: { ghostPoints: { ...s.ghostPoints, [k]: v } } });
+  return (
+    <Card>
+      <p className="mb-1 font-semibold text-gold">Ghost game points</p>
+      <Stepper label="Right banishment bet" value={s.ghostPoints.banishBet} min={0} max={20} onChange={(v) => points("banishBet", v)} />
+      <Stepper label="Right murder bet" value={s.ghostPoints.murderBet} min={0} max={20} onChange={(v) => points("murderBet", v)} />
+      <Stepper label="Right Traitor call" value={s.ghostPoints.traitorCall} min={0} max={20} onChange={(v) => points("traitorCall", v)} />
+      <Stepper label="Each Traitor found in Crystal Ball" value={s.ghostPoints.crystalBall} min={0} max={20} onChange={(v) => points("crystalBall", v)} />
+      <Stepper label="First Bhoot Bingo line" value={s.ghostPoints.bingo} min={0} max={20} onChange={(v) => points("bingo", v)} />
+      <div className="mt-3 flex flex-col gap-2">
+        <TextArea
+          label={`${SETTING_META.bingoMoments.label} (one per line, at least ${BINGO_SIDE * BINGO_SIDE})`}
+          hint={SETTING_META.bingoMoments.help}
+          value={moments}
+          rows={8}
+          onChange={setMoments}
+        />
+        <ErrorLine message={error} />
+        <Button
+          size="md"
+          variant="secondary"
+          disabled={lines.length < BINGO_SIDE * BINGO_SIDE || lines.join("\n") === s.bingoMoments.join("\n")}
+          busy={busy}
+          onClick={() => send({ type: "updateSettings", patch: { bingoMoments: lines } })}
+        >
+          Save Bingo moments ({lines.length})
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+function Narration({ game }: { game: GameHandle }) {
+  const s = game.view!.settings;
+  const { busy, error, send } = useHostSend(game);
+  const [draft, setDraft] = useState(s.narration);
+  const changed = NARRATION_KEYS.some((k) => draft[k] !== s.narration[k]);
+  return (
+    <div className="mt-3 flex flex-col gap-3">
+      <p className="text-base text-ink">{SETTING_META.narration.label}</p>
+      <p className="-mt-2 text-sm text-ink-muted">{SETTING_META.narration.help}</p>
+      {NARRATION_KEYS.map((k) => (
+        <TextField key={k} label={NARRATION_LABELS[k]} value={draft[k]} maxLength={140} onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))} />
+      ))}
+      <ErrorLine message={error} />
+      <Button size="md" variant="secondary" disabled={!changed} busy={busy} onClick={() => send({ type: "updateSettings", patch: { narration: draft } })}>
+        Save narrator lines
+      </Button>
     </div>
   );
 }

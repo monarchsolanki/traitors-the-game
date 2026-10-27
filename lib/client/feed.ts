@@ -55,6 +55,10 @@ export function describeEvent(e: EventView, view: GameView): string | null {
       return "The host took back the last step.";
     case "roleChanged":
       return "The host changed your role. Hold your role card to check it.";
+    case "bingo":
+      return `${name(d.playerId)} got Bhoot Bingo!`;
+    case "cohostChanged":
+      return d.cohost ? "The host made you co-host. Open the co-host controls from the top of your screen." : "You're no longer the co-host.";
     default:
       return null;
   }

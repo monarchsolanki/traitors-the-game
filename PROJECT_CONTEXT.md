@@ -8,7 +8,7 @@
 | --- | --- |
 | Owner | Monarch Solanki (host of the first game) |
 | Last updated | 26 October 2026 |
-| Status | Step 4 (break-it testing) done on 27 October; waiting for the owner's OK to start Step 5. Every route tested against every kind of caller; crowd, resend and privacy tests on the real database; phones resend lost moves safely and renew expired sign-ins. Bugs fixed: timers not advancing on their own, busy errors when everyone votes at once, a resent host tap shown as "a step behind", and a phase that could sit past its timer after a Wi-Fi blip. |
+| Status | Step 5 (Tier 2, polish, freeze) built on 27 October; waiting for the owner's OK and the rehearsal (6.1). Built: mission catalogue and editor, co-host, every score-only ghost game, breakfast entrance, presets, big-screen message, narrator lines, sounds, photo effects, printable paper fallback. Recruitment passes its gate tests and stays off by default (owner's call). Feature freeze from here: only fixes. |
 | Live link | https://traitors-the-game.vercel.app |
 | First game | Diwali x Halloween ("Diwaloween: Lights & Frights") villa party, Saturday 31 October 2026, 12 players plus the host |
 | Planning doc | [Traitors Party App — Build Plan](https://claude.ai/artifact/4t3XeWf8tHKf7C9YoMmDqN); fully merged into this file on 26 October 2026, so this file alone is enough |
@@ -188,6 +188,11 @@ The keys are final as of Step 1 and live in `lib/game/settings.ts` (each with it
 | Recruit offer timer | `recruitOfferSeconds` | 60 | 30 to 300 | Any time |
 | Team reward vote timer | `rewardVoteSeconds` | 60 | 30 to 300 | Any time |
 | Wrong PIN tries before lock | `pinMaxAttempts` | 5 | 3 to 10 | Any time |
+| Ghost game points | `ghostPoints` | right banishment bet 3, right murder bet 3, right Traitor call 2, each Traitor found in Crystal Ball 2, first Bhoot Bingo line 5 | 0 to 20 each | Any time |
+| Bhoot Bingo moments | `bingoMoments` | 16 moments ghosts can see or hear (`settings.ts`) | 9 to 40 lines, up to 60 characters each | Any time |
+| Breakfast entrance | `breakfastEntrance` | on | on, off | Any time |
+| Breakfast entrance length | `entranceSeconds` | 20 | 5 to 60 | Any time |
+| Big-screen narrator lines | `narration` | one line per stage: lobby, roles, mission, debate, vote, reveal, night, breakfast, End Game, final reveal | up to 140 characters each | Any time |
 
 Timer defaults are proposals. The run sheet's 5-minute night slot leaves room for a 3-minute night timer.
 
@@ -209,7 +214,9 @@ Timer defaults are proposals. The run sheet's 5-minute night slot leaves room fo
 
 Every change after dealing gets a confirm step and an action-log entry (who, when, what, why). Only the host view ever shows secrets.
 
-**How it's built (Step 3, 27 October).** The host screen has five tabs: Game, Players, Fix, Log, Settings. **Fix** (after dealing) holds every override, each with a required reason: a player (mark out as murdered, banished or left; bring back; change role; give, move or remove a shield or dagger), the current vote (enter or correct a ballot; rerun it), tonight (decide the night by hand, or nobody), a frozen rule, a late player (with a role), end the game now, and the paper fallback. **Log** lists every action newest first with time, day, phase, who and the reason, with a filter for host fixes. Undo is Step 4.
+**How it's built (Step 3, 27 October).** The host screen has five tabs: Game, Players, Fix, Log, Settings. **Fix** (after dealing) holds every override, each with a required reason: a player (mark out as murdered, banished or left; bring back; change role; give, move or remove a shield or dagger), the current vote (enter or correct a ballot; rerun it), tonight (decide the night by hand, or nobody), a frozen rule, a late player (with a role), end the game now, and the paper fallback. **Log** lists every action newest first with time, day, phase, who and the reason, with a filter for host fixes. Undo was built on 27 October (5.10).
+
+**How it's built (Step 5, 27 October).** **Missions:** "Run a mission" opens the catalogue (section 7, team games first), shows how each works, its props and Traitor angle, marks the ones already played, and lets the host tweak the rules before starting; the host (or co-host) adds, edits and removes catalogue entries in the app. **Co-host:** in the Players tab, "Make … co-host" on any player (and "Stop being co-host"). **Big screen:** a "Big-screen message" card on the Game tab (and on the co-host's page) shows a line of text on the big screen until cleared. **Settings tab:** the ghost games with what each does, ghost game points, the Bhoot Bingo moments (one per line), the breakfast entrance and its length, the narrator lines, and **Presets** (save this game's settings, players with photos, and mission list under a name; use a preset's settings and missions in a game still in the lobby; delete). The host home page can start a new game from a preset (its players, photos, settings and missions). **Final reveal:** the host's card lists Best Ghost scores before the reveal.
 
 ### 4.4 Default roster for 31 October
 
@@ -439,7 +446,24 @@ The End Game threshold is checked only after a Circle banishment, never after a 
 - Overrides after dealing need a reason and are logged: change a frozen rule (never the Traitor count), add a player (with a role), mark eliminated (murdered, banished or left), revive, change a role (the player must peek again), give, move or remove a held item, enter or correct a ballot, rerun a vote, resolve a night by hand, end the game early.
 - Every successful action, by anyone, is logged with actor, time, day and phase. Chat messages aren't copied into the log (the host reads the chat itself).
 - **Undo (built 27 October, pulled forward from Step 4):** "Undo last step" takes the game back to exactly how it was before the host's (or the timer's) last step, by restoring that saved snapshot as a new version. The full action log is kept, with an "Undid: …" entry and a required reason; events from the undone step disappear (a public "the host took back the last step" line appears instead); timers get back the time they had. Tapping again walks back further. Undo stops at a player's move (so it never silently erases a vote or pick; use the Fix tab), refuses seat, PIN and photo steps, and is off once the final result is revealed.
-- Not yet built: the ghost games (Tier 2).
+
+**Ghost games (built in Step 5, 27 October; section 8)**
+- Only a ghost everyone can already see is out may play: a murder victim waits until the host reveals the murder, and before that is refused with exactly the message a living player gets ("Ghost games are for ghosts."), so nothing leaks.
+- **Bhoot Bets.** A banishment bet is on the next banishment: open during the Circle debate, voting, and the End Game votes, until the reveal starts; one open bet per ghost; it settles at the banishment (a host elimination doesn't settle it). A murder bet is on tonight: open while the night is on; "nobody dies" is a valid pick; it settles when the host reveals the murder and wins on any night where nobody died, without ever saying why (shield, recruit or failed pick). Bets can't be changed. Unsettled bets are void at the final reveal. **Flag:** the plan says ghosts "bet points"; the build gives fixed points per right bet instead of wagers (simpler for guests; points are settings).
+- **Traitor calls** ("bets on who was a Traitor"): a ghost may call any eliminated player (except themselves) a Traitor or Innocent, once each, any time before the final reveal; scored at the final reveal against the final roles. Eliminated Traitors sit this out. Off when roles are shown on elimination (there'd be nothing to guess).
+- **Crystal Ball.** Once per Circle (from the debate until voting closes), a ghost locks in exactly as many players as there are Traitors (`traitorCount`), never themselves; each guess scores per real Traitor at the final reveal (recruited players count as Traitors). Eliminated Traitors sit this out.
+- **Bhoot Bingo.** Each ghost's 3×3 card is 9 of the `bingoMoments`, shuffled with the game's secret seed (stable all game). Ghosts tap squares themselves (honour system; squares can be untapped). The first ghost to complete a row, column or diagonal wins the Bingo points and is announced on the big screen; later lines score nothing. **Flag:** the default moments leave out "a shield save" and "a Traitor banished" from the plan's examples, because ghosts can't know either before the final reveal; the host can add any moment.
+- **Live reactions.** During the debate only, ghosts tap one of 8 emoji (`REACTION_EMOJI` in `settings.ts`); the server checks the sender is a ghost and the switch is on (`reactionRefusal`), stores only the room code, emoji and time in `game_reactions` (no sender), caps them at 30 per 10 seconds per game, and the big screen floats them up. They aren't game actions and never change the game version.
+- **Scores** (`ghostScores`): every eliminated player gets a total (bets + Traitor calls + Crystal Ball + Bingo). Shown on every screen at the final reveal (Best Ghost); before that only the host sees them, because calls and Crystal Ball are scored against the roles.
+
+**Co-host (built in Step 5)**
+- The host makes any player co-host (one at a time) and can stop it. The co-host uses their own phone's seat: their player screen shows a link to `/cohost/CODE`, a separate page that shows only public state plus the mission catalogue, the missions with their winners, and who is still voting in a winners' vote (never what they voted).
+- The co-host may: start missions (from the catalogue or not), set mission winners, give a shield or dagger to winners, open and close the winners' vote, add, edit and remove catalogue missions, set or clear the big-screen message, and reveal the next ballot. Everything else (Circle, night, timers, pause, overrides, finishing a reveal, ending the game) stays with the host. Each co-host action is logged under the co-host.
+- Who holds what is private, so when the co-host tries to give someone an item they already hold, the refusal says only that the player "can't receive a shield right now. Ask the host."
+
+**Breakfast entrance and the big screen (built in Step 5)**
+- When the host reveals the murder, the engine fixes a random walk-in order of the survivors (seeded, so every screen agrees) and puts it in the public reveal with its length (`entranceSeconds`). The big screen seats an empty chair for everyone alive at nightfall, brings the survivors in one by one, and the last empty chair is the victim ("… never came down to breakfast"), then shows the usual murder card. Every phone, the victim's included, shows "Breakfast is served, watch the big screen" with a countdown until the entrance ends, so no phone spoils it. With the switch off, the reveal is instant as before.
+- The host or co-host can put a message on the big screen (up to 140 characters) until they clear it. Narrator lines under each stage come from the `narration` setting.
 
 ---
 
@@ -469,6 +493,43 @@ If all Traitors (3 by default) are banished early, the Innocents win early and H
 **The run sheet is a guide, not a limit.** The game goes on until an end condition is met. Each extra day adds about 25 minutes without a mission (reveal, Circle and night) or about 40 with one. If the night runs long, the host can skip missions, shorten debates or lower the End Game threshold.
 
 ---
+
+### 6.1 Rehearsal checklist (Step 5 freeze)
+
+Run this with real phones before 31 October, following the run sheet above. Tick each line; anything that fails is a fix, not a new feature.
+
+**Before guests arrive**
+- [ ] Wi-Fi works in every room the game uses; a phone hotspot is ready as a backup.
+- [ ] Supabase: the anonymous sign-in limit is raised (Authentication, then Rate Limits; about 150 an hour), since every phone shares the villa's internet address.
+- [ ] The live link opens on the TV or laptop for the big screen; Full screen on; Sound on (tap it once; the browser needs a tap before it plays sound); the screen stays awake.
+- [ ] The host is signed in on their phone (and a second device signed in too, as a backup).
+- [ ] The game is created (or started from the saved preset), with every player's photo and display name checked; settings checked (3 Traitors, dagger ×2, End Game auto, timers, ghost games on).
+- [ ] The co-host is chosen (Players tab, "Make … co-host") and has opened the co-host page from their phone.
+- [ ] Props for the missions you might run are ready (section 7).
+
+**Setup (7:30 PM, 10 minutes)**
+- [ ] Everyone scans the QR code, taps their photo and sets a PIN; the host confirms every seat; every dot is green.
+- [ ] Deal roles; everyone holds to peek; "Everyone has opened their role" shows.
+- [ ] Save the offline copy of roles (Game tab) and print it or keep it on the host's phone.
+
+**Each day (follow the run sheet)**
+- [ ] Mission (optional): pick from the catalogue, read the win and tie rules aloud, reward the winners (direct or winners' vote).
+- [ ] Circle: debate timer, voting on phones, the reveal ballot by ballot, ties per the tie rule, the banishment card.
+- [ ] Night: Traitors pick (and chat); everyone else answers the suspect poll; ghosts bet and react.
+- [ ] Breakfast: reveal the murder; the entrance plays on the big screen; phones wait for it.
+- [ ] Ghosts: the ghost vote once, Bhoot Bets, Crystal Ball at the Circle, Bingo, reactions during the debate.
+
+**Break-it moments to try once in the rehearsal**
+- [ ] One phone turns Wi-Fi off mid-vote and back on: the vote counts once.
+- [ ] The host's phone is locked for 5 minutes, then reopened: it catches up.
+- [ ] A player refreshes or switches phones and rejoins with the PIN.
+- [ ] Pause and resume; add a minute to a timer.
+- [ ] Undo a host step, and try the Fix tab (enter a ballot by hand).
+
+**Finale**
+- [ ] End Game votes until unanimous; the host's private result card; "Reveal to everyone"; every role flips on the big screen with the suspicion meter and Best Ghost.
+- [ ] Save the game as a preset for next time (Settings tab).
+- [ ] The rehearsal finishes inside the run sheet's times (with the 15 to 20 minute buffer).
 
 ## 7. Mission catalogue
 
@@ -503,6 +564,8 @@ Missions are optional: after each murder reveal the host decides whether to run 
 | Lemon and Spoon Race | Race with a lemon on a spoon held in your mouth | 10 min | Spoons, lemons | Shield |
 | Ring Toss | Toss rings onto bottles; the most rings wins | 10 min | Rings, bottles | Shield |
 | Buzzer Quiz | The host reads quick-fire questions; the first correct answer scores | 10 min | Question list | Dagger |
+
+**In the app (Step 5, 27 October):** this table is the default mission catalogue (`DEFAULT_MISSIONS` in `lib/game/settings.ts`), copied into every new game and saved with presets. The host or co-host picks a mission from it, can tweak the rules before starting, and can add, edit or remove missions; the big screen shows the mission's name, how it works and the win and tie rules. The suggested reward is a hint only; the Traitor angle shows only to the host and co-host.
 
 ---
 
@@ -542,6 +605,8 @@ Murdered and banished players stay ghosts until the final reveal and never learn
 - Ghosts don't discuss the game with living players (party rule).
 - The top-scoring ghost wins Best Ghost at Sunday breakfast.
 
+**How it's built (Step 5, 27 October).** Every score-only game is built, each behind its own switch (default on): Bhoot Bets (banishment and murder bets, plus Traitor calls), Crystal Ball, Live reactions and Bhoot Bingo. Exact rules are in 5.10. A ghost's phone has two tabs, "Ghost games" and "What's happening" (the public feed), with the ghost vote above them when it can be used. Points are settings (`ghostPoints`); Best Ghost appears at the final reveal on every screen.
+
 ---
 
 ## 9. Architecture
@@ -569,8 +634,8 @@ One web app, three synced views, all updated live: the host's control panel, eac
 | Host control | `/host/[code]` and `/host/[code]/settings` | The host, on a phone or laptop | Lobby, settings and roster editor, God view of all roles, phase controls with timers and a "waiting on" checklist, run-or-skip mission choice and awards to one or more players, vote reveal button, undo, edit-anything panel, action log |
 | Player phone | `/play/[code]` | Each player (10 to 12 at the party) | Tap your photo to join, PIN, hold-to-peek role card, current phase, voting, my items (shield, dagger), night screen (Traitor picks or suspect poll), ghost mode |
 | Traitors' tower | inside `/play/[code]` | Traitors only | Private chat, private victim pick, recruitment choice and the recruit's offer |
-| Big screen | `/screen/[code]` (built in Step 3; public, no sign-in) | A laptop or TV everyone can see | QR join code and photo wall in the lobby, phase title and timer, mission card, vote count, vote-by-vote reveal with ×2/×3 and ghost badges and a running tally, tie screen, spin animation, banishment and murder cards (held for 20 seconds after they happen), night screen, final reveal with every role and the suspicion meter; keeps the screen awake; full-screen button. Breakfast entrance is tier 2 |
-| Co-host (tier 2) | `/cohost/[code]` | Optional helper | Mission results and big-screen controls; no roles |
+| Big screen | `/screen/[code]` (built in Step 3; public, no sign-in) | A laptop or TV everyone can see | QR join code and photo wall in the lobby, phase title and timer, mission card, vote count, vote-by-vote reveal with ×2/×3 and ghost badges and a running tally, tie screen, spin animation, banishment and murder cards (held for 20 seconds after they happen), night screen, final reveal with every role and the suspicion meter; keeps the screen awake; full-screen button. Step 5: breakfast entrance, Live reactions, the big-screen message, narrator lines, Bingo announcements, roles flipping in turn at the final reveal with the suspicion meter and Best Ghost, and sounds (heartbeat while votes are open or revealed, a chime per ballot, a gong on results; a Sound button turns them on) |
+| Co-host (built in Step 5) | `/cohost/[code]` | A player the host made co-host, on their own phone | Pick and start missions from the catalogue, reward winners or run their private vote, reveal the next ballot, set the big-screen message; public state only, never roles, picks, ballots or who holds what |
 
 ### 9.3 Server authority
 
@@ -599,6 +664,7 @@ One web app, three synced views, all updated live: the host's control panel, eac
 - Reveal text never says why nobody died.
 - Test access with real player sessions of every viewer type, including after elimination and reconnect.
 - **Checked (Step 4, 27 October).** Every route was tested against every kind of caller (no sign-in, a stranger, a signed-in non-host, the other game's host, each seated phone, ghosts, a phone that took a seat back), and each reply is exactly that caller's `viewFor`, error replies included. On the real database, a browser holding only the public key can read nothing from `games`, `seats`, `game_actions`, `hosts` or `presets`, can't write anywhere or call the save functions, can't list photos, and when it listens to realtime on every table while a game moves, hears only `game_pings` rows (code, version, time). Realtime accepts those subscriptions but sends them nothing, because row security and the publication keep them silent.
+- **Step 5 additions (27 October).** The co-host view is public state plus the mission catalogue, the missions with winners, and who is still voting in a winners' vote; it never has roles, ballots, picks or item holders, and a refused award doesn't say why. A ghost's view has only their own ghost-game entries (never anyone else's bets, calls or guesses); an eliminated Traitor isn't offered Crystal Ball or Traitor calls; a hidden murder victim gets no ghost games until the reveal. Ghost scores reach screens only at the final reveal. Live reactions carry no sender. The leak checker (`findLeaks`) checks all of this for every viewer, in the unit tests and in every simulated game.
 
 ### 9.5 Identity
 
@@ -632,10 +698,13 @@ The main risks on the night are an accidental leak or a stuck game, not an attac
 | `seats` | Player ↔ phone (anonymous auth user), hashed PIN (scrypt), failed attempts, locked flag, last seen, bot flag (Step 2: a bot seat has no phone and no PIN); one seat per phone per game | Server only |
 | `game_actions` | Append-only ledger: idempotency key (unique per game), actor, action, versions before and after (exactly one apart, unique per game), and the state after every action (for undo and recovery) | Server only |
 | `game_pings` | Room code and version only | Everyone (read-only), and sent over Supabase Realtime |
-| `presets` | Saved settings and rosters (tier 2) | Server only |
+| `presets` | Saved presets: name, settings, roster (names and display names, photos copied to `presets/<id>/` in the photo bucket) and, from Step 5, the mission catalogue (`missions`) | Server only |
+| `game_reactions` (Step 5) | Live reactions: room code, emoji, time; no sender. Written only by the server; old rows tidied after an hour | Everyone (read-only), and sent over Supabase Realtime |
 | Storage bucket `player-photos` | Player photos (private, 5 MB, JPEG, PNG, WebP, HEIC) | Server only; screens get short-lived signed links |
 
 Writes go through two database functions, callable only with the secret key: `create_game` (inserts the game and its ping) and `apply_game_action(game, expected version, idempotency key, actor, action, next state)`. The second runs in one transaction: a repeated key returns `duplicate`; a version that moved on returns `stale` (the `update … where version = expected` touched no row); otherwise it saves the state, writes the ledger row and bumps the ping. Row Level Security is on for every table; only `game_pings` has a read policy, and `anon` and `authenticated` have no other grants.
+
+**Step 5 (migration `20261027180000_reactions_and_preset_missions.sql`, applied 27 October):** the `game_reactions` table above and `presets.missions`. The game state gained `missionCatalogue`, `cohostId`, `screenMessage` and `ghostGames` (bets, Traitor calls, Crystal Ball guesses, Bingo marks and winner); missions gained `templateId` and `howItWorks`. Games saved before Step 5 are filled in on load (`normaliseState`).
 
 **Original proposal (superseded by the design above; kept for reference):**
 
@@ -694,6 +763,7 @@ The planning doc's first, simpler data model (games, players, roles, items, vote
 - Gentle motion only (a flickering diya flame); everything respects reduced-motion settings.
 - Secret screens look neutral until held; the role colour shows only while peeking.
 - Night looks the same for Traitors and Innocents at a glance: the same title and grid. A Traitor's screen marks fellow Traitors with a small dot, never the word "Traitor", and shows a pick count ("1 of 3 picks in"), never names.
+- **Step 5 polish:** eliminated players fade to grey; at the final reveal each player's card turns over in turn to show their role; the breakfast entrance brings photos in one by one; ghosts' reactions float up the big screen; sounds are synthesised in the browser (no files) and start only after a tap on "Sound"; every new animation stops under reduced-motion settings.
 
 ---
 
@@ -741,6 +811,8 @@ Build tier by tier. A tier starts only when the one before it works end to end. 
 | 3. Polish, once stable | Photo effects (grey-out on elimination, roles flipped at the finale), sounds (heartbeat during votes, gong on reveals), narrator text and editable text on the big screen |
 | 4. Last, behind a host switch | Recruitment, switched on only after its tests pass |
 | Later: documented, not built | Ghost powers other than the ghost vote; secret Traitor tasks and sabotage objectives; handwritten votes; anonymous-vote setting; recruitment at 2 Traitors; game history export |
+
+**Status (27 October):** Tiers 1 to 4 are built. Recruitment (tier 4) passes its gate tests and its switch stays off by default; turning it on is the owner's call. Feature freeze from Step 5: only fixes from here.
 | Dropped | Custom gift types; death-card game; Destiny Card |
 
 ---
@@ -826,6 +898,8 @@ Checkpoint: a full game on 3 real phones plus the laptop.
 
 Then a feature freeze, a rehearsal checklist that follows the run sheet (section 6), and a printable paper fallback.
 
+**Built (27 October):** all of the above. Tier 2 and tier 3 as described in 4.3, 5.10, 7, 8 and 9.8; recruitment's gate tests pass (with a new one for ghost games during an offer) and it stays off by default; the rehearsal checklist is 6.1; the offline copy of roles has a Print button and prints cleanly (rows and slips don't split across pages).
+
 ### 12.3 Things that must hold true
 
 - The rules engine decides everything: one pure function, `applyGameAction(state, action)` in `lib/game/engine.ts`, implements section 5 and rejects invalid actions. The UI never decides a rule.
@@ -873,10 +947,13 @@ Then a feature freeze, a rehearsal checklist that follows the run sheet (section
 | `tests/simulator.test.ts` | Bot games across 5, 10, 11, 12 and 20 players and 9 settings profiles (including chaos with random host overrides), checking `lib/game/invariants.ts` and `lib/game/leaks.ts` after every action |
 | `tests/routes.test.ts` (Step 4) | Every API route against every kind of caller, through the real route and server code, with an in-memory Supabase stand-in (`tests/fakes/supabase.ts`) that keeps the database's unique rules and the save function's duplicate / stale / applied outcomes: who may create, view and act; exact views per caller; seats, PINs and locking; an expired sign-in told apart from a wrong PIN; elimination and taking a seat back on a new phone; the host on a new device; twelve votes at once; the same request twice; two host taps at once and a resent host tap; a storm of timer nudges |
 | `tests/client.retry.test.ts` (Step 4) | Dropped phones: a lost move resent with the same key and stopping at the first answer; busy servers resent; refused moves and stale taps never resent; the no-connection message; an expired sign-in renewed once; a player's lost session replaced; a wrong PIN not retried |
+| `tests/engine.tier2.test.ts` (Step 5) | The mission catalogue (defaults, add, edit, remove, unique names, limits, starting from it); the co-host (who may pick them, exactly what they may do, generic refusals, their view, clearing on removal); the big-screen message; the breakfast entrance (order, the victim's empty chair, off); every ghost game (who may play, the hidden victim, bet windows and settling, a bet on nobody on a shield save, Traitor calls, Crystal Ball, Bingo cards and winner, switches, scores only at the reveal); presets applied in the lobby only; older saved games filled in |
 
 Run `npm test` for everything with a quick bot sweep (about 135 games), or `npm run simulate` for about 2,700 bot games (2 to 3 minutes).
 
 **Database tests (Step 2):** `npm run e2e` runs `tests/e2e/game.e2e.test.ts` against the linked Supabase project with the keys in `.env.local` (never part of `npm test`). It checks idempotent saves, stale host taps refused, simultaneous player actions both landing, an invalid move saving nothing, a gap-free action ledger and matching pings, then plays a full 12-bot game through the database with invariant and privacy checks; it deletes its games afterwards. `tests/e2e/drive.e2e.test.ts` is a manual driver (create a game with bots in all but some seats, press host buttons, run bots, delete) used to test the player screens in a browser. The privacy checker (`findLeaks`) tests every viewer's view against 9.4 and is reused in Step 4.
+
+**Step 5 test additions:** `tests/routes.test.ts` covers co-host access (view and actions only for the player the host picked, only mission and big-screen actions), Live reactions (ghosts only, debate only, listed emoji only, no sender stored, the flood cap, the switch) and presets (save with copied photos, list, owner only, new game from a preset with photos, replace by name, delete removes photos, apply in the lobby only). `tests/engine.recruitment.test.ts` gained a gate test for ghost games during a recruit offer. The bot simulator now plays the ghost games and uses a co-host in half its games, with the leak and invariant checks covering the new state.
 
 **Database tests added in Step 4:** in the same file, a crowd of phones at once (twelve role confirmations in the same instant, ten timer nudges for one version applying one tick, one vote resent six times counting once, eleven more votes in the same instant all landing and locking the vote, two host taps at once with one refused as stale, and one host tap resent while in flight landing once without an error), and what a browser can reach with the public key (section 9.4).
 
@@ -934,6 +1011,8 @@ All decisions dated 26 October 2026 unless noted.
 | Requests carry the access token (26 Oct, Step 2) | The browser sends its Supabase access token on each request; no cookie session or proxy | Simplest reliable setup with Cache Components on; the server verifies every request |
 | Vercel region (26 Oct, Step 2; updated 27 Oct) | Server functions run in Mumbai (`bom1`), next to the database, set in the Vercel project settings (Settings → Functions). A `vercel.json` with `regions` stopped Vercel creating deployments at all on 26 October, so it was removed | Vercel's default region is in the US; every game action would otherwise cross the world twice |
 | Big screen holds results (27 Oct, Step 3) | A banishment, murder reveal or End Game result stays on the big screen for 20 seconds, and a spin plays for 4.5 seconds, timed from when the screen first sees it (a screen opened later doesn't replay old results). Phones show "X was banished" for a minute after | The engine moves straight to night after a banishment, so without this the room would never see who went |
+| Step 5 build (27 Oct) | Tier 2 and 3 built and frozen: mission catalogue as editable data; co-host chosen by the host from the players, using their own seat (no separate login); every score-only ghost game; breakfast entrance; presets that also keep photos and missions; big-screen message; narrator lines; sounds; photo effects. Ghost-game details chosen by Claude Code as defaults (flagged in 16): fixed points per right bet, Traitor calls for "who was a Traitor" bets, Bingo moments that need no secret, reactions during the debate only | Step 5 scope (12.2); owner said build the full scope properly |
+| Recruitment stays off by default (27 Oct) | Its gate tests pass, so the switch is safe to use; the default stays off and turning it on is the owner's call before dealing | 5.4 and tier 4: built last, behind a switch |
 | Dropped phones and real-database checks (27 Oct) | Lost moves are resent automatically with the same key (up to 3 times, about 5 seconds); requests give up after 20 seconds so they can be resent; an expired sign-in is renewed once (the server marks it `code: "session"` so a wrong PIN is never resent); timer nudges keep retrying until the game moves on. A same-key host tap that loses a race now comes back as a duplicate, not "a step behind". Checked on the real database: twelve phones at once, resends, nudge storms, double taps, and that a browser with the public key reads and hears nothing but version pings | Step 4: dropped phones, concurrency, and the realtime check in 9.4 |
 | Step 4 break-it fixes (27 Oct) | Timer nudges from screens used a key too short for the server's validation, so timers never advanced on their own; fixed. Twelve votes in the same second made some phones see "busy"; saves now retry up to 40 times with a short random wait. Found by the new route tests (`tests/routes.test.ts`, every route against every kind of caller, using an in-memory Supabase stand-in in `tests/fakes/supabase.ts`) | Step 4: break-it testing |
 | Undo, including a win (27 Oct) | The host can undo their last step, again and again, back to a player's move; before the final reveal that includes the step that ended the game ("Undo the win and keep playing"). Each undo needs a reason and is logged | Owner's instruction: a win can be taken back and play can continue; undo was planned for Step 4 anyway |
@@ -965,7 +1044,9 @@ Each has a safe default, so the build doesn't wait on them.
 - [x] Ghost game for version 1: all score-only games, plus the ghost vote (decided 26 October)
 - [ ] Ideas from similar games (section 17): pick any to add; the rest stay Later
 - [ ] Missions: shortlist games from section 7; on the night, the host decides after each murder reveal whether to run one
-- [ ] Co-host: pick from the Games committee (Deep, Yashvi or Cherry). They're all players, so a co-host login runs missions and the big screen without ever seeing roles
+- [ ] Co-host: pick from the Games committee (Deep, Yashvi or Cherry). They're all players, so the co-host page runs missions and the big screen without ever seeing roles. Built (Step 5): the host picks them in the Players tab; default none
+- [ ] Ghost game details (Step 5 defaults, see 5.10): fixed points per right bet (not wagers); Traitor calls stand in for the "who was a Traitor" bets; Bingo moments that need no secret; reactions during the debate only; the point values in 4.2
+- [ ] Recruitment for 31 October: on or off? (default: off; gate tests pass)
 - [x] Player photos: the host uploads names and photos later in the roster editor (decided 26 October)
 - [x] Eliminated Traitors still win if any Traitor survives: yes (decided 26 October)
 - [ ] Ghost vote details: usable in revotes or the End Game? (default: no to both)
@@ -1120,6 +1201,8 @@ Add it to the table in section 9.4, give it a branch in `viewFor`, and add it to
 - **The folder name has a space.** Quote the path in shell commands.
 - **Anonymous sign-ins are rate-limited per internet address.** Supabase's default is 30 an hour per IP, and every phone on the villa Wi-Fi shares one address. Each phone and each browser on it (Chrome, Safari, an Instagram or WhatsApp in-app browser) needs one, so a busy start could hit the limit. Raise it in the Supabase dashboard before the night (Authentication, then Rate Limits).
 - **The schedule is tight.** Cut from the lowest tier first; never ship half a feature.
+- **The co-host is also a player.** A co-host who is a Traitor could give themselves a shield or dagger at a mission. Every co-host action is logged under the co-host, and the host can undo it or take it back in the Fix tab. A refused award doesn't say why, but a co-host could still guess that the player already holds one.
+- **Bhoot Bingo is on the honour system.** Ghosts tap their own squares; it only affects Best Ghost.
 
 ---
 

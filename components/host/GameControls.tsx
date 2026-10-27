@@ -5,30 +5,18 @@ import type { ClientAction } from "@/lib/game/actions";
 import type { GameHandle } from "@/lib/client/useGame";
 import { api } from "@/lib/client/api";
 import { itemLabel } from "@/lib/client/labels";
-import type { ItemType, MissionKind, VoteRound } from "@/lib/game/types";
+import type { ItemType, VoteRound } from "@/lib/game/types";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
-import { Card, Notice, Segmented, TextField, Toggle } from "@/components/ui/Field";
+import { Card, Notice, Segmented, Toggle } from "@/components/ui/Field";
 import { PlayerGrid } from "@/components/ui/PlayerGrid";
 import { Sheet } from "@/components/ui/Sheet";
 import { ErrorLine, gridPlayers, playerById } from "@/components/player/shared";
 import { downloadPaperFallback } from "@/lib/client/paper";
 import { OverrideSheet } from "./FixPanel";
+import { MissionPicker, ScreenMessageCard } from "./MissionCatalogue";
 import { presence } from "./SeatDot";
 import { UndoButton } from "./UndoButton";
-
-const MISSION_IDEAS: Array<{ name: string; kind: MissionKind }> = [
-  { name: "Bhoot-Bollywood Dumb Charades", kind: "team" },
-  { name: "Antakshari", kind: "team" },
-  { name: "Hidden Diya Hunt", kind: "team" },
-  { name: "Tower of Terror", kind: "team" },
-  { name: "Rangoli Pictionary", kind: "team" },
-  { name: "Mystery Box", kind: "individual" },
-  { name: "Minute to Win It", kind: "individual" },
-  { name: "Spooky Musical Chairs", kind: "individual" },
-  { name: "Two Truths and a Lie", kind: "individual" },
-  { name: "Memory Tray", kind: "individual" },
-];
 
 export function useHostSend(game: GameHandle) {
   const [busy, setBusy] = useState(false);
@@ -159,63 +147,16 @@ function ChoicePoint({ game, children }: { game: GameHandle; children?: React.Re
         Go to the Circle of Shaq
       </Button>
       <ErrorLine message={error} />
-      <MissionForm game={game} open={missionOpen} onClose={() => setMissionOpen(false)} />
+      <MissionPicker
+        game={game}
+        catalogue={game.view!.host!.missionCatalogue}
+        open={missionOpen}
+        onClose={() => setMissionOpen(false)}
+        send={(a) => send(a)}
+        busy={busy}
+        error={error}
+      />
     </div>
-  );
-}
-
-function MissionForm({ game, open, onClose }: { game: GameHandle; open: boolean; onClose: () => void }) {
-  const { busy, error, send } = useHostSend(game);
-  const [name, setName] = useState("");
-  const [kind, setKind] = useState<MissionKind>("team");
-  const [winRule, setWinRule] = useState("");
-  const [tieRule, setTieRule] = useState("Sudden-death round");
-  return (
-    <Sheet open={open} onClose={onClose} title="Start a mission">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap gap-2">
-          {MISSION_IDEAS.map((m) => (
-            <button
-              key={m.name}
-              type="button"
-              onClick={() => {
-                setName(m.name);
-                setKind(m.kind);
-              }}
-              className={`rounded-full px-3 py-1.5 text-sm ring-1 ${name === m.name ? "bg-gold text-night ring-gold" : "bg-surface-2 text-ink ring-gold/20"}`}
-            >
-              {m.name}
-            </button>
-          ))}
-        </div>
-        <TextField label="Mission name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} />
-        <Segmented
-          label="Type"
-          value={kind}
-          options={[
-            { value: "team", label: "Team game" },
-            { value: "individual", label: "Individual" },
-          ]}
-          onChange={setKind}
-        />
-        <TextField label="How to win (announced to everyone)" value={winRule} onChange={(e) => setWinRule(e.target.value)} maxLength={200} />
-        <TextField label="If it's a tie" value={tieRule} onChange={(e) => setTieRule(e.target.value)} maxLength={200} />
-        <ErrorLine message={error} />
-        <Button
-          disabled={!name.trim()}
-          busy={busy}
-          onClick={async () => {
-            if (await send({ type: "startMission", name, kind, winRule, tieRule })) {
-              setName("");
-              setWinRule("");
-              onClose();
-            }
-          }}
-        >
-          Start the mission
-        </Button>
-      </div>
-    </Sheet>
   );
 }
 
@@ -240,6 +181,7 @@ function MissionControls({ game }: { game: GameHandle }) {
       <Card>
         <p className="font-display text-2xl text-gold">{mission?.name}</p>
         <p className="text-ink-muted">{mission?.kind === "team" ? "Team game" : "Individual game"}</p>
+        {mission?.howItWorks ? <p className="mt-2 text-ink-muted">{mission.howItWorks}</p> : null}
         {mission?.winRule ? <p className="mt-2">To win: {mission.winRule}</p> : null}
         {mission?.tieRule ? <p>Tie: {mission.tieRule}</p> : null}
       </Card>
@@ -316,7 +258,7 @@ function MissionControls({ game }: { game: GameHandle }) {
       <Button disabled={!!rewardOpen} busy={busy} onClick={() => send({ type: "openCircle" })}>
         Go to the Circle of Shaq
       </Button>
-      <MissionForm game={game} open={missionOpen} onClose={() => setMissionOpen(false)} />
+      <MissionPicker game={game} catalogue={host.missionCatalogue} open={missionOpen} onClose={() => setMissionOpen(false)} send={(a) => send(a)} busy={busy} error={error} />
     </div>
   );
 }
@@ -647,6 +589,21 @@ function FinaleControls({ game }: { game: GameHandle }) {
         <p className="text-ink-muted">{f.reason}</p>
         <p className="mt-2">Winners: {names(game, f.winnerIds)}</p>
       </Card>
+      {f.ghostScores.length ? (
+        <Card>
+          <p className="mb-2 font-semibold text-gold">Best Ghost</p>
+          <ol className="flex flex-col gap-1">
+            {f.ghostScores.map((g, i) => (
+              <li key={g.playerId} className="flex justify-between gap-2">
+                <span>
+                  {i + 1}. {playerById(view, g.playerId)?.displayName}
+                </span>
+                <span className="font-mono text-gold">{g.total}</span>
+              </li>
+            ))}
+          </ol>
+        </Card>
+      ) : null}
       {!revealed ? (
         <>
           <Button onClick={() => setConfirm(true)}>Reveal to everyone</Button>
@@ -672,6 +629,16 @@ function FinaleControls({ game }: { game: GameHandle }) {
       )}
       <ErrorLine message={error} />
     </div>
+  );
+}
+
+function BigScreenCard({ game }: { game: GameHandle }) {
+  const { busy, error, send } = useHostSend(game);
+  if (game.view!.closed) return null;
+  return (
+    <Card>
+      <ScreenMessageCard game={game} send={(a) => send(a)} busy={busy} error={error} />
+    </Card>
   );
 }
 
@@ -748,6 +715,7 @@ export function GameControls({ game }: { game: GameHandle }) {
       <TimerControls game={game} />
       {body}
       {view.startingPlayerCount && !(view.phase === "FINALE") ? <UndoButton game={game} /> : null}
+      <BigScreenCard game={game} />
       <BotRunner game={game} />
       <RolesList game={game} />
     </div>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { PHASE_TITLE } from "@/lib/client/labels";
 import { useGame } from "@/lib/client/useGame";
+import { useTicker } from "@/lib/client/useTicker";
 import { Button } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Field";
 import { Sheet } from "@/components/ui/Sheet";
@@ -13,6 +14,8 @@ import {
   BreakfastScreen,
   DebateScreen,
   EndgameVoteScreen,
+  EntranceHold,
+  entranceLeft,
   FinaleScreen,
   GhostScreen,
   LobbyWait,
@@ -54,6 +57,7 @@ export function PlayerApp({ code }: { code: string }) {
   const game = useGame(code.toUpperCase(), "player");
   const [roleOpen, setRoleOpen] = useState(false);
   const view = game.view;
+  useTicker(500, view?.phase === "MURDER_REVEAL");
 
   if (game.notFound) {
     return (
@@ -82,6 +86,7 @@ export function PlayerApp({ code }: { code: string }) {
   let body: React.ReactNode;
   if (!game.seated || !me) body = <JoinScreen game={game} code={view.code} />;
   else if (view.finalePending) body = <HoldOn />;
+  else if (entranceLeft(game) > 0) body = <EntranceHold game={game} />;
   else if (view.phase === "FINALE") body = <FinaleScreen game={game} />;
   else if (me.isGhost) body = <GhostScreen game={game} />;
   else {
@@ -142,6 +147,11 @@ export function PlayerApp({ code }: { code: string }) {
           </div>
         ) : null}
         {game.seated ? <RecentNews game={game} /> : null}
+        {game.seated && me?.isCohost && view.phase !== "FINALE" ? (
+          <Link href={`/cohost/${view.code}`} className="mb-4 block rounded-2xl bg-gold/10 px-4 py-3 text-center text-gold ring-1 ring-gold/30">
+            You&apos;re the co-host · open the co-host controls
+          </Link>
+        ) : null}
         {body}
       </main>
       {me && dealt ? (
