@@ -77,7 +77,10 @@ describe("recruitment gate tests", () => {
     g.host({ type: "revealMurder" });
     const reveal = g.state.events.filter((e) => e.type === "murderRevealed").pop()!;
     expect(reveal.audience).toEqual({ kind: "public" });
-    expect(reveal.data).toEqual({ nightId: g.night().id, victimId: null, role: null });
+    const { entrance, ...rest } = reveal.data as { entrance: string[] };
+    expect(rest).toEqual({ nightId: g.night().id, victimId: null, role: null, entranceMs: 20_000 });
+    // Everyone alive walks in to breakfast, exactly as when nobody was targeted.
+    expect([...entrance].sort()).toEqual(g.state.players.filter((p) => p.status === "alive").map((p) => p.id).sort());
   });
 
   it("the new Traitor takes part in the next night, sees the chat and their fellow Traitor", () => {

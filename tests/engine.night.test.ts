@@ -156,7 +156,10 @@ describe("shields (sections 5.4 step 6, 5.6)", () => {
     expect(g.night()).toMatchObject({ victimId: null, reason: "shield" });
     g.host({ type: "revealMurder" });
     const reveal = g.state.events.filter((e) => e.type === "murderRevealed").pop()!;
-    expect(reveal.data).toEqual({ nightId: g.night().id, victimId: null, role: null });
+    const { entrance, ...rest } = reveal.data as { entrance: string[] };
+    expect(rest).toEqual({ nightId: g.night().id, victimId: null, role: null, entranceMs: 20_000 });
+    // Everyone alive walks in to breakfast, exactly as when nobody was targeted.
+    expect([...entrance].sort()).toEqual(g.state.players.filter((p) => p.status === "alive").map((p) => p.id).sort());
   });
 
   it("expires after one night even if unused", () => {

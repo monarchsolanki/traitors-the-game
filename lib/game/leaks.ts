@@ -1,3 +1,4 @@
+import { isVisibleGhost } from "./ghosts";
 import type { GameState, Viewer } from "./types";
 import { viewFor } from "./view";
 
@@ -51,6 +52,14 @@ export function findLeaks(s: GameState, viewer: Viewer): string[] {
     add("why nobody died leaked");
   }
   if (json.includes('"lostNightId"') || json.includes('"nightResolved"')) add("private night fields leaked");
+  if (json.includes('"holderId"')) add("who holds which item leaked");
+
+  // Ghost games: only a visible ghost gets them, only their own, and eliminated Traitors skip the role games.
+  if (json.includes('"ghostId"') || json.includes('"pickIds"') || json.includes('"bingoWinnerId"')) add("ghost game entries leaked");
+  if (v.me?.ghostGames && !isVisibleGhost(s, me!)) add("ghost games shown to someone who isn't a ghost");
+  if (v.me?.ghostGames && s.roles[me!] === "traitor" && (v.me.ghostGames.crystalBall || v.me.ghostGames.bets?.calls)) {
+    add("an eliminated Traitor offered a game about who the Traitors are");
+  }
 
   for (const r of [v.round, ...v.pastRounds]) {
     if (!r) continue;

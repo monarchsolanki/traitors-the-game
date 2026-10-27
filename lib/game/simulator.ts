@@ -1,4 +1,6 @@
+import { COHOST_ACTIONS } from "./actions";
 import { applyGameAction, createGame } from "./engine";
+import { banishBetsOpen, bingoCard, crystalOpen, crystalSize, murderBetsOpen } from "./ghosts";
 import { checkInvariants } from "./invariants";
 import { allViewers, findLeaks } from "./leaks";
 import { pickOne, seededRand, shuffle, type Rand } from "./random";
@@ -66,6 +68,10 @@ export function botMove(
       }
     }
   }
+  if (!isAlive && s.frozen && rand() < 0.3) {
+    const m = ghostGameMove(s, playerId, alive, rand);
+    if (m) return m;
+  }
   const night = s.phase === "NIGHT" && lastNight(s) && !lastNight(s)!.resolved ? lastNight(s)! : null;
   if (night && isAlive) {
     if (night.recruit?.targetId === playerId && !night.recruit.answer) return { type: "answerRecruit", accept: rand() < 0.5 };
@@ -88,6 +94,32 @@ export function botMove(
     } else if (s.settings.suspectPoll && !night.suspectAnswers[playerId] && others.length) {
       return { type: "suspectAnswer", targetId: pickOne(others, rand) };
     }
+  }
+  return null;
+}
+
+/** A ghost plays a side game. The engine refuses what isn't allowed (a hidden victim, a Traitor ghost). */
+function ghostGameMove(s: GameState, playerId: string, alive: string[], rand: Rand): ActionPayload | null {
+  const on = s.settings.ghostGames;
+  const g = s.ghostGames;
+  const waiting = (kind: "banish" | "murder") => g.bets.some((b) => b.ghostId === playerId && b.kind === kind && !b.settled);
+  const roll = rand();
+  if (on.bhootBets && roll < 0.4) {
+    if (banishBetsOpen(s) && !waiting("banish") && alive.length) return { type: "ghostBet", kind: "banish", targetId: pickOne(alive, rand) };
+    if (murderBetsOpen(s) && !waiting("murder") && alive.length) {
+      return { type: "ghostBet", kind: "murder", targetId: rand() < 0.2 ? null : pickOne(alive, rand) };
+    }
+    const out = s.players.filter((x) => x.id !== playerId && x.status !== "alive" && !g.calls.some((c) => c.ghostId === playerId && c.playerId === x.id));
+    if (out.length) return { type: "traitorCall", playerId: pickOne(out, rand).id, call: rand() < 0.5 ? "traitor" : "innocent" };
+  }
+  if (on.crystalBall && roll < 0.7 && crystalOpen(s) && !g.crystal.some((c) => c.ghostId === playerId && c.day === s.day)) {
+    const others = s.players.filter((x) => x.id !== playerId).map((x) => x.id);
+    return { type: "crystalBall", playerIds: shuffle(others, rand).slice(0, crystalSize(s)) };
+  }
+  if (on.bhootBingo) {
+    const marked = g.bingo[playerId]?.marked ?? [];
+    const free = bingoCard(s, playerId).filter((m) => !marked.includes(m));
+    if (free.length) return { type: "markBingo", moment: pickOne(free, rand) };
   }
   return null;
 }
@@ -188,6 +220,8 @@ function chaosMove(s: GameState, rand: Rand): ActionPayload | null {
     return { type: "setRole", playerId: id, role: s.roles[id] === "traitor" ? "innocent" : "traitor", reason };
   }
   if (roll < 0.785) return { type: "endGameEarly", reason };
+  if (roll < 0.8) return { type: "setScreenMessage", text: rand() < 0.3 ? null : `Message ${Math.floor(rand() * 1000)}` };
+  if (roll < 0.81 && s.missionCatalogue.length) return { type: "deleteMissionTemplate", templateId: pickOne(s.missionCatalogue, rand).id };
   if (roll < 0.9) return { type: "updateSettings", patch: { voteSeconds: 30 + Math.floor(rand() * 200) } };
   return null;
 }
@@ -240,6 +274,8 @@ export function simulate(opts: SimOptions): SimResult {
   const roster = Array.from({ length: opts.players }, (_, i) => ({ name: `Bot ${i + 1}`, displayName: `B${i + 1}` }));
   let now = 1_800_000_000_000;
   let s = createGame({ code: "SIMBOT", seed: `game-${opts.seed}`, at: now, roster, settings: opts.settings });
+  // Half the games have a co-host, who sends some of the mission and big-screen moves.
+  const cohostId = rand() < 0.5 ? pickOne(s.players, rand).id : null;
   const history: string[] = [];
   const phases = new Set<Phase>();
   let rejected = 0;
@@ -276,7 +312,13 @@ export function simulate(opts: SimOptions): SimResult {
       const m = botMove(s, p.id, rand);
       if (m) moves.push({ actor: asPlayer(p.id), payload: m });
     }
-    for (const m of hostProgress(s, rand, o)) moves.push({ actor: HOST, payload: m });
+    if (cohostId && s.cohostId !== cohostId && s.players.some((p) => p.id === cohostId)) {
+      moves.push({ actor: HOST, payload: { type: "setCohost", playerId: cohostId } });
+    }
+    for (const m of hostProgress(s, rand, o)) {
+      const byCohost = s.cohostId && COHOST_ACTIONS.has(m.type) && rand() < 0.5;
+      moves.push({ actor: byCohost ? { kind: "cohost", playerId: s.cohostId! } : HOST, payload: m });
+    }
     let moved = false;
     for (const m of shuffle(moves, rand)) {
       if (apply(m.actor, m.payload)) {

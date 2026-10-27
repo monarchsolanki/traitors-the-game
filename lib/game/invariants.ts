@@ -93,6 +93,38 @@ export function checkInvariants(s: GameState, prev: GameState | null = null): st
     bad(`back to ${s.phase} after the End Game started`);
   }
 
+  // Ghost games, co-host and catalogue (Step 5)
+  const ids = new Set(s.players.map((p) => p.id));
+  const g = s.ghostGames;
+  const openBets = new Set<string>();
+  for (const b of g.bets) {
+    if (!ids.has(b.ghostId) || (b.pick !== null && !ids.has(b.pick))) bad(`bet ${b.id} names someone not in the game`);
+    if (b.correct !== null && !b.settled) bad(`bet ${b.id} has a result but isn't settled`);
+    if (!b.settled) {
+      const k = `${b.ghostId}:${b.kind}`;
+      if (openBets.has(k)) bad(`${b.ghostId} has two open ${b.kind} bets`);
+      openBets.add(k);
+    }
+  }
+  const calls = new Set<string>();
+  for (const c of g.calls) {
+    const k = `${c.ghostId}:${c.playerId}`;
+    if (calls.has(k) || c.ghostId === c.playerId) bad(`bad Traitor call ${k}`);
+    calls.add(k);
+  }
+  const guesses = new Set<string>();
+  for (const c of g.crystal) {
+    const k = `${c.ghostId}:${c.day}`;
+    if (guesses.has(k) || new Set(c.pickIds).size !== c.pickIds.length || c.pickIds.includes(c.ghostId)) bad(`bad Crystal Ball guess ${k}`);
+    guesses.add(k);
+  }
+  if (g.bingoWinnerId && g.bingo[g.bingoWinnerId]?.lineAt == null) bad("Bingo winner without a line");
+  if (s.cohostId && !ids.has(s.cohostId)) bad("co-host isn't in the game");
+  const names = s.missionCatalogue.map((t) => t.name.toLowerCase());
+  if (new Set(names).size !== names.length || new Set(s.missionCatalogue.map((t) => t.id)).size !== names.length) {
+    bad("duplicate mission in the catalogue");
+  }
+
   // End conditions (sections 5.2, 5.3)
   if (s.phase === "FINALE") {
     if (!s.finale) bad("FINALE without a result");

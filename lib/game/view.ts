@@ -1,4 +1,17 @@
-import { resolveEndGameThreshold, type GameSettings } from "./settings";
+import {
+  banishBetsOpen,
+  bingoCard,
+  crystalOpen,
+  crystalSize,
+  ghostScores,
+  hasBingoLine,
+  isVisibleGhost,
+  murderBetsOpen,
+  pendingVictimId,
+  reactionsOpen,
+  type GhostScore,
+} from "./ghosts";
+import { REACTION_EMOJI, resolveEndGameThreshold, type GameSettings, type MissionTemplate } from "./settings";
 import type {
   ChatMessage,
   EndgameChoice,
@@ -65,6 +78,7 @@ export interface MissionView {
   order: number;
   name: string;
   kind: MissionKind;
+  howItWorks: string;
   winRule: string;
   tieRule: string;
   status: "active" | "done";
@@ -93,6 +107,8 @@ export interface FinaleView {
   reason: string;
   early: boolean;
   suspicion: Record<string, number>;
+  /** Best Ghost: every eliminated player's ghost-game score. */
+  ghostScores: GhostScore[];
 }
 
 export interface PublicView {
@@ -119,6 +135,8 @@ export interface PublicView {
   finale: FinaleView | null;
   /** The game is decided but the host hasn't revealed the result yet. */
   finalePending: boolean;
+  /** A message the host or co-host put on the big screen. */
+  screenMessage: { text: string; at: number } | null;
 }
 
 export interface MeView {
@@ -147,6 +165,34 @@ export interface MeView {
     submitted: boolean;
     myTargetId: string | null;
   } | null;
+  /** The host made this player co-host (they open /cohost/CODE for the controls). */
+  isCohost: boolean;
+  /** Ghost games, only for a ghost everyone can already see is out. */
+  ghostGames: GhostGamesView | null;
+}
+
+export interface GhostGamesView {
+  bets: {
+    banishOpen: boolean;
+    murderOpen: boolean;
+    /** This ghost's bet waiting to settle, per kind (pick null = nobody dies). */
+    banish: { pick: string | null } | null;
+    murder: { pick: string | null } | null;
+    /** Settled bets on public results (banishments and murders), newest first. */
+    history: Array<{ kind: "banish" | "murder"; pick: string | null; correct: boolean; day: number }>;
+    /** "Was this eliminated player a Traitor?" Settles at the final reveal. Null for eliminated Traitors. */
+    calls: Array<{ playerId: string; myCall: Role | null }> | null;
+  } | null;
+  crystalBall: { open: boolean; size: number; myPicks: string[] | null; locked: number } | null;
+  bingo: { card: string[]; marked: string[]; hasLine: boolean; winnerId: string | null } | null;
+  reactions: { open: boolean; emoji: string[] } | null;
+}
+
+export interface CohostView {
+  catalogue: MissionTemplate[];
+  missions: Array<MissionView & { winnerIds: string[] }>;
+  /** The winners' private vote, without who voted for whom. */
+  rewardVote: { itemType: ItemType; voterIds: string[]; votedIds: string[] } | null;
 }
 
 export interface TraitorView {
@@ -168,7 +214,7 @@ export interface GameView extends PublicView {
   me?: MeView;
   traitor?: TraitorView;
   host?: HostSecrets;
-  cohost?: { missions: Mission[] };
+  cohost?: CohostView;
 }
 
 /** The only way game state leaves the server (section 9.4). */
@@ -180,10 +226,7 @@ export function viewFor(s: GameState, viewer: Viewer): GameView {
       return { ...buildPublic(s, "host", { mask: false, allRoles: true, events: () => true }), host: secrets };
     }
     case "cohost":
-      return {
-        ...buildPublic(s, "cohost", { mask: true, allRoles: false, events: (a) => a.kind === "public" }),
-        cohost: { missions: structuredClone(s.missions) },
-      };
+      return { ...buildPublic(s, "cohost", { mask: true, allRoles: false, events: (a) => a.kind === "public" }), cohost: cohostView(s) };
     case "screen":
       return buildPublic(s, "screen", { mask: true, allRoles: false, events: (a) => a.kind === "public" });
     case "player":
@@ -191,10 +234,20 @@ export function viewFor(s: GameState, viewer: Viewer): GameView {
   }
 }
 
-function pendingVictimId(s: GameState): string | null {
-  if (s.phase === "FINALE") return null;
-  const n = s.nights[s.nights.length - 1];
-  return n && n.resolved && !n.revealed ? n.victimId : null;
+function cohostView(s: GameState): CohostView {
+  const r = s.currentRoundId ? s.rounds.find((x) => x.id === s.currentRoundId) : null;
+  return {
+    catalogue: structuredClone(s.missionCatalogue),
+    missions: s.missions.map((m) => ({ ...missionView(m), winnerIds: [...m.winnerIds] })),
+    rewardVote:
+      r && r.kind === "reward" && r.status === "open"
+        ? { itemType: r.itemType!, voterIds: [...r.eligibleVoterIds], votedIds: r.ballots.map((b) => b.voterId) }
+        : null,
+  };
+}
+
+function missionView(m: Mission): MissionView {
+  return { id: m.id, day: m.day, order: m.order, name: m.name, kind: m.kind, howItWorks: m.howItWorks, winRule: m.winRule, tieRule: m.tieRule, status: m.status };
 }
 
 function maskedStatus(s: GameState, playerId: string, mask: boolean): PlayerStatus {
@@ -244,16 +297,7 @@ function buildPublic(
     endGameThreshold: resolveEndGameThreshold(s.settings, s.frozen?.startingPlayerCount ?? s.players.length),
     endgameStarted: s.endgameStarted,
     players,
-    missions: s.missions.map((m) => ({
-      id: m.id,
-      day: m.day,
-      order: m.order,
-      name: m.name,
-      kind: m.kind,
-      winRule: m.winRule,
-      tieRule: m.tieRule,
-      status: m.status,
-    })),
+    missions: s.missions.map(missionView),
     currentMissionId: s.currentMissionId,
     round: current && current.kind !== "reward" ? roundView(current) : null,
     pastRounds: s.rounds.filter((r) => r.kind !== "reward" && r.status === "done" && r.id !== current?.id).map(roundView),
@@ -278,8 +322,10 @@ function buildPublic(
           reason: s.finale.reason,
           early: s.finale.early,
           suspicion: { ...s.finale.suspicion },
+          ghostScores: ghostScores(s),
         }
       : null,
+    screenMessage: s.screenMessage ? { ...s.screenMessage } : null,
   };
 }
 
@@ -384,6 +430,8 @@ function playerView(s: GameState, playerId: string): GameView {
         ? { deadline: night.recruit.deadline }
         : null,
     rewardVote,
+    isCohost: s.cohostId === p.id,
+    ghostGames: ghostGamesView(s, p.id),
   };
   const view: GameView = { ...pub, me };
   if (isTraitor) {
@@ -408,4 +456,51 @@ function playerView(s: GameState, playerId: string): GameView {
     };
   }
   return view;
+}
+
+function ghostGamesView(s: GameState, playerId: string): GhostGamesView | null {
+  const on = s.settings.ghostGames;
+  if (s.phase === "FINALE" || !isVisibleGhost(s, playerId) || !Object.values(on).some(Boolean)) return null;
+  const g = s.ghostGames;
+  const traitorGhost = s.roles[playerId] === "traitor";
+  const mine = g.bets.filter((b) => b.ghostId === playerId);
+  const waiting = (kind: "banish" | "murder") => {
+    const b = mine.find((x) => x.kind === kind && !x.settled);
+    return b ? { pick: b.pick } : null;
+  };
+  const eliminated = s.players.filter((p) => p.id !== playerId && p.status !== "alive" && p.id !== pendingVictimId(s));
+  const crystalToday = g.crystal.find((c) => c.ghostId === playerId && c.day === s.day);
+  const card = on.bhootBingo ? bingoCard(s, playerId) : [];
+  const marked = (g.bingo[playerId]?.marked ?? []).filter((m) => card.includes(m));
+  return {
+    bets: on.bhootBets
+      ? {
+          banishOpen: banishBetsOpen(s),
+          murderOpen: murderBetsOpen(s),
+          banish: waiting("banish"),
+          murder: waiting("murder"),
+          history: mine
+            .filter((b) => b.settled && b.correct !== null)
+            .reverse()
+            .map((b) => ({ kind: b.kind, pick: b.pick, correct: !!b.correct, day: b.day })),
+          calls:
+            traitorGhost || s.settings.revealOnElimination
+              ? null
+              : eliminated.map((p) => ({ playerId: p.id, myCall: g.calls.find((c) => c.ghostId === playerId && c.playerId === p.id)?.call ?? null })),
+        }
+      : null,
+    crystalBall:
+      on.crystalBall && !traitorGhost
+        ? {
+            open: crystalOpen(s),
+            size: crystalSize(s),
+            myPicks: crystalToday ? [...crystalToday.pickIds] : null,
+            locked: g.crystal.filter((c) => c.ghostId === playerId).length,
+          }
+        : null,
+    bingo: on.bhootBingo
+      ? { card, marked, hasLine: g.bingo[playerId]?.lineAt != null || hasBingoLine(card, marked), winnerId: g.bingoWinnerId }
+      : null,
+    reactions: on.liveReactions ? { open: reactionsOpen(s), emoji: [...REACTION_EMOJI] } : null,
+  };
 }

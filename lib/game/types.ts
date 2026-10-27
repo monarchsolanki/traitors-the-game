@@ -1,4 +1,6 @@
-import type { GameSettings, SettingKey } from "./settings";
+import type { GameSettings, MissionTemplate, SettingKey } from "./settings";
+
+export type { MissionTemplate } from "./settings";
 
 /** Phases from section 5.1. A pause is a flag on the game, not a phase. */
 export const PHASES = [
@@ -67,6 +69,9 @@ export interface Mission {
   order: number;
   name: string;
   kind: MissionKind;
+  /** The catalogue entry it was started from, if any. */
+  templateId: string | null;
+  howItWorks: string;
   winRule: string;
   tieRule: string;
   winnerIds: string[];
@@ -166,7 +171,52 @@ export interface GameEvent {
   data: Record<string, unknown>;
 }
 
-export type Actor = { kind: "host" } | { kind: "player"; playerId: string } | { kind: "system" };
+/** A co-host is a seated player the host picked; as co-host they run missions and the big screen, never seeing roles. */
+export type Actor =
+  | { kind: "host" }
+  | { kind: "cohost"; playerId: string }
+  | { kind: "player"; playerId: string }
+  | { kind: "system" };
+
+/**
+ * Ghost games (section 8): score-only, never touching the living game. A banishment bet is on the next
+ * banishment; a murder bet on tonight's murder (null = nobody dies). Both settle when the result is public.
+ */
+export interface GhostBet {
+  id: string;
+  ghostId: string;
+  kind: "banish" | "murder";
+  pick: string | null;
+  day: number;
+  at: number;
+  settled: boolean;
+  correct: boolean | null;
+}
+
+/** "Was this eliminated player a Traitor?" Settles at the final reveal. Eliminated Traitors don't play. */
+export interface TraitorCall {
+  ghostId: string;
+  playerId: string;
+  call: Role;
+  at: number;
+}
+
+/** A Crystal Ball guess of the Traitors, once per Circle; scored at the final reveal. */
+export interface CrystalGuess {
+  ghostId: string;
+  day: number;
+  pickIds: string[];
+  at: number;
+}
+
+export interface GhostGamesState {
+  bets: GhostBet[];
+  calls: TraitorCall[];
+  crystal: CrystalGuess[];
+  /** Bhoot Bingo marks per ghost (moment texts), and when their first line was completed. */
+  bingo: Record<string, { marked: string[]; lineAt: number | null }>;
+  bingoWinnerId: string | null;
+}
 
 export interface LogEntry {
   id: string;
@@ -223,6 +273,13 @@ export interface GameState {
   finale: Finale | null;
   closed: boolean;
   nextId: number;
+  /** Missions the host can start, edited in the app (section 7). */
+  missionCatalogue: MissionTemplate[];
+  /** The player the host made co-host, if any. */
+  cohostId: string | null;
+  /** A message the host or co-host put on the big screen. */
+  screenMessage: { text: string; at: number } | null;
+  ghostGames: GhostGamesState;
 }
 
 type WithReason = { reason: string };
@@ -242,7 +299,9 @@ export type ActionPayload =
   | { type: "dealRoles" }
   | { type: "acknowledgeRole" }
   // Missions and items
-  | { type: "startMission"; name: string; kind: MissionKind; winRule?: string; tieRule?: string }
+  | { type: "startMission"; name: string; kind: MissionKind; winRule?: string; tieRule?: string; howItWorks?: string; templateId?: string }
+  | { type: "saveMissionTemplate"; template: Omit<MissionTemplate, "id"> & { id?: string } }
+  | { type: "deleteMissionTemplate"; templateId: string }
   | { type: "setMissionWinners"; playerIds: string[] }
   | { type: "awardItem"; itemType: ItemType; playerIds: string[] }
   | { type: "openRewardVote"; itemType: ItemType; voterIds: string[] }
@@ -281,7 +340,17 @@ export type ActionPayload =
   | ({ type: "setRole"; playerId: string; role: Role } & WithReason)
   | ({ type: "endGameEarly" } & WithReason)
   | { type: "revealFinale" }
-  | { type: "closeGame" };
+  | { type: "closeGame" }
+  // Co-host and big screen
+  | { type: "setCohost"; playerId: string | null }
+  | { type: "setScreenMessage"; text: string | null }
+  // Ghost games
+  | { type: "ghostBet"; kind: "banish" | "murder"; targetId: string | null }
+  | { type: "traitorCall"; playerId: string; call: Role }
+  | { type: "crystalBall"; playerIds: string[] }
+  | { type: "markBingo"; moment: string }
+  // Server only: settings and missions from a saved preset (lobby only)
+  | { type: "applyPreset"; settings: GameSettings; missions: MissionTemplate[] };
 
 export type ActionType = ActionPayload["type"];
 export type GameAction = ActionPayload & { actor: Actor; at: number };

@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes, randomInt } from "node:crypto";
-import { applyGameAction, createGame } from "@/lib/game/engine";
+import { applyGameAction, createGame, normaliseState, type CreateGameOptions } from "@/lib/game/engine";
 import type { ActionPayload, Actor, GameState } from "@/lib/game/types";
 import { HttpError } from "./http";
 import { adminClient } from "./supabase";
@@ -30,17 +30,21 @@ export async function loadGame(rawCode: string): Promise<StoredGame> {
     .maybeSingle();
   if (error) throw error;
   if (!data) throw new HttpError(404, "That room code doesn't exist.");
-  return { id: data.id, code: data.code, hostUserId: data.host_user_id, state: data.state as GameState };
+  return { id: data.id, code: data.code, hostUserId: data.host_user_id, state: normaliseState(data.state as GameState) };
 }
 
 export function requireGameHost(game: StoredGame, userId: string): void {
   if (game.hostUserId !== userId) throw new HttpError(403, "Only this game's host can do that.");
 }
 
-export async function createStoredGame(hostUserId: string): Promise<StoredGame> {
+/** A new game with the default roster and settings, or a preset's (photos are copied by the caller). */
+export async function createStoredGame(
+  hostUserId: string,
+  from: Pick<CreateGameOptions, "roster" | "settings" | "missions"> = {},
+): Promise<StoredGame> {
   for (let attempt = 0; attempt < 8; attempt++) {
     const code = Array.from({ length: CODE_LENGTH }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join("");
-    const state = createGame({ code, seed: randomBytes(16).toString("hex"), at: Date.now() });
+    const state = createGame({ ...from, code, seed: randomBytes(16).toString("hex"), at: Date.now() });
     const { data, error } = await adminClient().rpc("create_game", { p_code: code, p_host: hostUserId, p_state: state });
     if (!error) return { id: data as string, code, hostUserId, state };
     if (error.code !== "23505") throw error;

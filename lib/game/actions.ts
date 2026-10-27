@@ -9,6 +9,21 @@ const text = (max: number) => z.string().max(max);
 const itemType = z.enum(["shield", "dagger"]);
 const role = z.enum(["innocent", "traitor"]);
 
+const missionTemplate = z
+  .object({
+    id: id.optional(),
+    name: text(60),
+    kind: z.enum(["team", "individual"]),
+    howItWorks: text(300),
+    minutes: z.number().int().min(1).max(120),
+    props: text(120),
+    winRule: text(200),
+    tieRule: text(200),
+    reward: itemType.nullable(),
+    traitorAngle: text(200),
+  })
+  .strict();
+
 const settingsPatch = z
   .object(Object.fromEntries(SETTING_KEYS.map((k) => [k, settingSchemas[k].optional()])) as {
     [K in SettingKey]: z.ZodOptional<(typeof settingSchemas)[K]>;
@@ -28,7 +43,17 @@ export const clientActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("confirmSeat"), playerId: id }),
   z.object({ type: z.literal("dealRoles") }),
   z.object({ type: z.literal("acknowledgeRole") }),
-  z.object({ type: z.literal("startMission"), name: text(80), kind: z.enum(["team", "individual"]), winRule: text(200).optional(), tieRule: text(200).optional() }),
+  z.object({
+    type: z.literal("startMission"),
+    name: text(80),
+    kind: z.enum(["team", "individual"]),
+    winRule: text(200).optional(),
+    tieRule: text(200).optional(),
+    howItWorks: text(300).optional(),
+    templateId: id.optional(),
+  }),
+  z.object({ type: z.literal("saveMissionTemplate"), template: missionTemplate }),
+  z.object({ type: z.literal("deleteMissionTemplate"), templateId: id }),
   z.object({ type: z.literal("setMissionWinners"), playerIds: ids }),
   z.object({ type: z.literal("awardItem"), itemType, playerIds: ids }),
   z.object({ type: z.literal("openRewardVote"), itemType, voterIds: ids }),
@@ -65,6 +90,12 @@ export const clientActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("endGameEarly"), reason }),
   z.object({ type: z.literal("revealFinale") }),
   z.object({ type: z.literal("closeGame") }),
+  z.object({ type: z.literal("setCohost"), playerId: id.nullable() }),
+  z.object({ type: z.literal("setScreenMessage"), text: text(140).nullable() }),
+  z.object({ type: z.literal("ghostBet"), kind: z.enum(["banish", "murder"]), targetId: id.nullable() }),
+  z.object({ type: z.literal("traitorCall"), playerId: id, call: role }),
+  z.object({ type: z.literal("crystalBall"), playerIds: ids }),
+  z.object({ type: z.literal("markBingo"), moment: text(60) }),
 ]);
 
 export type ClientAction = z.infer<typeof clientActionSchema>;
@@ -79,10 +110,27 @@ export const PLAYER_ACTIONS = new Set<ActionPayload["type"]>([
   "answerRecruit",
   "suspectAnswer",
   "sendChat",
+  "ghostBet",
+  "traitorCall",
+  "crystalBall",
+  "markBingo",
+]);
+
+/** Actions the co-host may send: missions and the big screen. The engine checks they're still co-host. */
+export const COHOST_ACTIONS = new Set<ActionPayload["type"]>([
+  "startMission",
+  "setMissionWinners",
+  "awardItem",
+  "openRewardVote",
+  "lockRewardVote",
+  "saveMissionTemplate",
+  "deleteMissionTemplate",
+  "setScreenMessage",
+  "revealNextBallot",
 ]);
 
 export const actionRequestSchema = z.object({
-  as: z.enum(["host", "player", "system"]),
+  as: z.enum(["host", "cohost", "player", "system"]),
   key: z.string().min(8).max(100),
   expectedVersion: z.number().int().min(0).optional(),
   action: clientActionSchema,

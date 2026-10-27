@@ -1,5 +1,5 @@
 import "server-only";
-import { NOT_UNDOABLE, undoState } from "@/lib/game/engine";
+import { normaliseState, NOT_UNDOABLE, undoState } from "@/lib/game/engine";
 import type { Actor, GameState } from "@/lib/game/types";
 import type { StoredGame } from "./games";
 import { loadGame } from "./games";
@@ -50,7 +50,7 @@ export async function undoPlan(game: StoredGame): Promise<UndoPlan> {
   const target = await ledgerRow(game.id, base - 1);
   if (!target) return { available: false, reason: "Nothing earlier to undo." };
   const summary = step.state_after.log[step.state_after.log.length - 1]?.summary ?? step.action.type;
-  return { available: true, summary, target: base - 1, targetState: target.state_after, targetSavedAt: Date.parse(target.created_at) };
+  return { available: true, summary, target: base - 1, targetState: normaliseState(target.state_after), targetSavedAt: Date.parse(target.created_at) };
 }
 
 export type UndoResult = { ok: true; game: StoredGame } | { ok: false; status: number; reason: string; stale?: boolean };

@@ -36,7 +36,14 @@ describe("defaults (section 4.2)", () => {
       recruitOfferSeconds: 60,
       rewardVoteSeconds: 60,
       pinMaxAttempts: 5,
+      ghostPoints: { banishBet: 3, murderBet: 3, traitorCall: 2, crystalBall: 2, bingo: 5 },
+      bingoMoments: DEFAULT_SETTINGS.bingoMoments,
+      breakfastEntrance: true,
+      entranceSeconds: 20,
+      narration: DEFAULT_SETTINGS.narration,
     });
+    expect(DEFAULT_SETTINGS.bingoMoments.length).toBeGreaterThanOrEqual(9);
+    expect(Object.values(DEFAULT_SETTINGS.narration).every((line) => line.length > 0)).toBe(true);
     expect(settingsSchema.safeParse(DEFAULT_SETTINGS).success).toBe(true);
     expect(validateSettings(DEFAULT_SETTINGS, 12).ok).toBe(true);
   });
@@ -76,6 +83,11 @@ describe("defaults (section 4.2)", () => {
       "recruitOfferSeconds",
       "rewardVoteSeconds",
       "pinMaxAttempts",
+      "ghostPoints",
+      "bingoMoments",
+      "breakfastEntrance",
+      "entranceSeconds",
+      "narration",
     ] as const) {
       expect(SETTING_META[k].afterDealing).toBe("anyTime");
     }

@@ -19,6 +19,9 @@ vi.mock("@/lib/server/supabase", async () => {
 import * as actionRoute from "@/app/api/games/[code]/action/route";
 import * as botsRoute from "@/app/api/games/[code]/bots/route";
 import * as photoRoute from "@/app/api/games/[code]/photo/route";
+import * as presetRoute from "@/app/api/games/[code]/preset/route";
+import * as reactRoute from "@/app/api/games/[code]/react/route";
+import * as presetsRoute from "@/app/api/presets/route";
 import * as seatRoute from "@/app/api/games/[code]/seat/route";
 import * as seatsRoute from "@/app/api/games/[code]/seats/route";
 import * as undoRoute from "@/app/api/games/[code]/undo/route";
@@ -406,5 +409,135 @@ describe("concurrency through the routes", () => {
     expect(results.map((r) => `${r.status} ${r.body.error ?? ""}`).filter((x) => !x.startsWith("200"))).toEqual([]);
     expect(state().phase).toBe("CIRCLE_VOTE");
     expect(state().version).toBe(v + 1);
+  });
+});
+
+describe("co-host access (Step 5)", () => {
+  it("only the player the host picked gets the co-host view and controls, and only missions and the big screen", async () => {
+    await seatEveryone();
+    await act("host-a", "host", { type: "dealRoles" });
+    const asCohost = (token: string, action: unknown) => act(token, "cohost" as never, action);
+    expect((await call(viewRoute.GET, { token: "phone-4", query: "?as=cohost" })).status).toBe(403);
+    expect((await asCohost("phone-4", { type: "setScreenMessage", text: "Hi" })).status).toBe(403);
+    expect((await act("phone-4", "player", { type: "setCohost", playerId: "p4" })).status).toBe(403);
+    expect((await act("host-a", "host", { type: "setCohost", playerId: "p4" })).status).toBe(200);
+
+    expectExactView(await call(viewRoute.GET, { token: "phone-4", query: "?as=cohost" }), { kind: "cohost" });
+    expect((await asCohost("phone-4", { type: "startMission", name: "Ring Toss", kind: "individual" })).status).toBe(200);
+    expect((await asCohost("phone-4", { type: "setScreenMessage", text: "Mission time" })).status).toBe(200);
+    for (const action of [{ type: "openCircle" }, { type: "pause" }, { type: "dealRoles" }, { type: "endGameEarly", reason: "x" }]) {
+      expect((await asCohost("phone-4", action)).status).toBe(403);
+    }
+    for (const token of ["phone-5", "stranger", "host-b"]) {
+      expect((await call(viewRoute.GET, { token, query: "?as=cohost" })).status).toBe(403);
+      expect((await asCohost(token, { type: "setScreenMessage", text: "Me too" })).status).toBe(403);
+    }
+    // Their own phone still gets their player view, with the co-host flag.
+    const own = await call(viewRoute.GET, { token: "phone-4", query: "?as=player" });
+    expect(own.body.view!.me!.isCohost).toBe(true);
+
+    expect((await act("host-a", "host", { type: "setCohost", playerId: null })).status).toBe(200);
+    expect((await call(viewRoute.GET, { token: "phone-4", query: "?as=cohost" })).status).toBe(403);
+    expect((await asCohost("phone-4", { type: "setScreenMessage", text: "Still?" })).status).toBe(403);
+  });
+});
+
+describe("live reactions (Step 5)", () => {
+  async function debateWithGhost() {
+    await seatEveryone();
+    await act("host-a", "host", { type: "dealRoles" });
+    await act("host-a", "host", { type: "eliminatePlayer", playerId: "p12", status: "banished", reason: "Test" });
+    await act("host-a", "host", { type: "openCircle" });
+  }
+  const react = (token: string | undefined, emoji: string) => call(reactRoute.POST, { token, body: { emoji } });
+
+  it("only a ghost, only during the debate, only the listed emoji; the stored row names nobody", async () => {
+    await debateWithGhost();
+    expect((await react(undefined, "💀")).status).toBe(401);
+    expect((await react("stranger", "💀")).status).toBe(403);
+    expect((await react("phone-5", "💀")).status).toBe(422);
+    expect((await react("phone-12", "💩")).status).toBe(422);
+    expect((await react("phone-12", "💀")).status).toBe(200);
+    const rows = globalThis.__fakeDb.tables.game_reactions;
+    expect(rows).toHaveLength(1);
+    expect(Object.keys(rows[0]).sort()).toEqual(["code", "created_at", "emoji", "id"]);
+    await act("host-a", "host", { type: "openVoting" });
+    expect((await react("phone-12", "💀")).status).toBe(422);
+  });
+
+  it("a flood of reactions is capped quietly", async () => {
+    await debateWithGhost();
+    for (let i = 0; i < 30; i++) expect((await react("phone-12", "👻")).body.ok).toBe(true);
+    const over = await react("phone-12", "👻");
+    expect([over.status, over.body.busy]).toEqual([200, true]);
+    expect(globalThis.__fakeDb.tables.game_reactions).toHaveLength(30);
+  });
+
+  it("switched off, nobody can react", async () => {
+    await debateWithGhost();
+    const ghostGames = { bhootBets: true, crystalBall: true, liveReactions: false, bhootBingo: true };
+    expect((await act("host-a", "host", { type: "updateSettings", patch: { ghostGames } })).status).toBe(200);
+    expect((await react("phone-12", "💀")).body.error).toMatch(/switched off/);
+  });
+});
+
+describe("presets (Step 5)", () => {
+  async function photo(playerId: string) {
+    const form = new FormData();
+    form.set("playerId", playerId);
+    form.set("file", new Blob([new Uint8Array(100)], { type: "image/jpeg" }), "a");
+    expect((await call(photoRoute.POST, { token: "host-a", form })).status).toBe(200);
+  }
+
+  it("saves a game's settings, roster with photos and missions; starts a new game from it; only for its owner", async () => {
+    await photo("p1");
+    await act("host-a", "host", { type: "updateSettings", patch: { debateSeconds: 300 } });
+    const saved = await call(presetsRoute.POST as Handler, { token: "host-a", body: { code, name: "Diwali night" } });
+    expect(saved.status).toBe(201);
+    const presetId = saved.body.id as string;
+    const storage = globalThis.__fakeDb.storage["player-photos"];
+    expect(storage.some((p) => p.startsWith(`presets/${presetId}/`))).toBe(true);
+    const list = await call(presetsRoute.GET as Handler, { token: "host-a" });
+    expect(list.body.presets).toEqual([expect.objectContaining({ id: presetId, name: "Diwali night", players: 12, photos: 1 })]);
+
+    // Other hosts see nothing and can't touch it.
+    expect((await call(presetsRoute.GET as Handler, { token: "host-b" })).body.presets).toEqual([]);
+    expect((await call(presetsRoute.POST as Handler, { token: "host-b", body: { code, name: "Mine" } })).status).toBe(403);
+    expect((await call(presetsRoute.DELETE as Handler, { token: "host-b", method: "DELETE", query: `?id=${presetId}` })).status).toBe(404);
+    expect((await call(gamesRoute.POST as Handler, { token: "host-b", body: { presetId } })).status).toBe(404);
+    expect((await call(presetsRoute.GET as Handler, { token: "phone-1" })).status).toBe(403);
+
+    // A new game from the preset: same roster, settings and the photo copied into the new game.
+    const created = await call(gamesRoute.POST as Handler, { token: "host-a", body: { presetId } });
+    expect(created.status).toBe(201);
+    const fresh = globalThis.__fakeDb.tables.games.find((g) => g.code === created.body.code)!;
+    const fs = fresh.state as GameState;
+    expect(fs.players.map((p) => p.displayName)).toEqual(state().players.map((p) => p.displayName));
+    expect(fs.settings.debateSeconds).toBe(300);
+    expect(fs.players[0].photoPath!.startsWith(`${fresh.id}/`)).toBe(true);
+    expect(storage).toContain(fs.players[0].photoPath);
+
+    // Saving under the same name replaces it; deleting removes its photos.
+    expect((await call(presetsRoute.POST as Handler, { token: "host-a", body: { code, name: "Diwali night" } })).status).toBe(201);
+    expect(globalThis.__fakeDb.tables.presets).toHaveLength(1);
+    expect((await call(presetsRoute.DELETE as Handler, { token: "host-a", method: "DELETE", query: `?id=${presetId}` })).status).toBe(200);
+    expect(globalThis.__fakeDb.storage["player-photos"].some((p) => p.startsWith(`presets/${presetId}/`))).toBe(false);
+  });
+
+  it("applies a preset's settings and missions to a game in the lobby only", async () => {
+    await act("host-a", "host", { type: "updateSettings", patch: { voteSeconds: 90 } });
+    const presetId = (await call(presetsRoute.POST as Handler, { token: "host-a", body: { code, name: "Quick" } })).body.id as string;
+    const other = await call(gamesRoute.POST as Handler, { token: "host-a", body: {} });
+    const first = code;
+    code = other.body.code as string;
+    expect(state().settings.voteSeconds).toBe(120);
+    expect((await call(presetRoute.POST, { token: "host-b", body: { presetId, key: "apply-key-1" } })).status).toBe(403);
+    const applied = await call(presetRoute.POST, { token: "host-a", body: { presetId, key: "apply-key-1" } });
+    expect(applied.status).toBe(200);
+    expect(state().settings.voteSeconds).toBe(90);
+    await seatEveryone();
+    await act("host-a", "host", { type: "dealRoles" });
+    expect((await call(presetRoute.POST, { token: "host-a", body: { presetId, key: "apply-key-2" } })).status).toBe(422);
+    code = first;
   });
 });

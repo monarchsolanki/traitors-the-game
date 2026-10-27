@@ -4,12 +4,12 @@
  * unique idempotency keys, and apply_game_action's duplicate / stale / applied outcomes.
  */
 type Row = Record<string, unknown>;
-type Result = { data: unknown; error: { code?: string; message: string } | null };
+type Result = { data: unknown; error: { code?: string; message: string } | null; count?: number };
 
 const clone = <T>(v: T): T => structuredClone(v);
 
 export class FakeSupabase {
-  tables: Record<string, Row[]> = { games: [], seats: [], game_actions: [], game_pings: [], hosts: [], presets: [] };
+  tables: Record<string, Row[]> = { games: [], seats: [], game_actions: [], game_pings: [], hosts: [], presets: [], game_reactions: [] };
   users = new Map<string, { sub: string; is_anonymous: boolean }>();
   storage: Record<string, string[]> = { "player-photos": [] };
   private nextId = 1;
@@ -78,6 +78,11 @@ export class FakeSupabase {
       this.storage[bucket] = this.storage[bucket].filter((p) => !paths.includes(p));
       return { data: [], error: null };
     },
+    copy: async (from: string, to: string) => {
+      if (!this.storage[bucket].includes(from)) return { data: null, error: { message: "Object not found" } };
+      this.storage[bucket].push(to);
+      return { data: { path: to }, error: null };
+    },
   });
 
   get storageClient() {
@@ -92,11 +97,13 @@ class Query implements PromiseLike<Result> {
   private returning = false;
   private single: "maybe" | "one" | null = null;
   private limitN: number | null = null;
+  private countOnly = false;
 
   constructor(private db: FakeSupabase, private table: string) {}
 
-  select() {
+  select(_cols?: string, opts?: { count?: string; head?: boolean }) {
     if (this.mode !== "select") this.returning = true;
+    if (opts?.head) this.countOnly = true;
     return this;
   }
   insert(row: Row | Row[]) {
@@ -120,6 +127,14 @@ class Query implements PromiseLike<Result> {
   }
   eq(col: string, v: unknown) {
     this.filters.push((r) => r[col] === v);
+    return this;
+  }
+  gte(col: string, v: string) {
+    this.filters.push((r) => String(r[col]) >= v);
+    return this;
+  }
+  lt(col: string, v: string) {
+    this.filters.push((r) => String(r[col]) < v);
     return this;
   }
   is(col: string, v: null) {
@@ -152,6 +167,7 @@ class Query implements PromiseLike<Result> {
       );
     }
     if (this.table === "hosts") return rows.some((r) => r !== self && r.user_id === row.user_id);
+    if (this.table === "presets") return rows.some((r) => r !== self && r.owner_user_id === row.owner_user_id && r.name === row.name);
     return false;
   }
 
@@ -160,6 +176,7 @@ class Query implements PromiseLike<Result> {
     const match = rows.filter((r) => this.filters.every((f) => f(r)));
     switch (this.mode) {
       case "select": {
+        if (this.countOnly) return { data: null, error: null, count: match.length } as Result;
         let out = match.map((r) => clone(r));
         if (this.limitN !== null) out = out.slice(0, this.limitN);
         if (this.single) return { data: out[0] ?? null, error: null };
@@ -168,7 +185,10 @@ class Query implements PromiseLike<Result> {
       case "insert": {
         const list = Array.isArray(this.payload) ? this.payload : [this.payload!];
         for (const r of list) {
-          const row = { failed_attempts: 0, locked: false, is_bot: false, ...clone(r) };
+          const defaults = this.table === "seats" ? { failed_attempts: 0, locked: false, is_bot: false } : {};
+          const row: Row = { ...defaults, ...clone(r) };
+          if (this.table === "game_reactions") Object.assign(row, { id: this.db.tables.game_reactions.length + 1, created_at: new Date().toISOString() });
+          if (this.table === "presets") row.created_at ??= new Date().toISOString();
           if (this.uniqueClash(row)) return { data: null, error: { code: "23505", message: "duplicate key" } };
           rows.push(row);
         }

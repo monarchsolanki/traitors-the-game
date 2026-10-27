@@ -1,4 +1,4 @@
-import { actionRequestSchema, PLAYER_ACTIONS } from "@/lib/game/actions";
+import { actionRequestSchema, COHOST_ACTIONS, PLAYER_ACTIONS } from "@/lib/game/actions";
 import type { Actor, Viewer } from "@/lib/game/types";
 import { requestUser, requireUser } from "@/lib/server/auth";
 import { loadGame, requireGameHost, runAction } from "@/lib/server/games";
@@ -40,6 +40,12 @@ export async function POST(req: Request, ctx: RouteContext<"/api/games/[code]/ac
         if (!PLAYER_ACTIONS.has(body.action.type)) throw new HttpError(403, "Only the host can do that.");
         actor = { kind: "player", playerId: seat.player_id };
         viewer = { kind: "player", playerId: seat.player_id };
+      } else if (body.as === "cohost") {
+        const seat = await seatForUser(game.id, user.id);
+        if (!seat || game.state.cohostId !== seat.player_id) throw new HttpError(403, "Only the co-host can do that.");
+        if (!COHOST_ACTIONS.has(body.action.type)) throw new HttpError(403, "Only the host can do that.");
+        actor = { kind: "cohost", playerId: seat.player_id };
+        viewer = { kind: "cohost" };
       } else {
         throw new HttpError(400, "Unknown sender.");
       }

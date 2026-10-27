@@ -1,9 +1,21 @@
+import {
+  banishBetsOpen,
+  bingoCard,
+  crystalOpen,
+  crystalSize,
+  emptyGhostGames,
+  hasBingoLine,
+  murderBetsOpen,
+  pendingVictimId,
+} from "./ghosts";
 import { pickOne, seededRand, shuffle } from "./random";
 import {
+  DEFAULT_MISSIONS,
   DEFAULT_ROSTER,
   DEFAULT_SETTINGS,
   DISPLAY_NAME_MAX,
   MAX_PLAYERS,
+  MISSION_LIMITS,
   NAME_MAX,
   SETTING_KEYS,
   SETTING_META,
@@ -14,6 +26,8 @@ import {
   validateSettingValue,
   validateSettings,
   type GameSettings,
+  type GhostGame,
+  type MissionTemplate,
   type SettingKey,
 } from "./settings";
 import type {
@@ -81,6 +95,7 @@ export interface CreateGameOptions {
   at: number;
   roster?: ReadonlyArray<{ name: string; displayName: string }>;
   settings?: Partial<GameSettings>;
+  missions?: ReadonlyArray<MissionTemplate>;
 }
 
 export function createGame(o: CreateGameOptions): GameState {
@@ -118,6 +133,10 @@ export function createGame(o: CreateGameOptions): GameState {
     finale: null,
     closed: false,
     nextId: 1,
+    missionCatalogue: structuredClone([...(o.missions ?? DEFAULT_MISSIONS)]),
+    cohostId: null,
+    screenMessage: null,
+    ghostGames: emptyGhostGames(),
   };
   const seen = new Set<string>();
   roster.forEach((r, i) => {
@@ -130,6 +149,23 @@ export function createGame(o: CreateGameOptions): GameState {
     seen.add(displayName.toLowerCase());
     s.players.push(newPlayer(`p${s.nextId++}`, name, displayName, i + 1));
   });
+  return s;
+}
+
+/**
+ * Fills in fields added after a game was saved (Step 5: mission catalogue, co-host, screen message,
+ * ghost games, new settings), so an older saved game keeps working. Mutates and returns the state.
+ */
+export function normaliseState(s: GameState): GameState {
+  s.settings = { ...structuredClone(DEFAULT_SETTINGS), ...s.settings };
+  s.missionCatalogue ??= structuredClone([...DEFAULT_MISSIONS]);
+  s.cohostId ??= null;
+  s.screenMessage ??= null;
+  s.ghostGames ??= emptyGhostGames();
+  for (const m of s.missions) {
+    m.templateId ??= null;
+    m.howItWorks ??= "";
+  }
   return s;
 }
 
@@ -202,6 +238,15 @@ function dispatch(ctx: Ctx): void {
     case "endGameEarly": return endGameEarly(ctx, a);
     case "revealFinale": return revealFinale(ctx);
     case "closeGame": return closeGame(ctx);
+    case "saveMissionTemplate": return saveMissionTemplate(ctx, a);
+    case "deleteMissionTemplate": return deleteMissionTemplate(ctx, a);
+    case "setCohost": return setCohost(ctx, a);
+    case "setScreenMessage": return setScreenMessage(ctx, a);
+    case "ghostBet": return ghostBet(ctx, a);
+    case "traitorCall": return traitorCall(ctx, a);
+    case "crystalBall": return crystalBall(ctx, a);
+    case "markBingo": return markBingo(ctx, a);
+    case "applyPreset": return applyPreset(ctx, a);
     default: {
       const unknown: never = a;
       fail(`Unknown action: ${(unknown as { type: string }).type}`);
@@ -271,6 +316,16 @@ const names = (s: GameState, ids: string[]) => ids.map((id) => nameOf(s, id)).jo
 function requireHost(ctx: Ctx): void {
   if (ctx.a.actor.kind !== "host") fail("Only the host can do that.");
 }
+
+/** Missions and big-screen controls: the host, or the player the host made co-host. */
+function requireHostOrCohost(ctx: Ctx): void {
+  const actor = ctx.a.actor;
+  if (actor.kind === "host") return;
+  if (actor.kind === "cohost" && ctx.s.cohostId === actor.playerId) return;
+  fail("Only the host or the co-host can do that.");
+}
+
+const byCohost = (ctx: Ctx) => ctx.a.actor.kind === "cohost";
 
 function requireActingPlayer(ctx: Ctx): Player {
   const actor = ctx.a.actor;
@@ -362,10 +417,13 @@ function heldItem(s: GameState, playerId: string, type: ItemType): Item | undefi
   return s.items.find((i) => i.holderId === playerId && i.type === type && i.state === "held");
 }
 
-function requireCanReceive(s: GameState, playerId: string, type: ItemType): Player {
+/** The co-host never sees who holds what, so a refusal for them doesn't say why (items are private). */
+function requireCanReceive(s: GameState, playerId: string, type: ItemType, forCohost = false): Player {
   const p = getPlayer(s, playerId);
   if (!isAlive(p)) fail(`${p.displayName} is a ghost and can't receive a ${type}.`);
-  if (heldItem(s, playerId, type)) fail(`${p.displayName} already holds a ${type}. Pick someone else.`);
+  if (heldItem(s, playerId, type)) {
+    fail(forCohost ? `${p.displayName} can't receive a ${type} right now. Ask the host.` : `${p.displayName} already holds a ${type}. Pick someone else.`);
+  }
   return p;
 }
 
@@ -441,6 +499,7 @@ function removePlayer(ctx: Ctx, a: ActionOf<"removePlayer">): void {
   const p = getPlayer(ctx.s, a.playerId);
   ctx.s.players = ctx.s.players.filter((x) => x.id !== p.id);
   ctx.s.players.forEach((x, i) => (x.seat = i + 1));
+  if (ctx.s.cohostId === p.id) ctx.s.cohostId = null;
   emit(ctx, "playerRemoved", PUBLIC, { playerId: p.id });
   log(ctx, `Removed ${p.displayName}`);
 }
@@ -628,13 +687,16 @@ function requireNoOpenRewardVote(ctx: Ctx): void {
 }
 
 function startMission(ctx: Ctx, a: ActionOf<"startMission">): void {
-  requireHost(ctx);
+  requireHostOrCohost(ctx);
   requireChoicePoint(ctx);
   const { s } = ctx;
-  const name = cleanText(a.name, 60, "Mission name");
+  const template = a.templateId ? s.missionCatalogue.find((t) => t.id === a.templateId) : null;
+  if (a.templateId && !template) fail("That mission isn't in the catalogue any more.");
+  const name = cleanText(a.name, MISSION_LIMITS.name, "Mission name");
   if (a.kind !== "team" && a.kind !== "individual") fail("A mission is a team game or an individual game.");
-  const winRule = cleanText(a.winRule, 200, "Win rule", true);
-  const tieRule = cleanText(a.tieRule, 200, "Tie rule", true);
+  const winRule = cleanText(a.winRule, MISSION_LIMITS.rule, "Win rule", true);
+  const tieRule = cleanText(a.tieRule, MISSION_LIMITS.rule, "Tie rule", true);
+  const howItWorks = cleanText(a.howItWorks ?? template?.howItWorks, MISSION_LIMITS.howItWorks, "How it works", true);
   closeMission(ctx);
   const m: Mission = {
     id: newId(s, "m"),
@@ -642,6 +704,8 @@ function startMission(ctx: Ctx, a: ActionOf<"startMission">): void {
     order: s.missions.filter((x) => x.day === s.day).length + 1,
     name,
     kind: a.kind,
+    templateId: template?.id ?? null,
+    howItWorks,
     winRule,
     tieRule,
     winnerIds: [],
@@ -651,12 +715,12 @@ function startMission(ctx: Ctx, a: ActionOf<"startMission">): void {
   s.currentMissionId = m.id;
   s.phase = "MISSION";
   setTimer(s, ctx.at, null);
-  emit(ctx, "missionStarted", PUBLIC, { missionId: m.id, name, kind: a.kind, winRule, tieRule });
+  emit(ctx, "missionStarted", PUBLIC, { missionId: m.id, name, kind: a.kind, winRule, tieRule, howItWorks });
   log(ctx, `Started mission "${name}"`);
 }
 
 function setMissionWinners(ctx: Ctx, a: ActionOf<"setMissionWinners">): void {
-  requireHost(ctx);
+  requireHostOrCohost(ctx);
   const m = requireActiveMission(ctx);
   const ids = distinctIds(ctx.s, a.playerIds, "winner");
   for (const id of ids) if (!isAlive(getPlayer(ctx.s, id))) fail(`${nameOf(ctx.s, id)} is a ghost and can't win a mission.`);
@@ -665,18 +729,18 @@ function setMissionWinners(ctx: Ctx, a: ActionOf<"setMissionWinners">): void {
 }
 
 function awardItem(ctx: Ctx, a: ActionOf<"awardItem">): void {
-  requireHost(ctx);
+  requireHostOrCohost(ctx);
   const m = requireActiveMission(ctx);
   requireNoOpenRewardVote(ctx);
   if (a.itemType !== "shield" && a.itemType !== "dagger") fail("The ability is a shield or a dagger.");
   const ids = distinctIds(ctx.s, a.playerIds, "player");
-  ids.forEach((id) => requireCanReceive(ctx.s, id, a.itemType));
+  ids.forEach((id) => requireCanReceive(ctx.s, id, a.itemType, byCohost(ctx)));
   ids.forEach((id) => createItem(ctx, a.itemType, id, m.id));
   log(ctx, `Mission "${m.name}": gave a ${a.itemType} to ${names(ctx.s, ids)}`);
 }
 
 function openRewardVote(ctx: Ctx, a: ActionOf<"openRewardVote">): void {
-  requireHost(ctx);
+  requireHostOrCohost(ctx);
   const m = requireActiveMission(ctx);
   requireNoOpenRewardVote(ctx);
   const { s } = ctx;
@@ -686,7 +750,11 @@ function openRewardVote(ctx: Ctx, a: ActionOf<"openRewardVote">): void {
   for (const id of voters) if (!isAlive(getPlayer(s, id))) fail(`${nameOf(s, id)} is a ghost.`);
   const candidates = voters.filter((id) => !heldItem(s, id, a.itemType));
   if (candidates.length < 2) {
-    fail(`At least two winners must be free to receive the ${a.itemType}. Otherwise give it directly.`);
+    fail(
+      byCohost(ctx)
+        ? `This vote can't open with these winners. Ask the host.`
+        : `At least two winners must be free to receive the ${a.itemType}. Otherwise give it directly.`,
+    );
   }
   openRound(ctx, "reward", {
     voters,
@@ -714,7 +782,7 @@ function castRewardVote(ctx: Ctx, a: ActionOf<"castRewardVote">): void {
 }
 
 function lockRewardVote(ctx: Ctx): void {
-  requireHost(ctx);
+  requireHostOrCohost(ctx);
   const r = currentRound(ctx.s);
   if (!r || r.kind !== "reward" || r.status !== "open") fail("There's no reward vote open.");
   log(ctx, "Closed the reward vote");
@@ -1051,7 +1119,7 @@ function requireRevealingRound(ctx: Ctx): VoteRound {
 }
 
 function revealNextBallot(ctx: Ctx): void {
-  requireHost(ctx);
+  requireHostOrCohost(ctx);
   const r = requireRevealingRound(ctx);
   if (r.revealedCount >= r.ballots.length) fail("Every ballot is already shown.");
   r.revealedCount += 1;
@@ -1186,6 +1254,7 @@ function banish(ctx: Ctx, r: VoteRound, playerId: string, via: "votes" | "spin" 
   p.eliminatedDay = s.day;
   loseItems(s, p.id, null);
   emit(ctx, "banished", PUBLIC, { playerId, roundId: r.id, via, role: revealedRole(s, playerId) });
+  settleBets(s, "banish", playerId);
   afterBanishment(ctx);
 }
 
@@ -1429,11 +1498,16 @@ function revealMurder(ctx: Ctx): void {
   if (!n || !n.resolved) fail("The night hasn't ended.");
   if (n.revealed) fail("The murder has already been revealed.");
   n.revealed = true;
+  // Breakfast entrance: the survivors walk in one by one on the big screen; the last empty chair is the victim.
+  const entrance = s.settings.breakfastEntrance ? shuffle(aliveIds(s), rand(s, `entrance:${n.id}`)) : null;
   emit(ctx, "murderRevealed", PUBLIC, {
     nightId: n.id,
     victimId: n.victimId,
     role: n.victimId ? revealedRole(s, n.victimId) : null,
+    entrance,
+    entranceMs: entrance ? s.settings.entranceSeconds * 1000 : 0,
   });
+  settleBets(s, "murder", n.victimId);
   log(ctx, n.victimId ? `Revealed the murder of ${nameOf(s, n.victimId)}` : "Revealed that nobody died");
   // Post-murder check (section 5.2).
   if (aliveTraitorIds(s).length === 0) return finale(ctx, "No Traitors are left.");
@@ -1658,7 +1732,11 @@ function finale(ctx: Ctx, reason: string, early = false): void {
   s.currentRoundId = null;
   closeMission(ctx);
   const n = lastNight(s);
-  if (n?.resolved) n.revealed = true;
+  if (n?.resolved) {
+    if (!n.revealed) settleBets(s, "murder", n.victimId);
+    n.revealed = true;
+  }
+  for (const b of s.ghostGames.bets) if (!b.settled) b.settled = true;
   s.finale = { revealed: false, winner, winnerIds, reason, early, endedAt: ctx.at, suspicion };
   s.phase = "FINALE";
   s.paused = false;
@@ -1666,6 +1744,198 @@ function finale(ctx: Ctx, reason: string, early = false): void {
   setTimer(s, ctx.at, null);
   // Only the host learns the result now; everyone else sees it when the host reveals it.
   emit(ctx, "gameOver", HOST, { winner, reason, early });
+}
+
+// ---------------------------------------------------------------------------
+// Mission catalogue (section 7: missions are data the host edits in the app)
+
+function cleanTemplate(raw: ActionOf<"saveMissionTemplate">["template"], id: string): MissionTemplate {
+  if (!raw || typeof raw !== "object") fail("The mission is missing.");
+  if (raw.kind !== "team" && raw.kind !== "individual") fail("A mission is a team game or an individual game.");
+  if (!Number.isInteger(raw.minutes) || raw.minutes < 1 || raw.minutes > MISSION_LIMITS.minutes) {
+    fail(`Minutes: between 1 and ${MISSION_LIMITS.minutes}.`);
+  }
+  if (raw.reward !== null && raw.reward !== "shield" && raw.reward !== "dagger") fail("The suggested reward is a shield, a dagger or none.");
+  return {
+    id,
+    name: cleanText(raw.name, MISSION_LIMITS.name, "Mission name"),
+    kind: raw.kind,
+    howItWorks: cleanText(raw.howItWorks, MISSION_LIMITS.howItWorks, "How it works", true),
+    minutes: raw.minutes,
+    props: cleanText(raw.props, MISSION_LIMITS.props, "Props", true),
+    winRule: cleanText(raw.winRule, MISSION_LIMITS.rule, "Win rule", true),
+    tieRule: cleanText(raw.tieRule, MISSION_LIMITS.rule, "Tie rule", true),
+    reward: raw.reward,
+    traitorAngle: cleanText(raw.traitorAngle, MISSION_LIMITS.traitorAngle, "Traitor angle", true),
+  };
+}
+
+function saveMissionTemplate(ctx: Ctx, a: ActionOf<"saveMissionTemplate">): void {
+  requireHostOrCohost(ctx);
+  const { s } = ctx;
+  const id = a.template?.id;
+  const index = id ? s.missionCatalogue.findIndex((t) => t.id === id) : -1;
+  if (id && index < 0) fail("That mission isn't in the catalogue any more.");
+  if (!id && s.missionCatalogue.length >= MISSION_LIMITS.max) fail(`The catalogue holds at most ${MISSION_LIMITS.max} missions.`);
+  const t = cleanTemplate(a.template, id ?? newId(s, "t"));
+  if (s.missionCatalogue.some((x) => x.id !== t.id && x.name.toLowerCase() === t.name.toLowerCase())) {
+    fail(`There's already a mission called "${t.name}".`);
+  }
+  if (index >= 0) s.missionCatalogue[index] = t;
+  else s.missionCatalogue.push(t);
+  log(ctx, `${index >= 0 ? "Edited" : "Added"} mission "${t.name}" in the catalogue`);
+}
+
+function deleteMissionTemplate(ctx: Ctx, a: ActionOf<"deleteMissionTemplate">): void {
+  requireHostOrCohost(ctx);
+  const t = ctx.s.missionCatalogue.find((x) => x.id === a.templateId);
+  if (!t) fail("That mission isn't in the catalogue any more.");
+  ctx.s.missionCatalogue = ctx.s.missionCatalogue.filter((x) => x.id !== t.id);
+  log(ctx, `Removed mission "${t.name}" from the catalogue`);
+}
+
+// ---------------------------------------------------------------------------
+// Co-host and big screen
+
+function setCohost(ctx: Ctx, a: ActionOf<"setCohost">): void {
+  requireHost(ctx);
+  const { s } = ctx;
+  if (a.playerId === null) {
+    if (!s.cohostId) fail("There's no co-host.");
+    const before = s.cohostId;
+    s.cohostId = null;
+    emit(ctx, "cohostChanged", toPlayer(before), { cohost: false });
+    log(ctx, `${nameOf(s, before)} is no longer co-host`);
+    return;
+  }
+  const p = getPlayer(s, a.playerId);
+  if (s.cohostId === p.id) fail(`${p.displayName} is already co-host.`);
+  if (s.cohostId) emit(ctx, "cohostChanged", toPlayer(s.cohostId), { cohost: false });
+  s.cohostId = p.id;
+  emit(ctx, "cohostChanged", toPlayer(p.id), { cohost: true });
+  log(ctx, `Made ${p.displayName} co-host`);
+}
+
+function setScreenMessage(ctx: Ctx, a: ActionOf<"setScreenMessage">): void {
+  requireHostOrCohost(ctx);
+  const { s } = ctx;
+  if (a.text === null) {
+    if (!s.screenMessage) fail("There's no message on the big screen.");
+    s.screenMessage = null;
+    log(ctx, "Cleared the big-screen message");
+    return;
+  }
+  const text = cleanText(a.text, 140, "Message");
+  s.screenMessage = { text, at: ctx.at };
+  log(ctx, `Big screen: "${text}"`);
+}
+
+function applyPreset(ctx: Ctx, a: ActionOf<"applyPreset">): void {
+  requireHost(ctx);
+  requirePhase(ctx, "LOBBY");
+  const { s } = ctx;
+  const v = validateSettings({ ...DEFAULT_SETTINGS, ...a.settings }, s.players.length);
+  if (!v.ok) fail(v.errors.join(" "));
+  if (!Array.isArray(a.missions) || a.missions.length > MISSION_LIMITS.max) fail("The preset's missions aren't valid.");
+  const missions = a.missions.map((t) => cleanTemplate(t, typeof t.id === "string" && t.id ? t.id : newId(s, "t")));
+  s.settings = v.value;
+  s.missionCatalogue = missions;
+  log(ctx, "Applied a saved preset (settings and missions)");
+}
+
+// ---------------------------------------------------------------------------
+// Ghost games (section 8): score-only; none of this touches the living game
+
+/** Ghosts only, and only once everyone can see they're out (a murder victim waits for the reveal). */
+function requireGhostGame(ctx: Ctx, game: GhostGame): Player {
+  const p = requireActingPlayer(ctx);
+  requireDealt(ctx);
+  requireNotFinale(ctx);
+  if (!ctx.s.settings.ghostGames[game]) fail("That ghost game is switched off.");
+  if (isAlive(p) || pendingVictimId(ctx.s) === p.id) fail("Ghost games are for ghosts.");
+  return p;
+}
+
+/** Eliminated Traitors know every role, so they sit out the games about who the Traitors are. */
+function requireNotTraitorGhost(ctx: Ctx, p: Player): void {
+  if (ctx.s.roles[p.id] === "traitor") fail("Traitors sit this one out.");
+}
+
+function ghostBet(ctx: Ctx, a: ActionOf<"ghostBet">): void {
+  const p = requireGhostGame(ctx, "bhootBets");
+  const { s } = ctx;
+  if (a.kind === "banish") {
+    if (!banishBetsOpen(s)) fail("Banishment bets are open during the Circle, until the reveal starts.");
+  } else if (a.kind === "murder") {
+    if (!murderBetsOpen(s)) fail("Murder bets are open at night.");
+  } else {
+    fail("Bet on a banishment or a murder.");
+  }
+  if (s.ghostGames.bets.some((b) => b.ghostId === p.id && b.kind === a.kind && !b.settled)) fail("Your bet is in. Bets can't be changed.");
+  if (a.targetId === null) {
+    if (a.kind === "banish") fail("Pick who'll be banished.");
+  } else {
+    const t = getPlayer(s, a.targetId);
+    if (!isAlive(t)) fail(`${t.displayName} is no longer in the game.`);
+  }
+  s.ghostGames.bets.push({ id: newId(s, "b"), ghostId: p.id, kind: a.kind, pick: a.targetId, day: s.day, at: ctx.at, settled: false, correct: null });
+  log(ctx, `${p.displayName} placed a Bhoot Bet on the ${a.kind === "banish" ? "banishment" : "murder"}`);
+}
+
+function settleBets(s: GameState, kind: "banish" | "murder", outcome: string | null): void {
+  for (const b of s.ghostGames.bets) {
+    if (b.kind === kind && !b.settled) {
+      b.settled = true;
+      b.correct = b.pick === outcome;
+    }
+  }
+}
+
+function traitorCall(ctx: Ctx, a: ActionOf<"traitorCall">): void {
+  const p = requireGhostGame(ctx, "bhootBets");
+  const { s } = ctx;
+  if (s.settings.revealOnElimination) fail("Roles are shown when players leave, so there's nothing to call.");
+  requireNotTraitorGhost(ctx, p);
+  if (a.call !== "traitor" && a.call !== "innocent") fail("Call them a Traitor or Innocent.");
+  if (a.playerId === p.id) fail("You can't call yourself.");
+  const t = getPlayer(s, a.playerId);
+  if (isAlive(t) || pendingVictimId(s) === t.id) fail(`${t.displayName} is still in the game.`);
+  if (s.ghostGames.calls.some((c) => c.ghostId === p.id && c.playerId === t.id)) fail("You've already made that call.");
+  s.ghostGames.calls.push({ ghostId: p.id, playerId: t.id, call: a.call, at: ctx.at });
+  log(ctx, `${p.displayName} made a Traitor call on ${t.displayName}`);
+}
+
+function crystalBall(ctx: Ctx, a: ActionOf<"crystalBall">): void {
+  const p = requireGhostGame(ctx, "crystalBall");
+  const { s } = ctx;
+  requireNotTraitorGhost(ctx, p);
+  if (!crystalOpen(s)) fail("Crystal Ball opens at each Circle, until voting closes.");
+  if (s.ghostGames.crystal.some((g) => g.ghostId === p.id && g.day === s.day)) fail("Your guess for this Circle is locked in.");
+  const size = crystalSize(s);
+  const ids = distinctIds(s, a.playerIds, "player");
+  if (ids.length !== size) fail(`Pick exactly ${size}.`);
+  if (ids.includes(p.id)) fail("Leave yourself out.");
+  s.ghostGames.crystal.push({ ghostId: p.id, day: s.day, pickIds: ids, at: ctx.at });
+  log(ctx, `${p.displayName} locked in a Crystal Ball guess`);
+}
+
+function markBingo(ctx: Ctx, a: ActionOf<"markBingo">): void {
+  const p = requireGhostGame(ctx, "bhootBingo");
+  const { s } = ctx;
+  const card = bingoCard(s, p.id);
+  if (typeof a.moment !== "string" || !card.includes(a.moment)) fail("That isn't on your card.");
+  const entry = (s.ghostGames.bingo[p.id] ??= { marked: [], lineAt: null });
+  entry.marked = entry.marked.includes(a.moment) ? entry.marked.filter((m) => m !== a.moment) : [...entry.marked, a.moment];
+  if (entry.lineAt === null && hasBingoLine(card, entry.marked)) {
+    entry.lineAt = ctx.at;
+    if (!s.ghostGames.bingoWinnerId) {
+      s.ghostGames.bingoWinnerId = p.id;
+      emit(ctx, "bingo", PUBLIC, { playerId: p.id });
+    }
+    log(ctx, `${p.displayName} completed a Bhoot Bingo line`);
+    return;
+  }
+  log(ctx, `${p.displayName} marked "${a.moment}" in Bhoot Bingo`);
 }
 
 // ---------------------------------------------------------------------------

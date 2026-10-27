@@ -15,6 +15,12 @@ export async function GET(req: Request, ctx: RouteContext<"/api/games/[code]/vie
       requireGameHost(game, user.id);
       return json(await buildViewResponse(game, { kind: "host" }, { seats: seatInfo(await seatsFor(game.id)) }));
     }
+    if (as === "cohost") {
+      const seat = await seatForUser(game.id, user.id);
+      if (!seat || game.state.cohostId !== seat.player_id) throw new HttpError(403, "The host hasn't made you co-host.");
+      await touchSeat(game.id, seat);
+      return json(await buildViewResponse(game, { kind: "cohost" }));
+    }
     if (as !== "player") throw new HttpError(400, "Unknown view.");
     const seat = await seatForUser(game.id, user.id);
     if (!seat) return json(await buildViewResponse(game, { kind: "screen" }, { seated: false }));
