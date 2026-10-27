@@ -108,9 +108,8 @@ export async function runAction(
     const outcome = (data as { result: string }).result;
     if (outcome === "applied") return { ok: true, game: { ...game, state: result.nextState }, duplicate: false };
     if (outcome === "duplicate") return { ok: true, game: await loadGame(code), duplicate: true };
-    if (expectedVersion !== undefined) {
-      return { ok: false, status: 409, stale: true, reason: "Your screen was a step behind. It has refreshed; check and try again." };
-    }
+    // Stale: go round again. A copy of this same request that just landed counts as a duplicate;
+    // otherwise a host tap (expectedVersion) is refused as stale at the top of the loop.
   }
   return { ok: false, status: 503, reason: "The game is busy right now. Try again." };
 }

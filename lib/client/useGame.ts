@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ActionResponse, SeatInfo, ViewResponse } from "@/lib/game/api-types";
 import type { ClientAction } from "@/lib/game/actions";
 import type { GameView } from "@/lib/game/view";
-import { api, ApiError, newKey } from "./api";
+import { api, ApiError, newKey, withRetries } from "./api";
 import { browserClient } from "./supabase";
 
 export type Connection = "live" | "connecting" | "offline";
@@ -130,34 +130,38 @@ export function useGame(code: string, kind: GameKind): GameHandle {
   useEffect(() => {
     if (deadline === null) return;
     const wait = Math.max(0, deadline - (Date.now() + offset.current)) + TICK_GRACE[kind];
-    const t = setTimeout(() => {
+    // If the nudge fails (a Wi-Fi blip on every phone at once), keep nudging, slower each time, until
+    // the game moves on; otherwise the phase would sit past its timer until the host tapped something.
+    let again = 5_000;
+    let t: ReturnType<typeof setTimeout>;
+    const nudge = () => {
       api<ActionResponse>(`/api/games/${code}/action`, {
         kind,
         body: { as: kind === "screen" ? "system" : kind, key: `tick-version-${version}`, action: { type: "tick" } },
       })
         .then(accept)
-        .catch(() => void refresh());
-    }, wait);
+        .catch(() => {
+          void refresh();
+          t = setTimeout(nudge, again);
+          again = Math.min(again * 2, 30_000);
+        });
+    };
+    t = setTimeout(nudge, wait);
     return () => clearTimeout(t);
   }, [accept, code, deadline, kind, refresh, version]);
 
   const act = useCallback<GameHandle["act"]>(
     async (action, o = {}) => {
+      // One key for every try: a resent move that already landed comes back as a duplicate.
+      const body = { as: kind, key: newKey(), expectedVersion: o.strict ? versionRef.current : undefined, action };
       try {
-        const r = await api<ActionResponse>(`/api/games/${code}/action`, {
-          kind,
-          body: {
-            as: kind,
-            key: newKey(),
-            expectedVersion: o.strict ? versionRef.current : undefined,
-            action,
-          },
-        });
+        const r = await withRetries(() => api<ActionResponse>(`/api/games/${code}/action`, { kind, body }));
         accept(r);
         return { ok: true };
       } catch (err) {
         if (err instanceof ApiError) {
           accept(err.body as Partial<ViewResponse>);
+          if (err.status === 0) setConnection("offline");
           return { ok: false, error: err.message };
         }
         return { ok: false, error: "Something went wrong." };

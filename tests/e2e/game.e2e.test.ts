@@ -1,3 +1,4 @@
+import { createClient } from "@supabase/supabase-js";
 import { afterAll, describe, expect, it } from "vitest";
 import { checkInvariants } from "@/lib/game/invariants";
 import { allViewers, findLeaks } from "@/lib/game/leaks";
@@ -16,6 +17,17 @@ import { buildViewResponse } from "@/lib/server/views";
  */
 const created: string[] = [];
 const HOST = { kind: "host" } as const;
+const SYSTEM = { kind: "system" } as const;
+const player = (playerId: string) => ({ kind: "player", playerId }) as const;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function waitFor(check: () => boolean, ms: number, what: string) {
+  const until = Date.now() + ms;
+  while (!check()) {
+    if (Date.now() > until) throw new Error(`Timed out waiting for ${what}`);
+    await sleep(100);
+  }
+}
 
 async function hostUserId(): Promise<string> {
   const { data, error } = await adminClient().from("hosts").select("user_id").limit(1).single();
@@ -190,5 +202,139 @@ describe("undo through the database (owner, 27 October)", () => {
     const stale = await applyUndo(g.code, key("u4"), game.state.version - 1, "Old screen");
     expect(stale.ok).toBe(false);
     await ledgerIsContiguous(game.id, game.state.version);
+  });
+});
+
+describe("a crowd of phones at once, through the database (Step 4)", () => {
+  it("lands twelve moves sent together, counts a resent request once, keeps one timer nudge and one of two host taps", async () => {
+    const g = await newGame();
+    await fillBots(g);
+    const stamp = Date.now();
+    const key = (s: string) => `e2e-crowd-${s}-${stamp}`;
+    expect((await runAction(g.code, HOST, { type: "dealRoles" }, key("deal"))).ok).toBe(true);
+    let game = await loadGame(g.code);
+    const ids = game.state.players.map((p) => p.id);
+    const target = (id: string) => ids[(ids.indexOf(id) + 1) % ids.length];
+
+    // Twelve phones open their roles in the same instant: all twelve land, one version each.
+    let v = game.state.version;
+    const acks = await Promise.all(ids.map((id) => runAction(g.code, player(id), { type: "acknowledgeRole" }, key(`ack-${id}`))));
+    expect(acks.filter((r) => !r.ok)).toEqual([]);
+    game = await loadGame(g.code);
+    expect(game.state.version).toBe(v + 12);
+    expect(ids.every((id) => game.state.roleSeen[id])).toBe(true);
+
+    // Every screen nudges the run-out debate timer at once (same key per version): one nudge lands.
+    await runAction(g.code, HOST, { type: "openCircle" }, key("circle"));
+    await runAction(g.code, HOST, { type: "adjustTimer", deltaSeconds: -3600 }, key("shorten"));
+    v = (await loadGame(g.code)).state.version;
+    const ticks = await Promise.all(Array.from({ length: 10 }, () => runAction(g.code, SYSTEM, { type: "tick" }, `tick-version-${v}`)));
+    expect(ticks.every((r) => r.ok)).toBe(true);
+    expect(ticks.filter((r) => r.ok && !r.duplicate)).toHaveLength(1);
+    game = await loadGame(g.code);
+    expect(game.state.version).toBe(v + 1);
+    expect(game.state.phase).toBe("CIRCLE_VOTE");
+
+    // A phone on a flaky connection sends the same vote six times: it counts once.
+    const resent = await Promise.all(
+      Array.from({ length: 6 }, () => runAction(g.code, player(ids[0]), { type: "castVote", targetId: target(ids[0]) }, key("vote-resent"))),
+    );
+    expect(resent.every((r) => r.ok)).toBe(true);
+    expect(resent.filter((r) => r.ok && !r.duplicate)).toHaveLength(1);
+
+    // The other eleven vote in the same instant: every ballot lands once and voting locks.
+    const votes = await Promise.all(
+      ids.slice(1).map((id) => runAction(g.code, player(id), { type: "castVote", targetId: target(id) }, key(`vote-${id}`))),
+    );
+    expect(votes.filter((r) => !r.ok)).toEqual([]);
+    game = await loadGame(g.code);
+    let round = game.state.rounds.at(-1)!;
+    expect(round.ballots.map((b) => b.voterId).sort()).toEqual([...ids].sort());
+    expect(round.status).toBe("revealing");
+
+    // The host double-taps "Reveal next vote": one lands, the other is refused as a step behind.
+    v = game.state.version;
+    const taps = await Promise.all([
+      runAction(g.code, HOST, { type: "revealNextBallot" }, key("tap-a"), v),
+      runAction(g.code, HOST, { type: "revealNextBallot" }, key("tap-b"), v),
+    ]);
+    expect(taps.filter((r) => r.ok)).toHaveLength(1);
+    expect(taps.filter((r) => !r.ok && r.stale)).toHaveLength(1);
+
+    // The host's phone resends one tap (same key) while the first is still in flight: it lands once, no error.
+    v = (await loadGame(g.code)).state.version;
+    const resentTap = await Promise.all([
+      runAction(g.code, HOST, { type: "revealNextBallot" }, key("tap-c"), v),
+      runAction(g.code, HOST, { type: "revealNextBallot" }, key("tap-c"), v),
+    ]);
+    expect(resentTap.every((r) => r.ok)).toBe(true);
+    game = await loadGame(g.code);
+    round = game.state.rounds.at(-1)!;
+    expect(round.revealedCount).toBe(2);
+    expect(game.state.version).toBe(v + 1);
+    expect(checkInvariants(game.state)).toEqual([]);
+    await ledgerIsContiguous(game.id, game.state.version);
+  });
+});
+
+describe("what a browser can reach with the public key (section 9.4)", () => {
+  it("reads and hears only version pings; game state, seats, the ledger, hosts and photos stay shut", async () => {
+    const g = await newGame();
+    const anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const secretTables = ["games", "seats", "game_actions", "hosts", "presets"];
+    try {
+      // Reads: nothing from the secret tables (refused or empty); pings show only code and version.
+      for (const table of secretTables) {
+        const { data, error } = await anon.from(table).select("*").limit(5);
+        expect(error !== null || (data ?? []).length === 0, `${table} is readable`).toBe(true);
+      }
+      const { data: pings, error: pingError } = await anon.from("game_pings").select("*").eq("code", g.code);
+      expect(pingError).toBeNull();
+      expect(Object.keys(pings![0]).sort()).toEqual(["code", "updated_at", "version"]);
+
+      // Writes: refused everywhere, including the save functions and the pings.
+      const state = (await loadGame(g.code)).state;
+      expect((await anon.rpc("apply_game_action", {
+        p_game_id: g.id, p_expected_version: 0, p_idempotency_key: "e2e-anon-0001", p_actor: HOST, p_action: { type: "dealRoles" }, p_state: { ...state, version: 1 },
+      })).error).not.toBeNull();
+      expect((await anon.rpc("create_game", { p_code: "ZZZZZ", p_host: g.hostUserId, p_state: state })).error).not.toBeNull();
+      await anon.from("game_pings").update({ version: 999 }).eq("code", g.code);
+      await anon.from("games").update({ status: "closed" }).eq("code", g.code);
+      await anon.from("seats").insert({ game_id: g.id, player_id: "p1", user_id: g.hostUserId });
+      const after = await adminClient().from("games").select("version, status").eq("code", g.code).single();
+      expect(after.data).toEqual({ version: 0, status: "active" });
+      const { data: ping0 } = await adminClient().from("game_pings").select("version").eq("code", g.code).single();
+      expect(ping0!.version).toBe(0);
+      expect(await seatsFor(g.id)).toEqual([]);
+
+      // Photos: the bucket is private.
+      const listed = await anon.storage.from("player-photos").list(g.id);
+      expect(listed.error !== null || (listed.data ?? []).length === 0).toBe(true);
+
+      // Realtime: listen to every table while the game moves; only pings arrive, carrying a version.
+      const heard: Record<string, Record<string, unknown>[]> = {};
+      const status: Record<string, string> = {};
+      for (const table of ["game_pings", ...secretTables]) {
+        anon
+          .channel(`e2e-privacy-${table}-${g.code}`)
+          .on("postgres_changes", { event: "*", schema: "public", table }, (msg) => {
+            (heard[table] ??= []).push(msg.new as Record<string, unknown>);
+          })
+          .subscribe((s) => (status[table] = s));
+      }
+      await waitFor(() => status.game_pings === "SUBSCRIBED", 20_000, "the pings channel");
+      await sleep(2_000);
+      await fillBots(g);
+      expect((await runAction(g.code, HOST, { type: "dealRoles" }, `e2e-privacy-deal-${Date.now()}`)).ok).toBe(true);
+      await waitFor(() => (heard.game_pings ?? []).some((p) => p.code === g.code), 20_000, "a ping");
+      await sleep(3_000);
+      for (const table of secretTables) expect(heard[table] ?? [], `heard ${table}`).toEqual([]);
+      for (const p of heard.game_pings!) expect(Object.keys(p).sort()).toEqual(["code", "updated_at", "version"]);
+      console.log(`Realtime channel status with the public key: ${JSON.stringify(status)}`);
+    } finally {
+      await anon.removeAllChannels();
+    }
   });
 });

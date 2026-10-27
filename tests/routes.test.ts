@@ -256,6 +256,18 @@ describe("seats and PINs", () => {
     expect((await call(seatRoute.POST, { token: "phone-1", body: { playerId: "p99", pin: "1234" } })).status).toBe(404);
   });
 
+  it("an expired sign-in is told apart from a wrong PIN, so phones renew only the sign-in", async () => {
+    const expired = await call(seatRoute.POST, { token: "expired-token", body: { playerId: "p1", pin: "1234" } });
+    expect([expired.status, expired.body.code]).toEqual([401, "session"]);
+    const view = await call(viewRoute.GET, { token: "expired-token", query: "?as=player" });
+    expect([view.status, view.body.code, view.body.view]).toEqual([401, "session", undefined]);
+    expect((await act("expired-token", "player", { type: "acknowledgeRole" })).body.code).toBe("session");
+    await call(seatRoute.POST, { token: "phone-1", body: { playerId: "p1", pin: "1234" } });
+    const wrong = await call(seatRoute.POST, { token: "stranger", body: { playerId: "p1", pin: "9999" } });
+    expect(wrong.status).toBe(401);
+    expect(wrong.body.code).toBeUndefined();
+  });
+
   it("one seat per phone; a taken seat needs its PIN; wrong PINs lock it until the host unlocks", async () => {
     expect((await call(seatRoute.POST, { token: "phone-1", body: { playerId: "p1", pin: "1234" } })).status).toBe(200);
     const twice = await call(seatRoute.POST, { token: "phone-1", body: { playerId: "p2", pin: "1234" } });
@@ -372,6 +384,13 @@ describe("concurrency through the routes", () => {
       act("host-a", "host", { type: "revealNextBallot" }, { expectedVersion: v }),
     ]);
     expect([a.status, b.status].sort()).toEqual([200, 409]);
+
+    // A resend of one tap (same key) while the first is in flight lands once and isn't refused.
+    const v2 = state().version;
+    const body = { as: "host", key: "resent-tap-123", expectedVersion: v2, action: { type: "revealNextBallot" } };
+    const both = await Promise.all([call(actionRoute.POST, { token: "host-a", body }), call(actionRoute.POST, { token: "host-a", body })]);
+    expect(both.map((r) => r.status)).toEqual([200, 200]);
+    expect(state().version).toBe(v2 + 1);
   });
 
   it("a storm of timer nudges from every screen applies one tick", async () => {

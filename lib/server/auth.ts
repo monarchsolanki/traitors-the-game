@@ -19,7 +19,7 @@ export async function requestUser(req: Request): Promise<RequestUser | null> {
 
 export async function requireUser(req: Request): Promise<RequestUser> {
   const user = await requestUser(req);
-  if (!user) throw new HttpError(401, "Your session has expired. Refresh the page.");
+  if (!user) throw new HttpError(401, "Your session has expired. Refresh the page.", "session");
   return user;
 }
 

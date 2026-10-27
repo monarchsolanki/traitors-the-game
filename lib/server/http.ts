@@ -3,9 +3,12 @@ import { unstable_rethrow } from "next/navigation";
 
 export class HttpError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  /** A machine-readable reason for the client, such as "session" for an expired sign-in. */
+  code?: string;
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -20,7 +23,7 @@ export async function handle(fn: () => Promise<Response>): Promise<Response> {
   } catch (err) {
     // Next.js signals (such as prerendering bailing out at a request-time read) must pass through.
     unstable_rethrow(err);
-    if (err instanceof HttpError) return json({ error: err.message }, err.status);
+    if (err instanceof HttpError) return json(err.code ? { error: err.message, code: err.code } : { error: err.message }, err.status);
     console.error(err);
     return json({ error: "Something went wrong on the server. Try again." }, 500);
   }
