@@ -22,7 +22,7 @@ describe("defaults (section 4.2)", () => {
       allowTraitorOnTraitor: true,
       murderRule: "majority",
       traitorChat: true,
-      recruitment: "off",
+      recruitment: "lastTraitor",
       revealOnElimination: false,
       tieRule: "revote",
       tieRevotesBeforeChoice: 2,

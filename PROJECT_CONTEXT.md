@@ -8,7 +8,7 @@
 | --- | --- |
 | Owner | Monarch Solanki (host of the first game) |
 | Last updated | 26 October 2026 |
-| Status | Step 5 (Tier 2, polish, freeze) built and approved by the owner on 27 October after trying its checklist on the live link. Every build step in section 12 is done; feature freeze from here: only fixes. Next: the rehearsal with real players (checklist in 6.1), raising Supabase's anonymous sign-in limit, and the open decisions in section 16. |
+| Status | Step 5 built and approved (27 October); every build step in section 12 is done and the feature freeze is on. The same day the owner settled every open decision (section 16): recruitment on, the ghost vote also in revotes and End Game banishments, no co-host, no time constraint on the run sheet, the rule flags confirmed. Supabase's anonymous sign-in limit is raised to 150 an hour. Next: the rehearsal with real players (6.1). |
 | Live link | https://traitors-the-game.vercel.app |
 | First game | Diwali x Halloween ("Diwaloween: Lights & Frights") villa party, Saturday 31 October 2026, 12 players plus the host |
 | Planning doc | [Traitors Party App — Build Plan](https://claude.ai/artifact/4t3XeWf8tHKf7C9YoMmDqN); fully merged into this file on 26 October 2026, so this file alone is enough |
@@ -119,7 +119,7 @@ It merges the earlier planning doc ("Traitors Party App — Build Plan", 26 Octo
 | Banishment | Removal by a Circle vote. |
 | Murder | Removal by the Traitors at night. |
 | Ghost | A murdered or banished player. Stays at the party and keeps using the app in ghost mode. |
-| Ghost vote | Each ghost's single vote, cast at one later standard Circle, once per game. The only ghost power. |
+| Ghost vote | Each ghost's single vote, cast once per game at a later standard Circle, tie revote or End Game banishment (owner, 27 October). The only ghost power. |
 | Shield | Mission reward. Blocks a murder against its holder for one night. |
 | Dagger | Mission reward. Makes its holder's ballot count 2 times (or 3, if the host sets it) at one Circle. |
 | Ability | A shield or a dagger, given by the host to one or more players after a mission. |
@@ -141,7 +141,7 @@ It merges the earlier planning doc ("Traitors Party App — Build Plan", 26 Octo
 | Traitors murder only Innocents | Traitors may murder a fellow Traitor if every other living Traitor picks them (setting, default on) | A deliberate bluff with a real cost: a suspected Traitor's partner can argue "he was murdered, so we're both clean" |
 | Missions build a cash prize pot | No prize pot; missions award only shields and daggers | Owner's call |
 | Dagger doubles a vote (Season 2) | Dagger counts 2 times by default; the host can set 3 | Owner originally asked for 3; with 5 or 6 players left, 3 nearly decides a Circle alone |
-| Recruitment is part of the format | Off by default; only the last Traitor; built last behind a host switch | Adds role changes and edge cases; the core game mustn't wait on it |
+| Recruitment is part of the format | Only the last Traitor; built last behind a host switch; on for 31 October (owner, 27 October), off by default until then | Adds role changes and edge cases; the core game mustn't wait on it |
 | Eliminated players leave | Ghosts stay, see a public feed, play every score-only ghost game, and each casts one ghost vote at a later Circle | Keeps everyone involved; the ghost vote is the only way a ghost touches the living game |
 | Eliminated players are out of the result | Eliminated players win with their team: eliminated Traitors win if any Traitor survives, eliminated Innocents win if the Innocents win | Owner's call: everyone stays invested to the end |
 | A season runs a set number of episodes | No fixed number of days; the game runs until an end condition is met, whether that takes 4, 5, 6 or 7 days | Owner's instruction: play until the end |
@@ -174,7 +174,7 @@ The keys are final as of Step 1 and live in `lib/game/settings.ts` (each with it
 | Traitor-on-Traitor murder | `allowTraitorOnTraitor` | on | on, off | Override |
 | Murder rule | `murderRule` | `majority` | `majority` (random tie-break), `unanimous` | Override |
 | Traitor chat | `traitorChat` | on | on, off | Override |
-| Recruitment | `recruitment` | `off` | `off`, `lastTraitor` | Override |
+| Recruitment | `recruitment` | `lastTraitor` (on; owner, 27 October) | `off`, `lastTraitor` | Override |
 | Role reveal on elimination | `revealOnElimination` | off (hidden) | off, on | Override |
 | Tie rule | `tieRule` | `revote` | `revote` (revotes between the tied players, then the host chooses), `spin` (a spin at once), `hostDecides` | Override |
 | Revotes before the host may spin | `tieRevotesBeforeChoice` | 2 | 1 to 5 | Override |
@@ -349,7 +349,7 @@ The End Game threshold is checked only after a Circle banishment, never after a 
 ### 5.5 Voting
 
 - Eligible voters are the players alive when voting opens, plus ghosts who still hold their ghost vote (below).
-- **Ghost vote** (`ghostVote`, default on): each ghost may cast one ballot, once per game, at any standard Circle after the one where they were eliminated (or after the night they were murdered). It counts 1, can't carry a dagger, can't target a ghost, and is revealed like any other ballot, with a ghost badge. Defaults to flag: ghost votes can't be used in revotes or the End Game, and are optional, so voting doesn't close by itself while a ghost could still vote: the host locks it (or the vote timer ends) once the "waiting on" list shows every living ballot in.
+- **Ghost vote** (`ghostVote`, default on): each ghost may cast one ballot, once per game, at any standard Circle after the one where they were eliminated (or after the night they were murdered). It counts 1, can't carry a dagger, can't target a ghost, and is revealed like any other ballot, with a ghost badge. Owner, 27 October: it can also be used in a tie revote or an End Game banishment (and its revote), but never in the End or Banish choice. Ghost votes are optional, so voting doesn't close by itself while a ghost could still vote: the host locks it (or the vote timer ends) once the "waiting on" list shows every living ballot in.
 - Each voter casts one ballot, final once submitted. Players can't vote for themselves.
 - Ballots missing when the host locks voting count as abstentions. The confirm step lists who hasn't voted.
 - The dagger holder ticks "use dagger" on their ballot, which then counts `daggerWeight` times (default 2).
@@ -417,7 +417,7 @@ The End Game threshold is checked only after a Circle banishment, never after a 
 `lib/game/engine.ts` implements 5.1 to 5.9. Where the text above left room, the engine does the following. Items marked **flag** are interpretations Monarch should confirm (also listed in section 16); each has a safe default that is already built.
 
 **Phases and checks**
-- **Flag: 2 players left.** 5.2 says "in the End Game with 2 players left", but 5.3 says "2 players left" ends the game at any point. The engine follows 5.3: after any banishment (or a host elimination) that leaves 2 or fewer alive, it goes straight to the final reveal, even if the End Game hadn't started. It only matters when the threshold is very low.
+- **2 players left (confirmed by the owner, 27 October).** 5.2 says "in the End Game with 2 players left", but 5.3 says "2 players left" ends the game at any point. The engine follows 5.3: after any banishment (or a host elimination) that leaves 2 or fewer alive, it goes straight to the final reveal, even if the End Game hadn't started. It only matters when the threshold is very low.
 - Once the End Game starts it never goes back to nights, even if the host revives someone.
 - After a host override that leaves no Traitors alive, or 2 or fewer players, the game goes to the final reveal at once.
 - A timer running out is applied by a `tick` action that any screen may send; the engine checks the server deadline and ignores early ticks. Debate timeout opens voting; vote timeout locks voting; night timeout resolves the night; reward-vote timeout settles the reward.
@@ -425,7 +425,7 @@ The End Game threshold is checked only after a Circle banishment, never after a 
 
 **Night**
 - A Traitor's pick can change until every living Traitor has picked. The moment the last one picks, the night ends (5.1 "all picks are in").
-- **Flag: unanimous murder rule.** Every living Traitor must pick the same player. For a Traitor-on-Traitor murder under `unanimous`, the target's own pick is ignored (they can't pick themselves), so a sacrifice works when every other Traitor agrees. A missing pick means nobody dies.
+- **Unanimous murder rule (confirmed by the owner, 27 October).** Every living Traitor must pick the same player. For a Traitor-on-Traitor murder under `unanimous`, the target's own pick is ignored (they can't pick themselves), so a sacrifice works when every other Traitor agrees. A missing pick means nobody dies.
 - A shield protects during the first night that ends after it was given, then expires. A shield the host gives at breakfast protects that coming night.
 - At breakfast the murder victim still shows as alive on every screen, including their own phone, until the host reveals the murder. Then their phone switches to the ghost screen.
 - Fellow Traitors see whether each other has picked, not whom (the chat is for agreeing). A recruited Traitor sees the whole chat history from the night they join.
@@ -435,7 +435,7 @@ The End Game threshold is checked only after a Circle banishment, never after a 
 - Ballots are revealed in a random order fixed when voting locks; the host reveals them one by one, then settles the result.
 - If nobody votes, every player on the ballot is tied.
 - Deciding a tie by hand when the tie rule isn't `hostDecides` is allowed as a logged override with a reason (for recovery, such as a tied player leaving).
-- **Flag: End Game abstentions.** A unanimous End needs every living player to vote End; a missing ballot counts as not-End, so one more banishment follows.
+- **End Game abstentions (confirmed by the owner, 27 October).** A unanimous End needs every living player to vote End; a missing ballot counts as not-End, so one more banishment follows.
 - End Game ballots (End or Banish) are revealed one by one too, inside the End Game phase.
 
 **Missions and awards**
@@ -449,10 +449,10 @@ The End Game threshold is checked only after a Circle banishment, never after a 
 
 **Ghost games (built in Step 5, 27 October; section 8)**
 - Only a ghost everyone can already see is out may play: a murder victim waits until the host reveals the murder, and before that is refused with exactly the message a living player gets ("Ghost games are for ghosts."), so nothing leaks.
-- **Bhoot Bets.** A banishment bet is on the next banishment: open during the Circle debate, voting, and the End Game votes, until the reveal starts; one open bet per ghost; it settles at the banishment (a host elimination doesn't settle it). A murder bet is on tonight: open while the night is on; "nobody dies" is a valid pick; it settles when the host reveals the murder and wins on any night where nobody died, without ever saying why (shield, recruit or failed pick). Bets can't be changed. Unsettled bets are void at the final reveal. **Flag:** the plan says ghosts "bet points"; the build gives fixed points per right bet instead of wagers (simpler for guests; points are settings).
+- **Bhoot Bets.** A banishment bet is on the next banishment: open during the Circle debate, voting, and the End Game votes, until the reveal starts; one open bet per ghost; it settles at the banishment (a host elimination doesn't settle it). A murder bet is on tonight: open while the night is on; "nobody dies" is a valid pick; it settles when the host reveals the murder and wins on any night where nobody died, without ever saying why (shield, recruit or failed pick). Bets can't be changed. Unsettled bets are void at the final reveal. The plan said ghosts "bet points"; the build gives fixed points per right bet instead of wagers (simpler for guests; points are settings). Kept by the owner, 27 October.
 - **Traitor calls** ("bets on who was a Traitor"): a ghost may call any eliminated player (except themselves) a Traitor or Innocent, once each, any time before the final reveal; scored at the final reveal against the final roles. Eliminated Traitors sit this out. Off when roles are shown on elimination (there'd be nothing to guess).
 - **Crystal Ball.** Once per Circle (from the debate until voting closes), a ghost locks in exactly as many players as there are Traitors (`traitorCount`), never themselves; each guess scores per real Traitor at the final reveal (recruited players count as Traitors). Eliminated Traitors sit this out.
-- **Bhoot Bingo.** Each ghost's 3×3 card is 9 of the `bingoMoments`, shuffled with the game's secret seed (stable all game). Ghosts tap squares themselves (honour system; squares can be untapped). The first ghost to complete a row, column or diagonal wins the Bingo points and is announced on the big screen; later lines score nothing. **Flag:** the default moments leave out "a shield save" and "a Traitor banished" from the plan's examples, because ghosts can't know either before the final reveal; the host can add any moment.
+- **Bhoot Bingo.** Each ghost's 3×3 card is 9 of the `bingoMoments`, shuffled with the game's secret seed (stable all game). Ghosts tap squares themselves (honour system; squares can be untapped). The first ghost to complete a row, column or diagonal wins the Bingo points and is announced on the big screen; later lines score nothing. The default moments leave out "a shield save" and "a Traitor banished" from the plan's examples, because ghosts can't know either before the final reveal; the host can add any moment. Kept by the owner, 27 October.
 - **Live reactions.** During the debate only, ghosts tap one of 8 emoji (`REACTION_EMOJI` in `settings.ts`); the server checks the sender is a ghost and the switch is on (`reactionRefusal`), stores only the room code, emoji and time in `game_reactions` (no sender), caps them at 30 per 10 seconds per game, and the big screen floats them up. They aren't game actions and never change the game version.
 - **Scores** (`ghostScores`): every eliminated player gets a total (bets + Traitor calls + Crystal Ball + Bingo). Shown on every screen at the final reveal (Best Ghost); before that only the host sees them, because calls and Crystal Ball are scored against the roles.
 
@@ -488,7 +488,9 @@ A typical 3-day game runs 7:30 PM to about 11:05 PM: 3 h 35 min elapsed, made of
 | 10:40 PM | End Game | End or Banish votes until unanimous | 15 |
 | 10:55 PM | Final reveal | Every role, the suspicion meter, the ghost scores and the winners | 10 |
 
-If all Traitors (3 by default) are banished early, the Innocents win early and Housie starts sooner. Beyond the buffer, the host can shorten debates from the control screen. The run sheet awaits the owner's final approval (section 16).
+If all Traitors (3 by default) are banished early, the Innocents win early and Housie starts sooner. Beyond the buffer, the host can shorten debates from the control screen.
+
+**Owner, 27 October: no time constraint.** The times above are a rough guide only. The game runs until an end condition is met, so there's no buffer rule and nothing gets cut for time.
 
 **The run sheet is a guide, not a limit.** The game goes on until an end condition is met. Each extra day adds about 25 minutes without a mission (reveal, Circle and night) or about 40 with one. If the night runs long, the host can skip missions, shorten debates or lower the End Game threshold.
 
@@ -500,11 +502,11 @@ Run this with real phones before 31 October, following the run sheet above. Tick
 
 **Before guests arrive**
 - [ ] Wi-Fi works in every room the game uses; a phone hotspot is ready as a backup.
-- [ ] Supabase: the anonymous sign-in limit is raised (Authentication, then Rate Limits; about 150 an hour), since every phone shares the villa's internet address.
+- [x] Supabase: the anonymous sign-in limit is raised (Authentication, then Rate Limits; about 150 an hour; done by the owner on 27 October), since every phone shares the villa's internet address.
 - [ ] The live link opens on the TV or laptop for the big screen; Full screen on; Sound on (tap it once; the browser needs a tap before it plays sound); the screen stays awake.
 - [ ] The host is signed in on their phone (and a second device signed in too, as a backup).
-- [ ] The game is created (or started from the saved preset), with every player's photo and display name checked; settings checked (3 Traitors, dagger ×2, End Game auto, timers, ghost games on).
-- [ ] The co-host is chosen (Players tab, "Make … co-host") and has opened the co-host page from their phone.
+- [ ] The game is created (or started from the saved preset), with every player's photo and display name checked; settings checked (3 Traitors, dagger ×2, End Game auto, recruitment on, ghost vote on, timers, ghost games on).
+- [x] No co-host: the host runs everything (owner, 27 October). The co-host feature stays available if that changes.
 - [ ] Props for the missions you might run are ready (section 7).
 
 **Setup (7:30 PM, 10 minutes)**
@@ -529,7 +531,7 @@ Run this with real phones before 31 October, following the run sheet above. Tick
 **Finale**
 - [ ] End Game votes until unanimous; the host's private result card; "Reveal to everyone"; every role flips on the big screen with the suspicion meter and Best Ghost.
 - [ ] Save the game as a preset for next time (Settings tab).
-- [ ] The rehearsal finishes inside the run sheet's times (with the 15 to 20 minute buffer).
+- [ ] Note how long each part took (no time limit, owner 27 October; it's useful to know for the night).
 
 ## 7. Mission catalogue
 
@@ -588,7 +590,7 @@ Murdered and banished players stay ghosts until the final reveal and never learn
 
 | Power | How it works | Strength | Which side it helps |
 | --- | --- | --- | --- |
-| Dead Vote (owner's idea; also in Blood on the Clocktower, where the dead also keep talking and win or lose with their team) | Every ghost, murdered or banished, gets one vote to cast at any later Circle of Shaq, once per game | Light | Planning view: even, since most ghosts are Innocents but eliminated Traitors vote knowing every role. Review view: less even than it looks, since a dead Traitor votes knowing every role while dead Innocents are guessing. Possible tweak, now the default: not usable in the End Game |
+| Dead Vote (owner's idea; also in Blood on the Clocktower, where the dead also keep talking and win or lose with their team) | Every ghost, murdered or banished, gets one vote to cast at any later Circle of Shaq, once per game | Light | Planning view: even, since most ghosts are Innocents but eliminated Traitors vote knowing every role. Review view: less even than it looks, since a dead Traitor votes knowing every role while dead Innocents are guessing. Owner, 27 October: usable at a later standard Circle, tie revote or End Game banishment, never the End or Banish choice |
 | Last Words | Each eliminated player gets 30 seconds on the big screen before leaving | Light | Even: Innocents can accuse, Traitors can mislead |
 | Ghost Tie-break | If a Circle vote ties, the ghosts vote to break it instead of the random spin | Light | Even, and only matters in a tie |
 | Spotlight | Once per game, ghosts pick one living player who must defend themselves first at the next Circle | Light | Slightly Innocent |
@@ -812,7 +814,7 @@ Build tier by tier. A tier starts only when the one before it works end to end. 
 | 4. Last, behind a host switch | Recruitment, switched on only after its tests pass |
 | Later: documented, not built | Ghost powers other than the ghost vote; secret Traitor tasks and sabotage objectives; handwritten votes; anonymous-vote setting; recruitment at 2 Traitors; game history export |
 
-**Status (27 October):** Tiers 1 to 4 are built. Recruitment (tier 4) passes its gate tests and its switch stays off by default; turning it on is the owner's call. Feature freeze from Step 5: only fixes from here.
+**Status (27 October):** Tiers 1 to 4 are built. Recruitment (tier 4) passes its gate tests; the owner turned it on for 31 October (now the default). Feature freeze from Step 5: only fixes from here.
 | Dropped | Custom gift types; death-card game; Destiny Card |
 
 ---
@@ -898,7 +900,7 @@ Checkpoint: a full game on 3 real phones plus the laptop.
 
 Then a feature freeze, a rehearsal checklist that follows the run sheet (section 6), and a printable paper fallback.
 
-**Built (27 October):** all of the above. Tier 2 and tier 3 as described in 4.3, 5.10, 7, 8 and 9.8; recruitment's gate tests pass (with a new one for ghost games during an offer) and it stays off by default; the rehearsal checklist is 6.1; the offline copy of roles has a Print button and prints cleanly (rows and slips don't split across pages).
+**Built (27 October):** all of the above. Tier 2 and tier 3 as described in 4.3, 5.10, 7, 8 and 9.8; recruitment's gate tests pass (with a new one for ghost games during an offer) and the owner turned it on (27 October); the rehearsal checklist is 6.1; the offline copy of roles has a Print button and prints cleanly (rows and slips don't split across pages).
 
 ### 12.3 Things that must hold true
 
@@ -998,7 +1000,7 @@ All decisions dated 26 October 2026 unless noted.
 | Balance simulation | Finds broken scenarios, doesn't prove balance | Bots can't model persuasion |
 | Full rehearsal | Required before game night | Tests mechanics and timing on real phones |
 | Building | Go-ahead given | Owner's instruction |
-| Ghost vote (26 Oct, replaces "ghosts never vote in version 1") | Each ghost casts one vote, once per game, at a later standard Circle; setting `ghostVote`, default on. The only ghost power | Owner's instruction. Defaults to confirm: not usable in revotes or the End Game; counts 1; no dagger |
+| Ghost vote (26 Oct, replaces "ghosts never vote in version 1") | Each ghost casts one vote, once per game, at a later standard Circle; setting `ghostVote`, default on. The only ghost power | Owner's instruction; counts 1; no dagger. Revotes and End Game banishments added by the owner, 27 October (see below) |
 | Ghost games (26 Oct, replaces "one score-only game") | Every score-only ghost game is in (Bhoot Bets, Crystal Ball, Live Reactions, Bhoot Bingo), each a host toggle, default on; Tier 2 | Owner's instruction: anything that gives no power to a ghost or any player is fine |
 | Eliminated players win with their team (26 Oct) | Eliminated Traitors win if any Traitor survives; eliminated Innocents win if the Innocents win; setting `eliminatedWinWithTeam`, default on | Owner's call; closes the open party-rule question |
 | Build schedule (26 Oct) | Not a constraint: build the full scope properly. Unfinished work at the freeze is still switched off, never half-shipped | Owner's instruction |
@@ -1011,6 +1013,10 @@ All decisions dated 26 October 2026 unless noted.
 | Requests carry the access token (26 Oct, Step 2) | The browser sends its Supabase access token on each request; no cookie session or proxy | Simplest reliable setup with Cache Components on; the server verifies every request |
 | Vercel region (26 Oct, Step 2; updated 27 Oct) | Server functions run in Mumbai (`bom1`), next to the database, set in the Vercel project settings (Settings → Functions). A `vercel.json` with `regions` stopped Vercel creating deployments at all on 26 October, so it was removed | Vercel's default region is in the US; every game action would otherwise cross the world twice |
 | Big screen holds results (27 Oct, Step 3) | A banishment, murder reveal or End Game result stays on the big screen for 20 seconds, and a spin plays for 4.5 seconds, timed from when the screen first sees it (a screen opened later doesn't replay old results). Phones show "X was banished" for a minute after | The engine moves straight to night after a banishment, so without this the room would never see who went |
+| Open decisions settled (27 Oct) | The owner answered every open decision in section 16: keep the section 17 ideas for later; pick missions on the night from the catalogue; no co-host (the host runs everything); keep the ghost-game details as built; recruitment on; the ghost vote also in tie revotes and End Game banishments (never the End or Banish choice); confirmed the three rule flags (2 players left ends the game, a unanimous sacrifice ignores the target's own pick, a missing End Game ballot blocks End); no time constraint on the run sheet | Owner's answers, 27 October |
+| Recruitment on (27 Oct, replaces "stays off by default") | The default is now `lastTraitor`: when one Traitor is left, they may recruit an Innocent instead of murdering. Games created earlier keep their own setting | Owner's decision; gate tests pass |
+| Ghost vote in revotes and the End Game (27 Oct) | A ghost's one vote can be used at a standard Circle, a tie revote, or an End Game banishment and its revote; never in the End or Banish choice (that needs every living player). Still once per game, counts 1, no dagger. Voting waits for ghosts who could still vote until the host locks it or the timer ends | Owner's decision |
+| Run sheet: no time constraint (27 Oct) | The run sheet is a guide only; the game runs until an end condition, with no buffer rule | Owner's decision |
 | Step 5 approved (27 Oct) | The owner tried the Step 5 checklist on the live link and it works; the build is frozen, with only fixes from here | Owner's OK after the Step 5 report (12.1) |
 | Step 5 build (27 Oct) | Tier 2 and 3 built and frozen: mission catalogue as editable data; co-host chosen by the host from the players, using their own seat (no separate login); every score-only ghost game; breakfast entrance; presets that also keep photos and missions; big-screen message; narrator lines; sounds; photo effects. Ghost-game details chosen by Claude Code as defaults (flagged in 16): fixed points per right bet, Traitor calls for "who was a Traitor" bets, Bingo moments that need no secret, reactions during the debate only | Step 5 scope (12.2); owner said build the full scope properly |
 | Recruitment stays off by default (27 Oct) | Its gate tests pass, so the switch is safe to use; the default stays off and turning it on is the owner's call before dealing | 5.4 and tier 4: built last, behind a switch |
@@ -1043,19 +1049,19 @@ An outside review of the plan was checked point by point; the reviewer then agre
 Each has a safe default, so the build doesn't wait on them.
 
 - [x] Ghost game for version 1: all score-only games, plus the ghost vote (decided 26 October)
-- [ ] Ideas from similar games (section 17): pick any to add; the rest stay Later
-- [ ] Missions: shortlist games from section 7; on the night, the host decides after each murder reveal whether to run one
-- [ ] Co-host: pick from the Games committee (Deep, Yashvi or Cherry). They're all players, so the co-host page runs missions and the big screen without ever seeing roles. Built (Step 5): the host picks them in the Players tab; default none
-- [ ] Ghost game details (Step 5 defaults, see 5.10): fixed points per right bet (not wagers); Traitor calls stand in for the "who was a Traitor" bets; Bingo moments that need no secret; reactions during the debate only; the point values in 4.2
-- [ ] Recruitment for 31 October: on or off? (default: off; gate tests pass)
+- [x] Ideas from similar games (section 17): all stay Later (owner, 27 October). The no-code ones (a ghost corner with snacks, sealed envelopes at a mission) can still be done in the room
+- [x] Missions: no shortlist; on the night the host picks from the catalogue after each murder reveal, or runs none (owner, 27 October)
+- [x] Co-host: none; the host runs everything (owner, 27 October). The feature stays available in the Players tab
+- [x] Ghost game details: keep as built (owner, 27 October): fixed points per right bet, Traitor calls for the "who was a Traitor" bets, Bingo moments that need no secret, reactions during the debate only, the points in 4.2
+- [x] Recruitment for 31 October: on (owner, 27 October); the default is now on
 - [x] Player photos: the host uploads names and photos later in the roster editor (decided 26 October)
 - [x] Eliminated Traitors still win if any Traitor survives: yes (decided 26 October)
-- [ ] Ghost vote details: usable in revotes or the End Game? (default: no to both)
-- [ ] 2 players left after a standard Circle: final reveal at once, as 5.3 says? (default: yes; see 5.10)
-- [ ] Unanimous murder rule with a Traitor sacrifice: ignore the target Traitor's own pick? (default: yes; see 5.10)
-- [ ] End Game: does a missing ballot block a unanimous End? (default: yes; see 5.10)
-- [ ] Run sheet buffer: 15 to 20 minutes after 11:05 PM, with Housie moving back if used
-- [ ] Run sheet: final approval
+- [x] Ghost vote details: usable in tie revotes and End Game banishments too, never the End or Banish choice (owner, 27 October)
+- [x] 2 players left after a standard Circle: final reveal at once, as 5.3 says (confirmed by the owner, 27 October)
+- [x] Unanimous murder rule with a Traitor sacrifice: ignore the target Traitor's own pick (confirmed by the owner, 27 October)
+- [x] End Game: a missing ballot blocks a unanimous End (confirmed by the owner, 27 October)
+- [x] Run sheet buffer: not needed; no time constraint (owner, 27 October)
+- [x] Run sheet: a guide only, no time constraint (owner, 27 October)
 
 ---
 
@@ -1197,10 +1203,11 @@ Add it to the table in section 9.4, give it a branch in `viewFor`, and add it to
 - **A completely Traitor-free result ends the game at once,** which tells everyone the Innocents won.
 - **Games can run long.** With no day limit, each extra day adds 25 to 40 minutes. The host keeps pace by skipping missions, shortening debates or lowering the End Game threshold.
 - **Several daggers at one Circle can swing a vote.** The host controls this through how many daggers they give out.
-- **The ghost vote leans Traitor.** A dead Traitor votes knowing every role, while dead Innocents are guessing, and eliminated Traitors still win with their team. The host can switch `ghostVote` off.
+- **The ghost vote leans Traitor, more so in revotes and the End Game.** A dead Traitor votes knowing every role, while dead Innocents are guessing, and eliminated Traitors still win with their team. Since 27 October the ghost vote also works in tie revotes and End Game banishments, where one vote can decide the game. The host can switch `ghostVote` off.
+- **Recruitment is on.** With one Traitor left, a recruit can turn an Innocent; together with 3 Traitors this leans further toward the Traitors (bots won about 60% for the Traitors before recruitment was the default). The host can switch it off in the lobby.
 - **The host is a single point of failure.** One big button per phase, a "waiting on" checklist and a co-host reduce the load.
 - **The folder name has a space.** Quote the path in shell commands.
-- **Anonymous sign-ins are rate-limited per internet address.** Supabase's default is 30 an hour per IP, and every phone on the villa Wi-Fi shares one address. Each phone and each browser on it (Chrome, Safari, an Instagram or WhatsApp in-app browser) needs one, so a busy start could hit the limit. Raise it in the Supabase dashboard before the night (Authentication, then Rate Limits).
+- **Anonymous sign-ins are rate-limited per internet address.** Supabase's default is 30 an hour per IP, and every phone on the villa Wi-Fi shares one address. Each phone and each browser on it (Chrome, Safari, an Instagram or WhatsApp in-app browser) needs one, so a busy start could hit the limit. Raise it in the Supabase dashboard before the night (Authentication, then Rate Limits). **Done 27 October:** the owner raised it to 150 an hour.
 - **The schedule is tight.** Cut from the lowest tier first; never ship half a feature.
 - **The co-host is also a player.** A co-host who is a Traitor could give themselves a shield or dagger at a mission. Every co-host action is logged under the co-host, and the host can undo it or take it back in the Fix tab. A refused award doesn't say why, but a co-host could still guess that the player already holds one.
 - **Bhoot Bingo is on the honour system.** Ghosts tap their own squares; it only affects Best Ghost.

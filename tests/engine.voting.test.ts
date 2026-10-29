@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { viewFor } from "@/lib/game/view";
 import { HOST, as, dealt } from "./helpers";
 
 const base = (o: Parameters<typeof dealt>[1] = {}) => {
@@ -342,15 +343,6 @@ describe("ghost vote (section 5.5, decided 26 October)", () => {
     expect(g.phase).toBe("CIRCLE_REVEAL");
   });
 
-  it("not in revotes or the End Game (defaults to confirm)", () => {
-    const g = toDay2Circle();
-    g.vote({ p1: "p5", p2: "p6" });
-    g.reveal();
-    g.host({ type: "startRevote" });
-    expect(g.round().ghostVoterIds).toEqual([]);
-    expect(g.no(as("p12"), { type: "castVote", targetId: "p5" })).toMatch(/standard Circle/);
-  });
-
   it("a ghost can't vote for a ghost", () => {
     const g = toDay2Circle();
     expect(g.no(as("p12"), { type: "castVote", targetId: "p12" })).toMatch(/yourself/);
@@ -367,5 +359,46 @@ describe("ghost vote (section 5.5, decided 26 October)", () => {
     g.by("p12", { type: "castVote", targetId: "p5" });
     g.host({ type: "rerunVote", reason: "Restart" });
     expect(g.p("p12").ghostVoteUsed).toBe(false);
+  });
+
+  it("owner, 27 October: a ghost may use their one vote in a tie revote instead", () => {
+    const g = toDay2Circle();
+    g.vote({ p1: "p5", p2: "p6" });
+    g.reveal();
+    expect(g.lastRound().result).toMatchObject({ outcome: "tie", method: "revote" });
+    g.host({ type: "startRevote" });
+    expect(g.round().kind).toBe("revote");
+    expect(g.round().ghostVoterIds).toEqual(["p12"]);
+    expect(viewFor(g.state, { kind: "player", playerId: "p12" }).me!.vote).toMatchObject({ canVote: true, asGhost: true });
+    g.by("p12", { type: "castVote", targetId: "p5" });
+    expect(g.round().ballots[0]).toMatchObject({ voterId: "p12", ghost: true, weight: 1 });
+    expect(g.p("p12").ghostVoteUsed).toBe(true);
+    expect(g.no(as("p12"), { type: "castVote", targetId: "p6", useDagger: true })).toMatch(/already used your ghost vote|already in/);
+  });
+
+  it("owner, 27 October: a ghost may vote in an End Game banishment, never in the End or Banish choice; still once per game", () => {
+    const g = dealt(12, { settings: { endGameThreshold: 11 } });
+    g.circle();
+    g.banish("p12");
+    expect(g.phase).toBe("ENDGAME_VOTE");
+    expect(g.round().ghostVoterIds).toEqual([]);
+    expect(g.no(as("p12"), { type: "castEndgameVote", choice: "end" })).toBeTruthy();
+    for (const id of g.alive()) g.by(id, { type: "castEndgameVote", choice: id === "p1" ? "banish" : "end" });
+    g.reveal();
+    expect(g.phase).toBe("ENDGAME_BANISH");
+    expect(g.round().ghostVoterIds).toEqual(["p12"]);
+    g.by("p12", { type: "castVote", targetId: "p5" });
+    expect(g.round().ballots[0]).toMatchObject({ voterId: "p12", ghost: true });
+    expect(g.p("p12").ghostVoteUsed).toBe(true);
+  });
+
+  it("switched off, ghosts can't vote in revotes or the End Game either", () => {
+    const g = dealt(12, { settings: { endGameThreshold: 11, ghostVote: false } });
+    g.circle();
+    g.banish("p12");
+    for (const id of g.alive()) g.by(id, { type: "castEndgameVote", choice: id === "p1" ? "banish" : "end" });
+    g.reveal();
+    expect(g.round().ghostVoterIds).toEqual([]);
+    expect(g.no(as("p12"), { type: "castVote", targetId: "p5" })).toMatch(/can't vote/);
   });
 });

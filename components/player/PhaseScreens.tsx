@@ -243,7 +243,7 @@ export function VoteScreen({ game }: { game: GameHandle }) {
         title={revote ? "Revote" : vote.asGhost ? "Your ghost vote" : "Who do you banish?"}
         help={
           vote.asGhost
-            ? "You have one ghost vote for the whole game. Use it now, or save it for a later Circle."
+            ? "You have one ghost vote for the whole game. Use it now, or save it for a later vote."
             : revote
               ? "Only the tied players are on the ballot. No daggers."
               : "Tap a photo. You can't change your vote after sending it."
@@ -575,7 +575,7 @@ export function GhostScreen({ game }: { game: GameHandle }) {
   const view = game.view!;
   const me = view.me!;
   const [tab, setTab] = useState<"games" | "feed">("games");
-  const canGhostVote = view.phase === "CIRCLE_VOTE" && !!me.vote?.canVote && me.vote.asGhost;
+  const canGhostVote = (view.phase === "CIRCLE_VOTE" || view.phase === "ENDGAME_BANISH") && !!me.vote?.canVote && me.vote.asGhost;
   const feed = view.events
     .map((e) => ({ id: e.id, text: describeEvent(e, view) }))
     .filter((e): e is { id: string; text: string } => !!e.text)

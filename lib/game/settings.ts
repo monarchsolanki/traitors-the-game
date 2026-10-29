@@ -133,7 +133,7 @@ export const SETTING_META: Record<
   },
   ghostVote: {
     label: "Ghost vote",
-    help: "Each ghost may cast one vote, once per game, at a later standard Circle.",
+    help: "Each ghost may cast one vote, once per game, at a later Circle, tie revote or End Game banishment (never the End or Banish choice).",
     afterDealing: "override",
   },
   eliminatedWinWithTeam: {
@@ -193,7 +193,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   allowTraitorOnTraitor: true,
   murderRule: "majority",
   traitorChat: true,
-  recruitment: "off",
+  recruitment: "lastTraitor",
   revealOnElimination: false,
   tieRule: "revote",
   tieRevotesBeforeChoice: 2,

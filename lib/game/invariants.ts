@@ -51,7 +51,7 @@ export function checkInvariants(s: GameState, prev: GameState | null = null): st
       if (b.targetId && b.targetId === b.voterId) bad("someone voted for themselves");
       if (b.usedDagger && b.weight !== 2 && b.weight !== 3) bad("dagger ballot with a wrong weight");
       if (b.usedDagger && r.kind !== "circle") bad(`dagger used in a ${r.kind}`);
-      if (b.ghost && r.kind !== "circle") bad(`ghost vote in a ${r.kind}`);
+      if (b.ghost && (r.kind === "endgame" || r.kind === "reward")) bad(`ghost vote in a ${r.kind}`);
       if (!b.usedDagger && b.weight !== 1) bad("plain ballot weighs more than 1");
       if (b.ghost) ghostBallots.set(b.voterId, (ghostBallots.get(b.voterId) ?? 0) + 1);
     }

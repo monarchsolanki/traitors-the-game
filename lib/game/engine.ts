@@ -920,16 +920,21 @@ function openCircle(ctx: Ctx): void {
   log(ctx, "Opened the Circle of Shaq");
 }
 
+/**
+ * Ghosts who may still use their one ghost vote. Owner, 27 October: it can be used at a standard Circle,
+ * a tie revote, or an End Game banishment (and its revote), never in the End or Banish choice.
+ */
+function ghostVoters(s: GameState): string[] {
+  return s.settings.ghostVote ? s.players.filter((p) => !isAlive(p) && !p.ghostVoteUsed).map((p) => p.id) : [];
+}
+
 function startCircleVote(ctx: Ctx): void {
   const { s } = ctx;
   const alive = aliveIds(s);
-  const ghosts = s.settings.ghostVote
-    ? s.players.filter((p) => !isAlive(p) && !p.ghostVoteUsed).map((p) => p.id)
-    : [];
   const r = openRound(ctx, "circle", {
     voters: alive,
     candidates: alive,
-    ghostVoters: ghosts,
+    ghostVoters: ghostVoters(s),
     seconds: s.settings.voteSeconds,
   });
   s.phase = "CIRCLE_VOTE";
@@ -961,7 +966,6 @@ function castVote(ctx: Ctx, a: ActionOf<"castVote">): void {
     ghost = false;
   } else {
     if (p.ghostVoteUsed) fail("You've already used your ghost vote.");
-    if (r.kind !== "circle") fail("A ghost vote can only be used at a standard Circle.");
     if (!s.settings.ghostVote || !r.ghostVoterIds.includes(p.id)) fail("Ghosts can't vote in this round.");
     ghost = true;
   }
@@ -1208,6 +1212,7 @@ function startRevote(ctx: Ctx): void {
   const next = openRound(ctx, kind, {
     voters: aliveIds(s),
     candidates,
+    ghostVoters: ghostVoters(s),
     parent: r.id,
     seconds: s.settings.voteSeconds,
   });
@@ -1281,7 +1286,7 @@ function startEndgameVote(ctx: Ctx, first: boolean): void {
 function startEndgameBanish(ctx: Ctx): void {
   const { s } = ctx;
   const alive = aliveIds(s);
-  const r = openRound(ctx, "endgameBanish", { voters: alive, candidates: alive, seconds: s.settings.voteSeconds });
+  const r = openRound(ctx, "endgameBanish", { voters: alive, candidates: alive, ghostVoters: ghostVoters(s), seconds: s.settings.voteSeconds });
   s.phase = "ENDGAME_BANISH";
   emit(ctx, "endgameBanishOpened", PUBLIC, { roundId: r.id });
 }

@@ -397,7 +397,7 @@ function playerView(s: GameState, playerId: string): GameView {
   } else if (round) {
     const mine = round.ballots.find((b) => b.voterId === p.id);
     const asGhost =
-      !alive && round.kind === "circle" && s.settings.ghostVote && round.ghostVoterIds.includes(p.id) && !p.ghostVoteUsed;
+      !alive && round.kind !== "endgame" && s.settings.ghostVote && round.ghostVoterIds.includes(p.id) && !p.ghostVoteUsed;
     const canVote = round.status === "open" && !mine && !s.paused && (alive ? round.eligibleVoterIds.includes(p.id) : asGhost);
     vote = {
       roundId: round.id,
