@@ -183,6 +183,7 @@ export function hostProgress(s: GameState, rand: Rand, o: Required<Pick<SimOptio
       }
       if (r.status === "tied" && r.result?.outcome === "tie") {
         const tied = r.result.tiedIds.filter((id) => alive.includes(id));
+        if ((r.kind === "circle" || r.kind === "revote") && rand() < 0.1) return [{ type: "noBanishment" }];
         if (r.result.method === "revote") return [{ type: "startRevote" }];
         if (r.result.method === "choose") return [rand() < 0.5 ? { type: "spinTie" } : { type: "startRevote" }];
         if (r.result.method === "spin") return [{ type: "spinTie" }];

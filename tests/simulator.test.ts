@@ -17,8 +17,8 @@ const PROFILES: Array<{ name: string; settings: (n: number) => Partial<GameSetti
     chaos: 0,
   },
   { name: "no missions", settings: (n) => ({ traitorCount: Math.min(3, Math.floor(n / 3)) }), mission: 0, shield: 0, chaos: 0 },
-  { name: "shields everywhere, low threshold (long games)", settings: (n) => ({ traitorCount: Math.max(1, Math.floor(n / 6)), endGameThreshold: 2 }), mission: 1, shield: 1, chaos: 0 },
-  { name: "high threshold (short games)", settings: (n) => ({ traitorCount: 1, endGameThreshold: n - 1 }), mission: 0.3, shield: 0.5, chaos: 0 },
+  { name: "shields everywhere, low threshold (long games)", settings: (n) => ({ traitorCount: Math.max(1, Math.floor(n / 6)), endCondition: "endgameVote", endGameThreshold: 2 }), mission: 1, shield: 1, chaos: 0 },
+  { name: "high threshold (short games)", settings: (n) => ({ traitorCount: 1, endCondition: "endgameVote", endGameThreshold: n - 1 }), mission: 0.3, shield: 0.5, chaos: 0 },
   {
     name: "unanimous, no Traitor-on-Traitor, dagger 3, spin ties",
     settings: (n) => ({ traitorCount: Math.floor(n / 3), murderRule: "unanimous", allowTraitorOnTraitor: false, daggerWeight: 3, tieRule: "spin" }),
@@ -49,7 +49,7 @@ const PROFILES: Array<{ name: string; settings: (n: number) => Partial<GameSetti
   },
   {
     name: "heavy chaos with unanimous and host ties",
-    settings: (n) => ({ traitorCount: Math.max(1, Math.floor(n / 4)), murderRule: "unanimous", tieRule: "hostDecides", recruitment: "lastTraitor", endGameThreshold: 2 }),
+    settings: (n) => ({ traitorCount: Math.max(1, Math.floor(n / 4)), murderRule: "unanimous", tieRule: "hostDecides", recruitment: "lastTraitor", endCondition: "endgameVote", endGameThreshold: 2 }),
     mission: 0.7,
     shield: 0.6,
     chaos: 0.2,

@@ -159,6 +159,8 @@ export function createGame(o: CreateGameOptions): GameState {
  * ghost games, new settings), so an older saved game keeps working. Mutates and returns the state.
  */
 export function normaliseState(s: GameState): GameState {
+  // A game saved mid-End Game before 30 October keeps the End Game vote it was playing under.
+  if (!s.settings.endCondition && s.endgameStarted) s.settings.endCondition = "endgameVote";
   s.settings = withDefaults(s.settings);
   s.missionCatalogue ??= structuredClone([...DEFAULT_MISSIONS]);
   s.cohostId ??= null;
@@ -224,6 +226,7 @@ function dispatch(ctx: Ctx): void {
     case "startRevote": return startRevote(ctx);
     case "spinTie": return spinTie(ctx);
     case "decideTie": return decideTie(ctx, a);
+    case "noBanishment": return noBanishment(ctx);
     case "nightPick": return nightPick(ctx, a);
     case "answerRecruit": return answerRecruit(ctx, a);
     case "suspectAnswer": return suspectAnswer(ctx, a);
@@ -1295,6 +1298,27 @@ function decideTie(ctx: Ctx, a: ActionOf<"decideTie">): void {
   banish(ctx, r, a.playerId, "host", tied);
 }
 
+/**
+ * Owner, 30 October: on a tied Circle vote (or revote) the host may banish nobody. The game goes on as
+ * after a banishment: the night (or the End Game, if the threshold is already reached). End Game ties
+ * still need a banishment.
+ */
+function noBanishment(ctx: Ctx): void {
+  requireHost(ctx);
+  const { s } = ctx;
+  const r = requireTiedRound(ctx);
+  if (r.kind !== "circle" && r.kind !== "revote") fail("Only a tied Circle vote can end with nobody banished; the End Game needs a banishment.");
+  const tiedIds = r.result.tiedIds;
+  const round: VoteRound = r;
+  round.status = "done";
+  round.result = { outcome: "nobody", tiedIds };
+  s.currentRoundId = null;
+  setTimer(s, ctx.at, null);
+  emit(ctx, "noBanishment", PUBLIC, { roundId: r.id, tiedIds });
+  log(ctx, `Let the tie between ${names(s, tiedIds)} stand: nobody banished`);
+  afterBanishment(ctx);
+}
+
 function banish(ctx: Ctx, r: VoteRound, playerId: string, via: "votes" | "spin" | "host", tiedIds: string[]): void {
   const { s } = ctx;
   r.status = "done";
@@ -1310,12 +1334,27 @@ function banish(ctx: Ctx, r: VoteRound, playerId: string, via: "votes" | "spin" 
   afterBanishment(ctx);
 }
 
+/**
+ * Mafia rule (owner, 30 October; `endCondition: "parity"`): the Traitors win as soon as the living
+ * Traitors equal or outnumber the living Innocents. Returns the finale reason, or null.
+ */
+function parityReason(s: GameState): string | null {
+  if (s.settings.endCondition !== "parity") return null;
+  const traitors = aliveTraitorIds(s).length;
+  const innocents = alivePlayers(s).length - traitors;
+  return traitors > 0 && traitors >= innocents
+    ? `The Traitors now equal or outnumber the Innocents (${traitors} to ${innocents}).`
+    : null;
+}
+
 /** Win check after every banishment (section 5.2). */
 function afterBanishment(ctx: Ctx): void {
   const { s } = ctx;
   if (aliveTraitorIds(s).length === 0) return finale(ctx, "Every Traitor has been banished.");
+  const parity = parityReason(s);
+  if (parity) return finale(ctx, parity);
   if (alivePlayers(s).length <= 2) return finale(ctx, "Only two players are left.");
-  if (s.endgameStarted || alivePlayers(s).length <= endGameThreshold(s)) {
+  if (s.settings.endCondition === "endgameVote" && (s.endgameStarted || alivePlayers(s).length <= endGameThreshold(s))) {
     const first = !s.endgameStarted;
     s.endgameStarted = true;
     return startEndgameVote(ctx, first);
@@ -1563,6 +1602,8 @@ function revealMurder(ctx: Ctx): void {
   log(ctx, n.victimId ? `Revealed the murder of ${nameOf(s, n.victimId)}` : "Revealed that nobody died");
   // Post-murder check (section 5.2).
   if (aliveTraitorIds(s).length === 0) return finale(ctx, "No Traitors are left.");
+  const parity = parityReason(s);
+  if (parity) return finale(ctx, parity);
   if (alivePlayers(s).length <= 2) finale(ctx, "Only two players are left.");
 }
 
@@ -1675,6 +1716,11 @@ function instantChecks(ctx: Ctx): boolean {
     finale(ctx, "No Traitors are left.");
     return true;
   }
+  const parity = parityReason(s);
+  if (parity) {
+    finale(ctx, parity);
+    return true;
+  }
   if (alivePlayers(s).length <= 2) {
     finale(ctx, "Only two players are left.");
     return true;
@@ -1722,6 +1768,8 @@ function revivePlayer(ctx: Ctx, a: ActionOf<"revivePlayer">): void {
   p.eliminatedDay = null;
   emit(ctx, "playerRevived", PUBLIC, { playerId: p.id });
   log(ctx, `Revived ${p.displayName}`, { reason, override: true });
+  // Bringing a Traitor back can give the Traitors the numbers (Mafia rule).
+  if (ctx.s.phase !== "LOBBY") instantChecks(ctx);
 }
 
 function setRole(ctx: Ctx, a: ActionOf<"setRole">): void {

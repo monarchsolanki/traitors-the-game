@@ -33,8 +33,15 @@ import { playerById } from "./shared";
 /** A banishment moves the game straight on, so phones say who went for a minute afterwards. */
 function RecentNews({ game }: { game: ReturnType<typeof useGame> }) {
   const view = game.view!;
-  const e = [...view.events].reverse().find((x) => x.type === "banished");
+  const e = [...view.events].reverse().find((x) => x.type === "banished" || x.type === "noBanishment");
   if (!e || game.now() - e.at > 60_000 || view.phase === "CIRCLE_REVEAL" || view.phase === "FINALE") return null;
+  if (e.type === "noBanishment") {
+    return (
+      <div className="mb-4">
+        <Notice title="Nobody was banished">The host let the tie stand.</Notice>
+      </div>
+    );
+  }
   const p = playerById(view, e.data.playerId as string);
   if (!p) return null;
   return (

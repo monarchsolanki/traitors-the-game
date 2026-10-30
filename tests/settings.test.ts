@@ -17,6 +17,7 @@ describe("defaults (section 4.2)", () => {
   it("match the party defaults", () => {
     expect(DEFAULT_SETTINGS).toEqual({
       traitorCount: 3,
+      endCondition: "parity",
       endGameThreshold: "auto",
       daggerWeight: 2,
       allowTraitorOnTraitor: true,
@@ -62,6 +63,7 @@ describe("defaults (section 4.2)", () => {
 
   it("follows the after-dealing column", () => {
     expect(SETTING_META.traitorCount.afterDealing).toBe("fixed");
+    expect(SETTING_META.endCondition.afterDealing).toBe("fixed");
     for (const k of [
       "endGameThreshold",
       "daggerWeight",

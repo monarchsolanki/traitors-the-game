@@ -183,6 +183,15 @@ function Spin({ game, event, start }: { game: GameHandle; event: EventView; star
 function ResultCard({ game, event }: { game: GameHandle; event: EventView }) {
   const view = game.view!;
   const d = event.data;
+  if (event.type === "noBanishment") {
+    const tied = ((d.tiedIds as string[]) ?? []).map((id) => byId(view, id)?.displayName).filter(Boolean).join(" and ");
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-[3vh] text-center">
+        <Big>Nobody is banished</Big>
+        <Sub>The tie between {tied} stands. Night falls.</Sub>
+      </div>
+    );
+  }
   if (event.type === "endgameResult") {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-[3vh] text-center">
@@ -299,7 +308,7 @@ function Stage({ game }: { game: GameHandle }) {
   const entranceMs = (e: EventView) => (e.type === "murderRevealed" && typeof e.data.entranceMs === "number" ? e.data.entranceMs : 0);
   const held = recent.find(
     (e) =>
-      ["banished", "murderRevealed", "endgameResult", "playerEliminated"].includes(e.type) &&
+      ["banished", "noBanishment", "murderRevealed", "endgameResult", "playerEliminated"].includes(e.type) &&
       now - startOf(e) < HOLD_MS + (spin ? SPIN_MS : 0) + entranceMs(e),
   );
   if (held && entranceMs(held) && now - startOf(held) < entranceMs(held)) return <Entrance game={game} event={held} start={startOf(held)} />;

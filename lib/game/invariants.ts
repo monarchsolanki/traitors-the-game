@@ -140,6 +140,7 @@ export function checkInvariants(s: GameState, prev: GameState | null = null): st
         s.finale.early ||
         aliveTraitors.length === 0 ||
         alive.length <= 2 ||
+        (s.settings.endCondition === "parity" && aliveTraitors.length >= alive.length - aliveTraitors.length) ||
         lastEnd?.result?.outcome === "end";
       if (!legit) bad("finale reached without an end condition");
     }
@@ -147,6 +148,12 @@ export function checkInvariants(s: GameState, prev: GameState | null = null): st
     if (aliveTraitors.length === 0) bad("no Traitors alive but the game goes on");
     const unrevealedMurder = s.phase === "MURDER_REVEAL" && night && !night.revealed;
     if (alive.length <= 2 && !unrevealedMurder) bad("2 or fewer alive but the game goes on");
+    if (s.settings.endCondition === "parity" && aliveTraitors.length >= alive.length - aliveTraitors.length && !unrevealedMurder) {
+      bad("the Traitors equal the Innocents but the game goes on");
+    }
+    if (s.settings.endCondition === "parity" && (s.endgameStarted || s.phase === "ENDGAME_VOTE" || s.phase === "ENDGAME_BANISH")) {
+      bad("an End Game vote under the Mafia rule");
+    }
   }
   return out;
 }

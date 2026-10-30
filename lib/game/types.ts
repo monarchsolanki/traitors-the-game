@@ -93,6 +93,8 @@ export interface Ballot {
 export type RoundResult =
   | { outcome: "banish"; playerId: string; via: "votes" | "spin" | "host"; tiedIds: string[] }
   | { outcome: "tie"; tiedIds: string[]; method: TieMethod }
+  /** Owner, 30 October: the host let a Circle tie stand and banished nobody. */
+  | { outcome: "nobody"; tiedIds: string[] }
   | { outcome: "end" }
   | { outcome: "continue" }
   | { outcome: "award"; playerId: string; via: "votes" | "random" };
@@ -324,6 +326,7 @@ export type ActionPayload =
   | { type: "startRevote" }
   | { type: "spinTie" }
   | { type: "decideTie"; playerId: string; reason?: string }
+  | { type: "noBanishment" }
   // Night
   | { type: "nightPick"; targetId: string; mode?: "murder" | "recruit" }
   | { type: "answerRecruit"; accept: boolean }

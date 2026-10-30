@@ -74,6 +74,7 @@ export const clientActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("startRevote") }),
   z.object({ type: z.literal("spinTie") }),
   z.object({ type: z.literal("decideTie"), playerId: id, reason: reason.optional() }),
+  z.object({ type: z.literal("noBanishment") }),
   z.object({ type: z.literal("nightPick"), targetId: id, mode: z.enum(["murder", "recruit"]).optional() }),
   z.object({ type: z.literal("answerRecruit"), accept: z.boolean() }),
   z.object({ type: z.literal("suspectAnswer"), targetId: id }),

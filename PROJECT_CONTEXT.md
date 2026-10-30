@@ -8,7 +8,7 @@
 | --- | --- |
 | Owner | Monarch Solanki (host of the first game) |
 | Last updated | 26 October 2026 |
-| Status | Feature-complete and approved; the owner's 30 October changes are built and live: private talks before each Circle (phones alert when they end), ghosts take part in every discussion, ghost challenges from the second morning (ghosts win a shield or dagger for a living player), three ghost challenges in the mission catalogue, and a `/tv` page so the TV opens the big screen on its own. Next: the rehearsal (6.1) and game night, 31 October. |
+| Status | Feature-complete and live. The owner's 30 October changes are built: the game ends only when a side wins (Mafia rule, no End Game vote), the host can banish nobody on a Circle tie, private talks before each Circle (phones alert when they end), ghosts in every discussion, ghost challenges from the second morning, ghost side games off by default except Live reactions, a `/tv` page for the TV, and the Mission Kit (7.1). Next: the rehearsal (6.1) and game night, 31 October. |
 | Live link | https://traitors-the-game.vercel.app |
 | First game | Diwali x Halloween ("Diwaloween: Lights & Frights") villa party, Saturday 31 October 2026, 12 players plus the host |
 | Planning doc | [Traitors Party App — Build Plan](https://claude.ai/artifact/4t3XeWf8tHKf7C9YoMmDqN); fully merged into this file on 26 October 2026, so this file alone is enough |
@@ -169,6 +169,7 @@ The keys are final as of Step 1 and live in `lib/game/settings.ts` (each with it
 | Players | derived from the roster | 12 | 5 to 20 | Override: add or remove a player |
 | Roster: names, display names, photos | `roster` | Party roster (4.4) | Any name; photo upload in the host's roster editor | Any time |
 | Traitors | `traitorCount` | 3 | 1 to floor(players / 3) | Fixed |
+| How the game ends | `endCondition` | `parity` (owner, 30 October): Mafia rule, no End Game vote | `parity`, `endgameVote` | Fixed |
 | End Game threshold | `endGameThreshold` | floor(starting players / 2) | 2 to players − 1 | Override |
 | Dagger weight | `daggerWeight` | 2 | 2 or 3 | Override |
 | Traitor-on-Traitor murder | `allowTraitorOnTraitor` | on | on, off | Override |
@@ -326,7 +327,17 @@ The End Game threshold is checked only after a Circle banishment, never after a 
 
 ### 5.3 End conditions
 
-| Condition | Outcome |
+**Owner, 30 October: the game ends only when one side has won, like Mafia (`endCondition: "parity"`, the default).** Nobody can vote to end it, and there's no End Game: after every Circle comes a night until a side wins. The win check runs after every banishment, at every murder reveal (never before, so nothing leaks), and after any host override that changes who's in or a role:
+
+| Condition (Mafia rule) | Outcome |
+| --- | --- |
+| No Traitors alive | Innocents win |
+| Living Traitors equal or outnumber living Innocents | Traitors win |
+| The host ends the game early (Fix tab, emergencies only) | Reveal with the current state; logged as an override |
+
+The End Game vote below stays available as the other choice in Settings (before dealing only), and is what the older rule tests check:
+
+| Condition (End Game vote) | Outcome |
 | --- | --- |
 | No Traitors alive, at any point | Innocents win at once |
 | Unanimous End in the End Game | Reveal: Traitors win if any Traitor is alive, otherwise Innocents |
@@ -439,6 +450,7 @@ The End Game threshold is checked only after a Circle banishment, never after a 
 - Ballots are revealed in a random order fixed when voting locks; the host reveals them one by one, then settles the result.
 - If nobody votes, every player on the ballot is tied.
 - Deciding a tie by hand when the tie rule isn't `hostDecides` is allowed as a logged override with a reason (for recovery, such as a tied player leaving).
+- **Banish nobody (owner, 30 October).** On any tied standard Circle vote or Circle revote, whatever the tie rule, the host may let the tie stand: "Banish nobody and start the night" (with a confirm step). Nobody leaves; every screen shows "Nobody is banished"; the game goes on as after a banishment, so the night begins (or the End Game, if the threshold is already reached). Ghosts' banishment bets carry over to the next banishment. End Game ties can't be left standing; they still need a banishment.
 - **End Game abstentions (confirmed by the owner, 27 October).** A unanimous End needs every living player to vote End; a missing ballot counts as not-End, so one more banishment follows.
 - End Game ballots (End or Banish) are revealed one by one too, inside the End Game phase.
 
@@ -498,7 +510,7 @@ A typical 3-day game runs 7:30 PM to about 11:05 PM: 3 h 35 min elapsed, made of
 | 10:00 PM | Circle of Shaq 3 | Debate, vote, reveal, banishment | 15 |
 | 10:15 PM | Night 3 | Last murder before the End Game | 5 |
 | 10:20 PM | Lights off | Murder reveal by diya light, then the final Circle of Shaq | 20 |
-| 10:40 PM | End Game | End or Banish votes until unanimous | 15 |
+| 10:40 PM | End Game | End or Banish votes until unanimous. Not played since 30 October: the days go on until a side wins (5.3) | 15 |
 | 10:55 PM | Final reveal | Every role, the suspicion meter, the ghost scores and the winners | 10 |
 
 If all Traitors (3 by default) are banished early, the Innocents win early and Housie starts sooner. Beyond the buffer, the host can shorten debates from the control screen.
@@ -546,7 +558,7 @@ Run this with real phones before 31 October, following the run sheet above. Tick
 - [ ] Undo a host step, and try the Fix tab (enter a ballot by hand).
 
 **Finale**
-- [ ] End Game votes until unanimous; the host's private result card; "Reveal to everyone"; every role flips on the big screen with the suspicion meter and Best Ghost.
+- [ ] The game ends by itself when a side wins (no End Game vote); the host's private result card; "Reveal to everyone"; every role flips on the big screen with the suspicion meter and Best Ghost.
 - [ ] Save the game as a preset for next time (Settings tab).
 - [ ] Note how long each part took (no time limit, owner 27 October; it's useful to know for the night).
 
@@ -589,6 +601,37 @@ Missions are optional: after each murder reveal the host decides whether to run 
 **Ghost challenges (owner, 30 October):** three pass/fail challenges for the ghosts, offered in the picker from the second morning: Ghost Memory Tray (study 20 items for 45 seconds, name 14 or more together in 2 minutes), Ghost Tower (a free-standing tower 40 cm or taller in 3 minutes, standing for 5 seconds), Ghost Taste Test (name 5 of 7 snacks blindfolded). All 20 games above stay in the catalogue (owner, 30 October); the host picks on the night. Games created before 30 October don't have the ghost challenges in their list; "Start one that isn't listed" (type: Ghosts) or "Add a mission" covers it.
 
 ---
+
+### 7.1 Game night missions and props (owner, 30 October)
+
+The owner's game ideas plus similar ones, for 12 players in 2 teams of 6. Full rules, Traitor angles and a tickable props checklist are on the Mission Kit page (https://claude.ai/artifact/EsAFAuj1GtKK2KWDzoqzbc, private to the owner until shared). Owner's ideas are marked ★.
+
+| Game | Type | Time | How it works | Win (tie) | Props |
+| --- | --- | --- | --- | --- | --- |
+| ★ Rangoli Relay | Team | 15 min | Relay: each player adds one of 8 parts of a reference rangoli to the team sheet | First complete, checked against the card (ghosts vote for the neater one) | 12 × 100 g rangoli powder, 2 black sheets, 12 cones or spoons, 2 reference cards, floor sheet, wipes |
+| ★ Rangoli Pictionary | Team | 15 min | Draw a Diwali or Halloween word in 60 s; the team guesses | Most words (sudden-death word) | 15 chart sheets or whiteboard, 2 marker sets, 30 word chits |
+| ★ Heads, Shoulders, Knees, Cup! | Individual | 10 min | Pairs, cup between them; touch the called body part; on "Cup!" grab it; knockout | Last player standing (replay a dead heat) | 6 cups, table |
+| ★ Cup Pyramid War | Team | 15 min | Relay-build a 15-cup pyramid; then 60 s of ping-pong throws at the other team's pyramid | A point for the faster build and for more cups knocked (6-cup build-off) | 40 cups, 6 ping-pong balls, 2 tables, tape |
+| ★ Bollywood Song Prop Grab | Individual | 15 min | Props on a table; grab the one the song names; heats then a final | +1 right, −1 wrong (one more song) | 13 song props + 3 decoys, speaker, scorecard |
+| ★ Biscuit Face Relay | Team | 10 min | Biscuit from forehead to mouth, no hands; each teammate in turn | First team where all 6 have eaten one (fastest single biscuit) | 4 packs Marie or Oreo, plates, wipes |
+| Flip Cup Relay | Team | 10 min | Sip, then flip the cup upside down from the table edge; relay | First team done, best of 3 (one-cup flip-off) | 12 cups, 1 L juice, table, towel |
+| Diya Pong | Team | 10 min | Throw ping-pong balls into the other team's 10 cups; the diya cup removes 2 extra | First to clear, or most in 8 min (one throw each) | 20 cups, 6 balls, 2 LED diyas, table |
+| Saree Draping Race | Team | 10 min | Drape a saree on a teammate in 3 min; 5-step ramp walk | Ghosts vote (room's cheer) | 2 sarees, 20 safety pins |
+| Pass the Bangle | Team | 10 min | Pass a bangle straw to straw down the line and back, no hands | First back to the start (two-bangle race) | 16 straws, 4 bangles |
+| Mummy Wrap | Team | 10 min | Wrap a teammate in toilet paper in 2 min; 5-step walk | Best covered, host judges (fewest tears) | 6 toilet rolls |
+| Bindi on the Bhoot | Individual | 10 min | Blindfolded, spun, stick a bindi on a face poster | Closest to the mark (go again) | A3 poster, bindis, blindfold, tape |
+| Rajma Straw Dash | Individual | 10 min | Move dry rajma between bowls by straw suction in 60 s; heats | Most beans (30 s rematch) | 500 g rajma, 8 bowls, 12 straws |
+| Balloon Bhoot Burst | Individual | 5–10 min | Balloon on each ankle; stomp the others' | Last balloon (30 s duel) | 30 balloons, 15 m string, pump |
+| Ghost Cup Pyramid | Ghost challenge | 5 min | Ghosts build a 10-cup pyramid and restack it | Pass: 45 s, two tries | 10 cups |
+| Ghost Biscuit Face | Ghost challenge | 5 min | Every ghost, forehead to mouth | Pass: all within 2 min, one drop each | Biscuits |
+| Ghost Song Grab | Ghost challenge | 5 min | Ghosts take turns grabbing for 5 songs | Pass: 4 of 5 right | Song props, speaker |
+| Ghost Flip Cup | Ghost challenge | 5 min | Relay flip | Pass: all flipped in 60 s | Cups, juice |
+
+**Song Prop Grab playlist** (each title names its prop): Kala Chashma (Baar Baar Dekho, 2016) black sunglasses; Jhumka Gira Re (Mera Saaya, 1966) jhumka; Bole Chudiyan (Kabhi Khushi Kabhie Gham, 2001) bangles; Mehendi Laga Ke Rakhna (DDLJ, 1995) mehendi cone; Lal Dupatta (Mujhse Shaadi Karogi, 2004) red dupatta; Chitthi Aayi Hai (Naam, 1986) envelope; Kajra Re (Bunty Aur Babli, 2005) kajal; Mera Joota Hai Japani (Shree 420, 1955) shoe; Ghungroo (War, 2019) ghungroo; Saree Ke Fall Sa (R… Rajkumar, 2013) saree; Chali Chali Re Patang (Bhabhi, 1957) kite; Diye Jalte Hain (Namak Haraam, 1973) diya; Phoolon Ka Taaron Ka (Hare Rama Hare Krishna, 1971) marigold flowers. Decoys: pen, steel spoon, TV remote.
+
+**Combined props for all of the above:** 100 sturdy 250 ml cups, 10 ping-pong balls, 3 long tables, 8 bowls, 4 plates, towels, napkins and wet wipes; 4 packs of biscuits, 500 g dry rajma, 1 L juice; 12 × 100 g rangoli powder, 12 cones, 4 black and 15 white chart sheets, 2 marker sets, reference cards and 30 word chits, 2 floor sheets, an A3 face poster and bindis; the 13 song props, 3 decoys and a speaker with the songs saved offline; 2 sarees and 20 safety pins, 30 straws, 4 bangles, 6 toilet rolls, 30 balloons with 15 m string and a pump, 2 LED diyas, 2 blindfolds, 2 rolls of masking tape, 12 team bands in two colours, scorecards, pens and a whistle.
+
+These games aren't in the app's mission list yet (the host can start any of them with "Start one that isn't listed").
 
 ## 8. Ghost mode
 
@@ -1034,6 +1077,9 @@ All decisions dated 26 October 2026 unless noted.
 | Requests carry the access token (26 Oct, Step 2) | The browser sends its Supabase access token on each request; no cookie session or proxy | Simplest reliable setup with Cache Components on; the server verifies every request |
 | Vercel region (26 Oct, Step 2; updated 27 Oct) | Server functions run in Mumbai (`bom1`), next to the database, set in the Vercel project settings (Settings → Functions). A `vercel.json` with `regions` stopped Vercel creating deployments at all on 26 October, so it was removed | Vercel's default region is in the US; every game action would otherwise cross the world twice |
 | Big screen holds results (27 Oct, Step 3) | A banishment, murder reveal or End Game result stays on the big screen for 20 seconds, and a spin plays for 4.5 seconds, timed from when the screen first sees it (a screen opened later doesn't replay old results). Phones show "X was banished" for a minute after | The engine moves straight to night after a banishment, so without this the room would never see who went |
+| Mafia-rule endings, no End Game vote (30 Oct, replaces the End Game vote as the default) | The game ends only when a side wins: Innocents when no Traitor is alive, Traitors when they equal or outnumber the Innocents. No End or Banish vote; days repeat until then. New setting `endCondition` (default `parity`; `endgameVote` keeps the old End Game). The host's emergency "end the game now" in the Fix tab stays | Owner's request: "no option to end the game until the engine decides" |
+| Banish nobody on a tie (30 Oct) | On a tied Circle vote or revote the host may banish nobody and go straight to the night; not in the End Game | Owner's request |
+| Game night missions and props (30 Oct) | The owner's game ideas (Rangoli Relay or Pictionary, Heads Shoulders Knees Cup, Cup Pyramid War, Bollywood Song Prop Grab, Biscuit Face Relay) plus similar games and four ghost challenges, with rules, a playlist and a combined props list (7.1, and the Mission Kit page) | Owner's request |
 | Ghost side games off by default, except Live reactions (30 Oct) | Nothing a player or ghost plays starts without the host: missions and ghost challenges already wait for the host; Bhoot Bets, Crystal Ball and Bhoot Bingo now start off (the host can switch any on in Settings); Live reactions stays on. Best Ghost shows only if someone scored. The night suspect poll stays on: it isn't a game but the decoy that keeps Traitors' phones looking like everyone else's | Owner's request |
 | Private talks, ghosts in discussions, ghost challenges, TV (30 Oct) | Each Circle starts with private talks (on by default, 10 minutes, ended by the host or the timer, phones alert when they end); ghosts take part in every discussion (replaces the party rule); from the second morning the host may run a ghost challenge whose prize, if the ghosts win, goes to a living player the ghosts choose (they vote on their phones, or tell the host); three ghost challenges added to the catalogue, all 20 missions kept; the TV opens the big screen on its own through `/tv`. Phone alert only when private talks end | Owner's changes, 30 October. Note: this adds a second ghost power that affects the living game (earlier only the ghost vote) |
 | Open decisions settled (27 Oct) | The owner answered every open decision in section 16: keep the section 17 ideas for later; pick missions on the night from the catalogue; no co-host (the host runs everything); keep the ghost-game details as built; recruitment on; the ghost vote also in tie revotes and End Game banishments (never the End or Banish choice); confirmed the three rule flags (2 players left ends the game, a unanimous sacrifice ignores the target's own pick, a missing End Game ballot blocks End); no time constraint on the run sheet | Owner's answers, 27 October |

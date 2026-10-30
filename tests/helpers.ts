@@ -146,9 +146,15 @@ export class G {
   }
 }
 
-/** Private talks (owner, 30 October) are off in these tests unless a test turns them on, so g.circle() opens the debate. */
+/**
+ * Two 30 October defaults are switched back here unless a test asks for them, so the older rule tests
+ * keep testing what they were written for: private talks off (g.circle() opens the debate), and the
+ * End Game vote rather than the Mafia rule (tests/engine.tier2.test.ts covers the Mafia rule).
+ */
 export function lobby(n = 12, settings: Partial<GameSettings> = {}): G {
-  return new G(createGame({ code: "TEST", seed: "seed-1", at: T0, roster: roster(n), settings: { privateTalks: false, ...settings } }));
+  return new G(
+    createGame({ code: "TEST", seed: "seed-1", at: T0, roster: roster(n), settings: { privateTalks: false, endCondition: "endgameVote", ...settings } }),
+  );
 }
 
 /** A dealt game with exact Traitors (default p1, p2, p3), now in ROLES. */

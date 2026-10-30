@@ -24,6 +24,7 @@ export const BINGO_SIDE = 3;
 
 export const settingSchemas = {
   traitorCount: z.number().int().min(1).max(Math.floor(MAX_PLAYERS / 3)),
+  endCondition: z.enum(["parity", "endgameVote"]),
   endGameThreshold: z.union([z.literal("auto"), z.number().int().min(2).max(MAX_PLAYERS - 1)]),
   daggerWeight: z.union([z.literal(2), z.literal(3)]),
   allowTraitorOnTraitor: z.boolean(),
@@ -77,6 +78,11 @@ export const SETTING_META: Record<
   traitorCount: {
     label: "Traitors",
     help: "How many Traitors are dealt. At most a third of the players.",
+    afterDealing: "fixed",
+  },
+  endCondition: {
+    label: "How the game ends",
+    help: "Mafia rule: the Innocents win when every Traitor is gone; the Traitors win as soon as they equal or outnumber the Innocents. Nobody can vote to end it. End Game vote: below the threshold, everyone votes End or Banish until unanimous.",
     afterDealing: "fixed",
   },
   endGameThreshold: {
@@ -202,6 +208,8 @@ export const SETTING_META: Record<
 
 export const DEFAULT_SETTINGS: GameSettings = {
   traitorCount: 3,
+  // Owner, 30 October: the game ends only when one side has won (Mafia rule), never by a vote.
+  endCondition: "parity",
   endGameThreshold: "auto",
   daggerWeight: 2,
   allowTraitorOnTraitor: true,

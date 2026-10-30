@@ -492,3 +492,130 @@ describe("ghost challenges (owner, 30 October): ghosts win an item for a living 
     expect(g.no(HOST, { type: "awardItem", itemType: "dagger", playerIds: ["p12"] })).toMatch(/ghost/);
   });
 });
+
+describe("banish nobody on a tie (owner, 30 October)", () => {
+  /** Day 1 Circle tied between p5 and p6. */
+  function tied(settings = {}) {
+    const g = dealt(12, { settings });
+    g.circle();
+    g.vote({ p1: "p5", p2: "p6" });
+    g.reveal();
+    expect(g.round().result).toMatchObject({ outcome: "tie", tiedIds: ["p5", "p6"] });
+    return g;
+  }
+
+  it("the host lets the tie stand: nobody leaves and the night begins", () => {
+    const g = tied({ ghostGames: ALL_GHOST_GAMES });
+    expect(g.no(as("p1"), { type: "noBanishment" })).toMatch(/host/);
+    g.host({ type: "noBanishment" });
+    expect(g.phase).toBe("NIGHT");
+    expect(g.alive()).toHaveLength(12);
+    expect(g.lastRound()).toMatchObject({ status: "done", result: { outcome: "nobody", tiedIds: ["p5", "p6"] } });
+    expect(g.state.events.filter((e) => e.type === "noBanishment")).toEqual([
+      expect.objectContaining({ audience: { kind: "public" }, data: { roundId: g.lastRound().id, tiedIds: ["p5", "p6"] } }),
+    ]);
+    noLeaks(g.state);
+  });
+
+  it("works after a revote too, and with any tie rule", () => {
+    const g = tied();
+    g.host({ type: "startRevote" });
+    g.vote({ p1: "p5", p2: "p6" });
+    g.reveal();
+    g.host({ type: "noBanishment" });
+    expect(g.phase).toBe("NIGHT");
+    const spin = tied({ tieRule: "spin" });
+    spin.host({ type: "noBanishment" });
+    expect(spin.phase).toBe("NIGHT");
+  });
+
+  it("goes to the End Game instead when the threshold is already reached, and is refused in the End Game", () => {
+    const g = dealt(12, { settings: { endGameThreshold: 11 } });
+    g.circle();
+    g.banish("p12");
+    for (const id of g.alive()) g.by(id, { type: "castEndgameVote", choice: id === "p1" ? "banish" : "end" });
+    g.reveal();
+    g.vote({ p1: "p5", p2: "p6" });
+    g.reveal();
+    expect(g.round().result).toMatchObject({ outcome: "tie" });
+    expect(g.no(HOST, { type: "noBanishment" })).toMatch(/End Game needs a banishment/);
+  });
+
+  it("is refused when there's no tie", () => {
+    const g = dealt();
+    g.circle();
+    expect(g.no(HOST, { type: "noBanishment" })).toMatch(/no tie/);
+  });
+});
+
+describe("Mafia-rule endings (owner, 30 October): no End Game vote", () => {
+  const mafia = (n = 12, traitors = ["p1", "p2", "p3"]) => dealt(n, { settings: { endCondition: "parity", traitorCount: traitors.length }, traitors });
+
+  it("is the default for new games", () => {
+    expect(DEFAULT_SETTINGS.endCondition).toBe("parity");
+  });
+
+  it("never opens an End Game vote; days go on until a side wins", () => {
+    const g = mafia();
+    const days: Array<[string, string]> = [["p12", "p4"], ["p11", "p5"], ["p10", "p6"]];
+    for (const [banished, murdered] of days) {
+      g.circle();
+      g.banish(banished);
+      expect(g.phase).toBe("NIGHT");
+      murder(g, murdered);
+    }
+    // 3 Traitors and 3 Innocents (p7, p8, p9) left after the third murder: the Traitors have the numbers.
+    expect(g.phase).toBe("FINALE");
+    expect(g.state.finale!.winner).toBe("traitors");
+    expect(g.state.endgameStarted).toBe(false);
+    expect(g.state.rounds.some((r) => r.kind === "endgame")).toBe(false);
+  });
+
+  it("the Innocents win when every Traitor is gone", () => {
+    const g = mafia(6, ["p1", "p2"]);
+    g.circle();
+    g.banish("p1");
+    murder(g, "p6");
+    g.circle();
+    g.banish("p2");
+    expect(g.phase).toBe("FINALE");
+    expect(g.state.finale).toMatchObject({ winner: "innocents", reason: "Every Traitor has been banished." });
+  });
+
+  it("the Traitors win the moment they equal the Innocents, after a banishment", () => {
+    const g = mafia(6, ["p1", "p2"]);
+    g.circle();
+    g.banish("p6"); // 2 Traitors, 3 Innocents
+    murder(g, "p5"); // 2 to 2 at the reveal
+    expect(g.phase).toBe("FINALE");
+    expect(g.state.finale).toMatchObject({ winner: "traitors", reason: "The Traitors now equal or outnumber the Innocents (2 to 2)." });
+  });
+
+  it("the check waits for the murder reveal, so nothing leaks early", () => {
+    const g = mafia(6, ["p1", "p2"]);
+    g.circle();
+    g.banish("p6");
+    g.pickAll("p5");
+    if (g.phase === "NIGHT") g.expire();
+    expect(g.phase).toBe("MURDER_REVEAL");
+    noLeaks(g.state);
+    g.host({ type: "revealMurder" });
+    expect(g.phase).toBe("FINALE");
+  });
+
+  it("a host override that gives the Traitors the numbers ends the game at once", () => {
+    const g = mafia(6, ["p1", "p2"]);
+    g.host({ type: "eliminatePlayer", playerId: "p6", status: "left", reason: "Went home" });
+    expect(g.phase).not.toBe("FINALE"); // 2 to 3
+    g.host({ type: "setRole", playerId: "p5", role: "traitor", reason: "Fix" });
+    expect(g.phase).toBe("FINALE");
+    expect(g.state.finale!.winner).toBe("traitors");
+  });
+
+  it("the End Game vote is still there for anyone who chooses it in Settings", () => {
+    const g = dealt(12, { settings: { endCondition: "endgameVote", endGameThreshold: 11 } });
+    g.circle();
+    g.banish("p12");
+    expect(g.phase).toBe("ENDGAME_VOTE");
+  });
+});

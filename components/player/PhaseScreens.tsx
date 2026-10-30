@@ -233,6 +233,9 @@ function RoundOutcome({ game, round }: { game: GameHandle; round: RoundView }) {
       </Card>
     );
   }
+  if (r.outcome === "nobody") {
+    return <Notice title="Nobody is banished">The tie between {r.tiedIds.map(name).join(" and ")} stands. Night falls.</Notice>;
+  }
   if (r.outcome === "tie") {
     return (
       <Notice title="It's a tie">

@@ -69,7 +69,7 @@ export function paperFallbackHtml(view: GameView, generatedAt: Date): string {
 <body>
 <button class="print" onclick="window.print()">Print this page</button>
 <h1>Traitors: The Game, room ${esc(view.code)}</h1>
-<p class="muted">Offline copy saved ${esc(when)}, day ${view.day}. Rules: ${view.settings.traitorCount} Traitors, dagger counts ×${view.settings.daggerWeight}, End Game at ${view.endGameThreshold} players or fewer.</p>
+<p class="muted">Offline copy saved ${esc(when)}, day ${view.day}. Rules: ${view.settings.traitorCount} Traitors, dagger counts ×${view.settings.daggerWeight}, ${view.settings.endCondition === "parity" ? "Innocents win when every Traitor is gone; Traitors win once they equal the Innocents" : `End Game at ${view.endGameThreshold} players or fewer`}.</p>
 <p class="warn"><strong>Secret.</strong> This page shows every role. Keep it on the host's device or folded in a pocket. Use it only if the internet drops for everyone.</p>
 <p><strong>Traitors:</strong> ${traitors.join(", ") || "none"}</p>
 <table>

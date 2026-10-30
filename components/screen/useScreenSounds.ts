@@ -8,7 +8,7 @@ import type { GameHandle } from "@/lib/client/useGame";
  * revealed ballot, and a gong on results. Synthesised with Web Audio, so there are no files to load.
  * Browsers only allow sound after a tap, so the screen has a Sound button; the choice is remembered.
  */
-const GONG_EVENTS = new Set(["banished", "murderRevealed", "finale", "tie", "endgameResult", "spin", "bingo"]);
+const GONG_EVENTS = new Set(["banished", "noBanishment", "murderRevealed", "finale", "tie", "endgameResult", "spin", "bingo"]);
 const STORE = "traitors-screen-sound";
 
 function envelope(ctx: AudioContext, at: number, peak: number, decay: number) {

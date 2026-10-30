@@ -55,6 +55,8 @@ export function describeEvent(e: EventView, view: GameView): string | null {
       return "The host took back the last step.";
     case "roleChanged":
       return "The host changed your role. Hold your role card to check it.";
+    case "noBanishment":
+      return "The tie stood: nobody was banished.";
     case "privateTalksStarted":
       return "Private talks started.";
     case "bingo":

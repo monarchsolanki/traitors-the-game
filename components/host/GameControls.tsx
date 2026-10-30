@@ -384,6 +384,7 @@ function RevealControls({ game, round }: { game: GameHandle; round: VoteRound })
   const [pick, setPick] = useState<string | null>(null);
   const [byHand, setByHand] = useState(false);
   const [handPick, setHandPick] = useState<string | null>(null);
+  const [nobody, setNobody] = useState(false);
   const shown = round.revealOrder.slice(0, round.revealedCount).map((id) => round.ballots.find((b) => b.voterId === id)!);
   const name = (id: string | null) => playerById(view, id)?.displayName ?? "";
   const tie = round.status === "tied" && round.result?.outcome === "tie" ? round.result : null;
@@ -427,6 +428,21 @@ function RevealControls({ game, round }: { game: GameHandle; round: VoteRound })
               Spin
             </Button>
           ) : null}
+          {round.kind === "circle" || round.kind === "revote" ? (
+            <Button variant="secondary" busy={busy} onClick={() => setNobody(true)}>
+              Banish nobody and start the night
+            </Button>
+          ) : null}
+          <Confirm
+            open={nobody}
+            title="Banish nobody?"
+            body="The tie stands: nobody leaves the game, and the night begins."
+            action="Banish nobody"
+            busy={busy}
+            error={error}
+            onConfirm={async () => (await send({ type: "noBanishment" }, true)) && setNobody(false)}
+            onClose={() => setNobody(false)}
+          />
           {tie.method !== "host" ? (
             <Button variant="quiet" size="md" onClick={() => setByHand(true)}>
               Decide by hand instead

@@ -60,6 +60,19 @@ export function SettingsPanel({ game }: { game: GameHandle }) {
       <Card>
         <p className="mb-1 font-semibold text-gold">Rules</p>
         <Stepper label={SETTING_META.traitorCount.label} hint={help("traitorCount")} value={s.traitorCount} min={1} max={Math.max(1, maxTraitors(Math.max(n, 3)))} disabled={locked("traitorCount")} onChange={(v) => set("traitorCount", v)} />
+        <Segmented
+          label={SETTING_META.endCondition.label}
+          hint={help("endCondition")}
+          value={s.endCondition}
+          disabled={locked("endCondition")}
+          options={[
+            { value: "parity", label: "Until one side wins" },
+            { value: "endgameVote", label: "End Game vote" },
+          ]}
+          onChange={(v) => set("endCondition", v)}
+        />
+        {s.endCondition === "endgameVote" ? (
+          <>
         <Toggle
           label="Automatic End Game threshold"
           hint={`Half the starting players, rounded down (${defaultEndGameThreshold(n)} for ${n}).`}
@@ -76,6 +89,8 @@ export function SettingsPanel({ game }: { game: GameHandle }) {
           disabled={locked("endGameThreshold") || s.endGameThreshold === "auto"}
           onChange={(v) => set("endGameThreshold", v)}
         />
+          </>
+        ) : null}
         <Segmented label={SETTING_META.daggerWeight.label} hint={help("daggerWeight")} value={s.daggerWeight} disabled={locked("daggerWeight")} options={[{ value: 2, label: "×2" }, { value: 3, label: "×3" }]} onChange={(v) => set("daggerWeight", v)} />
         <Toggle label={SETTING_META.allowTraitorOnTraitor.label} hint={help("allowTraitorOnTraitor")} checked={s.allowTraitorOnTraitor} disabled={locked("allowTraitorOnTraitor")} onChange={(v) => set("allowTraitorOnTraitor", v)} />
         <Segmented label={SETTING_META.murderRule.label} hint={help("murderRule")} value={s.murderRule} disabled={locked("murderRule")} options={[{ value: "majority", label: "Majority" }, { value: "unanimous", label: "Unanimous" }]} onChange={(v) => set("murderRule", v)} />
