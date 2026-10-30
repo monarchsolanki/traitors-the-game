@@ -13,7 +13,7 @@ const missionTemplate = z
   .object({
     id: id.optional(),
     name: text(60),
-    kind: z.enum(["team", "individual"]),
+    kind: z.enum(["team", "individual", "ghost"]),
     howItWorks: text(300),
     minutes: z.number().int().min(1).max(120),
     props: text(120),
@@ -46,7 +46,7 @@ export const clientActionSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("startMission"),
     name: text(80),
-    kind: z.enum(["team", "individual"]),
+    kind: z.enum(["team", "individual", "ghost"]),
     winRule: text(200).optional(),
     tieRule: text(200).optional(),
     howItWorks: text(300).optional(),

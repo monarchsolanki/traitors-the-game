@@ -106,6 +106,7 @@ export class G {
 
   circle() {
     this.host({ type: "openCircle" });
+    if (this.state.phase === "PRIVATE_TALKS") this.host({ type: "openCircle" });
     this.host({ type: "openVoting" });
   }
 
@@ -145,8 +146,9 @@ export class G {
   }
 }
 
+/** Private talks (owner, 30 October) are off in these tests unless a test turns them on, so g.circle() opens the debate. */
 export function lobby(n = 12, settings: Partial<GameSettings> = {}): G {
-  return new G(createGame({ code: "TEST", seed: "seed-1", at: T0, roster: roster(n), settings }));
+  return new G(createGame({ code: "TEST", seed: "seed-1", at: T0, roster: roster(n), settings: { privateTalks: false, ...settings } }));
 }
 
 /** A dealt game with exact Traitors (default p1, p2, p3), now in ROLES. */

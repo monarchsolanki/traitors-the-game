@@ -126,7 +126,7 @@ describe("a full game with 12 bots, through the database", () => {
       }
       if (!moved) moved = (await runBots(game, 4)).moves > 0;
       if (!moved) {
-        for (const f of [{ type: "lockVoting" }, { type: "lockRewardVote" }, { type: "resolveNight" }, { type: "finishReveal" }] as ActionPayload[]) {
+        for (const f of [{ type: "lockVoting" }, { type: "lockRewardVote" }, { type: "resolveNight" }, { type: "finishReveal" }, { type: "openCircle" }] as ActionPayload[]) {
           if ((await runAction(game.code, HOST, f, `e2e-force-${game.state.version}-${f.type}`)).ok) {
             moved = true;
             break;
@@ -165,7 +165,7 @@ describe("undo through the database (owner, 27 October)", () => {
     expect((await runAction(g.code, HOST, { type: "dealRoles" }, key("deal"))).ok).toBe(true);
     expect((await runAction(g.code, HOST, { type: "openCircle" }, key("circle"))).ok).toBe(true);
     game = await loadGame(g.code);
-    expect(game.state.phase).toBe("CIRCLE_DEBATE");
+    expect(game.state.phase).toBe("PRIVATE_TALKS");
 
     // Undo the Circle, then undo the deal.
     let r = await applyUndo(g.code, key("u1"), game.state.version, "Too early");
@@ -226,6 +226,7 @@ describe("a crowd of phones at once, through the database (Step 4)", () => {
 
     // Every screen nudges the run-out debate timer at once (same key per version): one nudge lands.
     await runAction(g.code, HOST, { type: "openCircle" }, key("circle"));
+    await runAction(g.code, HOST, { type: "openCircle" }, key("circle-after-talks"));
     await runAction(g.code, HOST, { type: "adjustTimer", deltaSeconds: -3600 }, key("shorten"));
     v = (await loadGame(g.code)).state.version;
     const ticks = await Promise.all(Array.from({ length: 10 }, () => runAction(g.code, SYSTEM, { type: "tick" }, `tick-version-${v}`)));

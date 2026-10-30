@@ -91,7 +91,10 @@ export function MissionPicker({
     setMode(next);
   };
 
+  // Ghost challenges are offered only once the engine would allow one (from the set morning, with ghosts).
+  const ghostsNow = view.players.some((p) => p.status !== "alive") && view.day - 1 >= view.settings.ghostMissionFromMorning;
   const groups: Array<{ title: string; items: MissionTemplate[] }> = [
+    ...(ghostsNow ? [{ title: "Ghost challenges (ghosts win an item for a living player)", items: catalogue.filter((t) => t.kind === "ghost") }] : []),
     { title: "Team games", items: catalogue.filter((t) => t.kind === "team") },
     { title: "Individual games", items: catalogue.filter((t) => t.kind === "individual") },
   ];
@@ -157,6 +160,7 @@ export function MissionPicker({
             options={[
               { value: "team", label: "Team game" },
               { value: "individual", label: "Individual" },
+              { value: "ghost", label: "Ghosts" },
             ]}
             onChange={(v) => set("kind", v)}
           />
@@ -193,6 +197,7 @@ export function MissionPicker({
             options={[
               { value: "team", label: "Team game" },
               { value: "individual", label: "Individual" },
+              { value: "ghost", label: "Ghosts" },
             ]}
             onChange={(v) => set("kind", v)}
           />

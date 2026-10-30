@@ -64,7 +64,7 @@ describe.skipIf(!mode)("manual driver", () => {
         }
         if (!moved) moved = (await runBots(game, 4)).moves > 0;
         if (!moved) {
-          for (const f of [{ type: "lockVoting" }, { type: "lockRewardVote" }, { type: "resolveNight" }, { type: "finishReveal" }] as ActionPayload[]) {
+          for (const f of [{ type: "lockVoting" }, { type: "lockRewardVote" }, { type: "resolveNight" }, { type: "finishReveal" }, { type: "openCircle" }] as ActionPayload[]) {
             if ((await runAction(code, { kind: "host" }, f, `drv-force-${game.state.version}-${f.type}`)).ok) break;
           }
         }

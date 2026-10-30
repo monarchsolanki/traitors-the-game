@@ -4,6 +4,7 @@ export const PHASE_TITLE: Record<Phase, string> = {
   LOBBY: "Getting ready",
   ROLES: "Roles are dealt",
   MISSION: "Mission",
+  PRIVATE_TALKS: "Private talks",
   CIRCLE_DEBATE: "Circle of Shaq",
   CIRCLE_VOTE: "Vote",
   CIRCLE_REVEAL: "The votes",

@@ -88,6 +88,10 @@ export function checkInvariants(s: GameState, prev: GameState | null = null): st
     case "MISSION":
       if (!s.currentMissionId) bad("MISSION without a mission");
       break;
+    case "PRIVATE_TALKS":
+      if (round) bad("a vote round open during private talks");
+      if (s.currentMissionId) bad("a mission still open during private talks");
+      break;
   }
   if (s.endgameStarted && !["ENDGAME_VOTE", "ENDGAME_BANISH", "FINALE"].includes(s.phase)) {
     bad(`back to ${s.phase} after the End Game started`);

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Field";
 import { Sheet } from "@/components/ui/Sheet";
 import { TopBar } from "@/components/ui/TopBar";
+import { CircleCall } from "./CircleCall";
 import { JoinScreen } from "./JoinScreen";
 import {
   BreakfastScreen,
@@ -21,6 +22,7 @@ import {
   LobbyWait,
   MissionScreen,
   NightScreen,
+  PrivateTalksScreen,
   RevealScreen,
   RolesScreen,
   VoteScreen,
@@ -100,6 +102,9 @@ export function PlayerApp({ code }: { code: string }) {
       case "MISSION":
         body = <MissionScreen game={game} />;
         break;
+      case "PRIVATE_TALKS":
+        body = <PrivateTalksScreen game={game} />;
+        break;
       case "CIRCLE_DEBATE":
         body = <DebateScreen game={game} />;
         break;
@@ -154,6 +159,7 @@ export function PlayerApp({ code }: { code: string }) {
         ) : null}
         {body}
       </main>
+      {game.seated && me && dealt ? <CircleCall game={game} /> : null}
       {me && dealt ? (
         <Sheet open={roleOpen} onClose={() => setRoleOpen(false)}>
           <RoleCard game={game} />

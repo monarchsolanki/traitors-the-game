@@ -63,39 +63,68 @@ export function RolesScreen({ game }: { game: GameHandle }) {
   );
 }
 
+/** A private vote for who gets a mission's ability: mission winners, or the ghosts after a ghost challenge. */
+export function RewardVoteCard({ game }: { game: GameHandle }) {
+  const view = game.view!;
+  const reward = view.me!.rewardVote;
+  const { busy, error, send } = useSend(game);
+  const [pick, setPick] = useState<string | null>(null);
+  if (!reward) return null;
+  if (reward.submitted) return <Notice>Your vote is in. Only the person who gets it will know.</Notice>;
+  if (!reward.candidateIds.length) return null;
+  const ghost = view.me!.isGhost;
+  return (
+    <Card className="flex flex-col gap-4">
+      <p className="text-center text-lg">
+        {ghost
+          ? `The ghosts won! Vote for the living player who gets the ${reward.itemType}. Only the ghosts see this.`
+          : `You won! Vote for who gets the ${reward.itemType}. Only the winners see this.`}
+      </p>
+      <PlayerGrid
+        players={gridPlayers(game, view.players.filter((p) => reward.candidateIds.includes(p.id) && p.id !== view.me!.playerId))}
+        selectedId={pick}
+        onSelect={setPick}
+      />
+      <ErrorLine message={error} />
+      <Button disabled={!pick} busy={busy} onClick={() => pick && send({ type: "castRewardVote", targetId: pick })}>
+        Vote
+      </Button>
+    </Card>
+  );
+}
+
 export function MissionScreen({ game }: { game: GameHandle }) {
   const view = game.view!;
   const mission = view.missions.find((m) => m.id === view.currentMissionId);
   const reward = view.me!.rewardVote;
-  const { busy, error, send } = useSend(game);
-  const [pick, setPick] = useState<string | null>(null);
   return (
     <div className="flex flex-col gap-5">
-      <Heading title={mission?.name ?? "Mission"} help={mission?.kind === "team" ? "A team game" : "An individual game"} />
+      <Heading
+        title={mission?.name ?? "Mission"}
+        help={mission?.kind === "ghost" ? "A ghost challenge: if the ghosts win, they give a shield or dagger to a living player." : mission?.kind === "team" ? "A team game" : "An individual game"}
+      />
       {mission?.winRule || mission?.tieRule ? (
         <Card className="flex flex-col gap-2">
           {mission.winRule ? <p><span className="text-ink-muted">To win: </span>{mission.winRule}</p> : null}
           {mission.tieRule ? <p><span className="text-ink-muted">If it&apos;s a tie: </span>{mission.tieRule}</p> : null}
         </Card>
       ) : null}
-      {reward && !reward.submitted && reward.candidateIds.length ? (
-        <Card className="flex flex-col gap-4">
-          <p className="text-center text-lg">You won! Vote for who gets the {reward.itemType}. Only the winners see this.</p>
-          <PlayerGrid
-            players={gridPlayers(game, view.players.filter((p) => reward.candidateIds.includes(p.id) && p.id !== view.me!.playerId))}
-            selectedId={pick}
-            onSelect={setPick}
-          />
-          <ErrorLine message={error} />
-          <Button disabled={!pick} busy={busy} onClick={() => pick && send({ type: "castRewardVote", targetId: pick })}>
-            Vote
-          </Button>
-        </Card>
-      ) : reward?.submitted ? (
-        <Notice>Your reward vote is in.</Notice>
+      {reward ? (
+        <RewardVoteCard game={game} />
       ) : (
-        <Notice>Play the mission in the room. The host hands out any rewards in private.</Notice>
+        <Notice>{mission?.kind === "ghost" ? "The ghosts are playing. Watch, or get a drink." : "Play the mission in the room. The host hands out any rewards in private."}</Notice>
       )}
+    </div>
+  );
+}
+
+/** Owner, 30 October: before each Circle, players split into small groups and talk in private. */
+export function PrivateTalksScreen({ game }: { game: GameHandle }) {
+  return (
+    <div className="flex flex-col items-center gap-4 text-center">
+      <Heading title="Private talks" help="Find someone and talk in private. Make allies, test suspicions, plant doubts." />
+      <Countdown deadline={game.view!.deadline} pausedRemainingMs={game.view!.pausedRemainingMs} now={game.now} className="text-5xl" />
+      <Notice>When the timer ends or the host calls time, your phone alerts and everyone comes back for the Circle of Shaq.</Notice>
     </div>
   );
 }
@@ -586,10 +615,12 @@ export function GhostScreen({ game }: { game: GameHandle }) {
       <div className="text-center">
         <p className="font-display text-4xl font-semibold text-ghost">You&apos;re a ghost</p>
         <p className="mt-1 text-ink-muted">
-          Stay close and watch. Don&apos;t talk about the game with living players.
+          You&apos;re still in the room: join the private talks and the Circle, and make your case.
           {view.settings.ghostVote && !me.ghostVote.used ? " You still have your one ghost vote." : ""}
         </p>
       </div>
+      {view.phase === "PRIVATE_TALKS" ? <PrivateTalksScreen game={game} /> : null}
+      {me.rewardVote ? <RewardVoteCard game={game} /> : null}
       {canGhostVote ? <VoteScreen game={game} /> : null}
       {view.phase === "CIRCLE_REVEAL" ? <RevealScreen game={game} /> : null}
       {me.ghostGames ? (

@@ -7,6 +7,7 @@ export const PHASES = [
   "LOBBY",
   "ROLES",
   "MISSION",
+  "PRIVATE_TALKS",
   "CIRCLE_DEBATE",
   "CIRCLE_VOTE",
   "CIRCLE_REVEAL",
@@ -23,7 +24,7 @@ export type Team = "innocents" | "traitors";
 export type PlayerStatus = "alive" | "murdered" | "banished" | "left";
 export type ItemType = "shield" | "dagger";
 export type ItemState = "held" | "used" | "expired" | "lost";
-export type MissionKind = "team" | "individual";
+export type MissionKind = "team" | "individual" | "ghost";
 
 /**
  * circle: standard Circle (daggers and ghost votes allowed)

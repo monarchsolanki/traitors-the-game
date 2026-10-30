@@ -69,6 +69,11 @@ function Confirm({
   );
 }
 
+/** With private talks on, the next step from a mission or breakfast is private talks, then the Circle. */
+function circleLabel(game: GameHandle): string {
+  return game.view!.settings.privateTalks ? "Start private talks" : "Go to the Circle of Shaq";
+}
+
 function names(game: GameHandle, ids: string[]): string {
   return ids.map((id) => playerById(game.view!, id)?.displayName ?? id).join(", ");
 }
@@ -144,7 +149,7 @@ function ChoicePoint({ game, children }: { game: GameHandle; children?: React.Re
       {children}
       <Button onClick={() => setMissionOpen(true)}>Run a mission</Button>
       <Button variant="secondary" busy={busy} onClick={() => send({ type: "openCircle" })}>
-        Go to the Circle of Shaq
+        {circleLabel(game)}
       </Button>
       <ErrorLine message={error} />
       <MissionPicker
@@ -180,7 +185,7 @@ function MissionControls({ game }: { game: GameHandle }) {
     <div className="flex flex-col gap-4">
       <Card>
         <p className="font-display text-2xl text-gold">{mission?.name}</p>
-        <p className="text-ink-muted">{mission?.kind === "team" ? "Team game" : "Individual game"}</p>
+        <p className="text-ink-muted">{mission?.kind === "ghost" ? "Ghost challenge" : mission?.kind === "team" ? "Team game" : "Individual game"}</p>
         {mission?.howItWorks ? <p className="mt-2 text-ink-muted">{mission.howItWorks}</p> : null}
         {mission?.winRule ? <p className="mt-2">To win: {mission.winRule}</p> : null}
         {mission?.tieRule ? <p>Tie: {mission.tieRule}</p> : null}
@@ -196,6 +201,8 @@ function MissionControls({ game }: { game: GameHandle }) {
             Close the vote now
           </Button>
         </Card>
+      ) : mission?.kind === "ghost" ? (
+        <GhostReward game={game} />
       ) : (
         <Card className="flex flex-col gap-4">
           <p className="font-semibold text-gold">Reward the winners (private)</p>
@@ -256,9 +263,82 @@ function MissionControls({ game }: { game: GameHandle }) {
         Another mission
       </Button>
       <Button disabled={!!rewardOpen} busy={busy} onClick={() => send({ type: "openCircle" })}>
-        Go to the Circle of Shaq
+        {circleLabel(game)}
       </Button>
       <MissionPicker game={game} catalogue={host.missionCatalogue} open={missionOpen} onClose={() => setMissionOpen(false)} send={(a) => send(a)} busy={busy} error={error} />
+    </div>
+  );
+}
+
+/** After a ghost challenge: if the ghosts won, they give the ability to a living player of their choice. */
+function GhostReward({ game }: { game: GameHandle }) {
+  const view = game.view!;
+  const host = view.host!;
+  const { busy, error, send } = useHostSend(game);
+  const [itemType, setItemType] = useState<ItemType>("shield");
+  const [voteMode, setVoteMode] = useState(true);
+  const [pick, setPick] = useState<string | null>(null);
+  const ghosts = view.players.filter((p) => p.status !== "alive").map((p) => p.id);
+  const alive = view.players.filter((p) => p.status === "alive");
+  const holding = (id: string) => host.items.some((i) => i.holderId === id && i.type === itemType && i.state === "held");
+  return (
+    <Card className="flex flex-col gap-4">
+      <p className="font-semibold text-gold">If the ghosts won</p>
+      <p className="text-sm text-ink-muted">They give the ability to any living player they choose, in private. If they lost, just move on.</p>
+      <Segmented
+        label="Ability"
+        value={itemType}
+        options={[
+          { value: "shield", label: "Shield" },
+          { value: "dagger", label: "Dagger" },
+        ]}
+        onChange={setItemType}
+      />
+      <Segmented
+        label="How they choose"
+        value={voteMode ? "vote" : "direct"}
+        options={[
+          { value: "vote", label: "Ghosts vote" },
+          { value: "direct", label: "They tell me" },
+        ]}
+        onChange={(v) => setVoteMode(v === "vote")}
+      />
+      {voteMode ? (
+        <p className="text-ink-muted">Every ghost votes on their phone: {names(game, ghosts) || "no ghosts yet"}. Most votes wins; a tie is settled at random.</p>
+      ) : (
+        <PlayerGrid
+          players={gridPlayers(game, alive, (p) => ({ note: holding(p.id) ? `Has a ${itemType}` : undefined, disabled: holding(p.id) }))}
+          selectedId={pick}
+          onSelect={setPick}
+          size={56}
+        />
+      )}
+      <ErrorLine message={error} />
+      <Button
+        disabled={voteMode ? !ghosts.length : !pick}
+        busy={busy}
+        onClick={async () => {
+          const ok = voteMode
+            ? await send({ type: "openRewardVote", itemType, voterIds: ghosts })
+            : await send({ type: "awardItem", itemType, playerIds: [pick!] });
+          if (ok) setPick(null);
+        }}
+      >
+        {voteMode ? "The ghosts won: open their vote" : `Give the ${itemType} to ${pick ? playerById(view, pick)?.displayName : "…"}`}
+      </Button>
+    </Card>
+  );
+}
+
+function TalksControls({ game }: { game: GameHandle }) {
+  const { busy, error, send } = useHostSend(game);
+  return (
+    <div className="flex flex-col gap-4">
+      <Notice>Private talks: players split up and talk. When the timer ends (or you tap below), every phone alerts and the Circle of Shaq opens.</Notice>
+      <Button busy={busy} onClick={() => send({ type: "openCircle" }, true)}>
+        End private talks and open the Circle
+      </Button>
+      <ErrorLine message={error} />
     </div>
   );
 }
@@ -690,6 +770,9 @@ export function GameControls({ game }: { game: GameHandle }) {
     }
     case "MISSION":
       body = <MissionControls game={game} />;
+      break;
+    case "PRIVATE_TALKS":
+      body = <TalksControls game={game} />;
       break;
     case "CIRCLE_DEBATE":
       body = <OpenVoting game={game} />;

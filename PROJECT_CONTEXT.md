@@ -8,7 +8,7 @@
 | --- | --- |
 | Owner | Monarch Solanki (host of the first game) |
 | Last updated | 26 October 2026 |
-| Status | Step 5 built and approved (27 October); every build step in section 12 is done and the feature freeze is on. The same day the owner settled every open decision (section 16): recruitment on, the ghost vote also in revotes and End Game banishments, no co-host, no time constraint on the run sheet, the rule flags confirmed. Supabase's anonymous sign-in limit is raised to 150 an hour. Next: the rehearsal with real players (6.1). |
+| Status | Feature-complete and approved; the owner's 30 October changes are built and live: private talks before each Circle (phones alert when they end), ghosts take part in every discussion, ghost challenges from the second morning (ghosts win a shield or dagger for a living player), three ghost challenges in the mission catalogue, and a `/tv` page so the TV opens the big screen on its own. Next: the rehearsal (6.1) and game night, 31 October. |
 | Live link | https://traitors-the-game.vercel.app |
 | First game | Diwali x Halloween ("Diwaloween: Lights & Frights") villa party, Saturday 31 October 2026, 12 players plus the host |
 | Planning doc | [Traitors Party App — Build Plan](https://claude.ai/artifact/4t3XeWf8tHKf7C9YoMmDqN); fully merged into this file on 26 October 2026, so this file alone is enough |
@@ -192,7 +192,10 @@ The keys are final as of Step 1 and live in `lib/game/settings.ts` (each with it
 | Bhoot Bingo moments | `bingoMoments` | 16 moments ghosts can see or hear (`settings.ts`) | 9 to 40 lines, up to 60 characters each | Any time |
 | Breakfast entrance | `breakfastEntrance` | on | on, off | Any time |
 | Breakfast entrance length | `entranceSeconds` | 20 | 5 to 60 | Any time |
-| Big-screen narrator lines | `narration` | one line per stage: lobby, roles, mission, debate, vote, reveal, night, breakfast, End Game, final reveal | up to 140 characters each | Any time |
+| Private talks before each Circle | `privateTalks` | on (owner, 30 October) | on, off | Any time |
+| Private talks timer | `privateTalksSeconds` | 600 (10 min) | 60 to 1800 | Any time |
+| Ghost challenges from morning | `ghostMissionFromMorning` | 2 (the second morning; morning 1 is day 2) | 1 to 10 | Any time |
+| Big-screen narrator lines | `narration` | one line per stage: lobby, roles, mission, private talks, debate, vote, reveal, night, breakfast, End Game, final reveal | up to 140 characters each | Any time |
 
 Timer defaults are proposals. The run sheet's 5-minute night slot leaves room for a 3-minute night timer.
 
@@ -292,7 +295,8 @@ Proposed phase names for the engine are in `CODE_CASE`.
 | `LOBBY` | Host and players | Players tap their photo and set a PIN; the host confirms every seat and edits settings | The host confirms all seats and deals | `ROLES` |
 | `ROLES` | App | Deals `traitorCount` Traitors at random and freezes the rule settings | Every player has opened their role (or the host moves on) | `MISSION`, or `CIRCLE_DEBATE` if the host skips it |
 | `MISSION` | Host; all living players play | Chooses whether to run a mission; announces the win and tie rule; after the game, picks the ability and gives it to one or more players | The host confirms the awards, or skips the mission | Another `MISSION`, or `CIRCLE_DEBATE` |
-| `CIRCLE_DEBATE` | Living players | Talk; no app actions | The host opens voting or the debate timer ends | `CIRCLE_VOTE` |
+| `PRIVATE_TALKS` (owner, 30 October) | Everyone, ghosts included | Players split into small groups and talk in private; no app actions | The host taps "End private talks" or its timer ends; every phone alerts | `CIRCLE_DEBATE` |
+| `CIRCLE_DEBATE` | Everyone, ghosts included (owner, 30 October) | The open discussion (Circle of Shaq); no app actions | The host opens voting or the debate timer ends | `CIRCLE_VOTE` |
 | `CIRCLE_VOTE` | Living players; ghosts with an unused ghost vote | One ballot each; a dagger holder may use the dagger; a ghost may cast their one ghost vote | The host locks voting, or the vote timer ends (5.5) | `CIRCLE_REVEAL` |
 | `CIRCLE_REVEAL` | Host | Reveals ballots one by one and resolves ties | One player is banished | Win check (5.2) |
 | `NIGHT` | Traitors; everyone else answers the suspect poll | Each Traitor picks a target in private; the last Traitor may recruit if switched on | All picks are in or the night timer ends | `MURDER_REVEAL` |
@@ -381,8 +385,8 @@ The End Game threshold is checked only after a Circle banishment, never after a 
 
 - Murdered and banished players become ghosts. Their phones switch to the ghost screen.
 - Ghosts see the public event feed and play every switched-on score-only ghost game. They never learn any role before the finale.
-- Each ghost has one ghost vote (5.5). Apart from that, ghosts can't vote, receive items, or affect the living game in version 1.
-- Ghosts don't discuss the game with living players (party rule).
+- Each ghost has one ghost vote (5.5). Ghosts can't receive items.
+- **Owner, 30 October:** ghosts take part in every discussion, private talks and the Circle, as before they were eliminated (this replaces the party rule that ghosts don't discuss the game with the living). From the second morning, the host may run a ghost challenge: if the ghosts win, they give a shield or dagger to any living player of their choice (5.10).
 - Ghost scores are revealed at the finale; the top ghost wins Best Ghost at Sunday breakfast.
 
 ### 5.9 Edge cases
@@ -465,6 +469,15 @@ The End Game threshold is checked only after a Circle banishment, never after a 
 - When the host reveals the murder, the engine fixes a random walk-in order of the survivors (seeded, so every screen agrees) and puts it in the public reveal with its length (`entranceSeconds`). The big screen seats an empty chair for everyone alive at nightfall, brings the survivors in one by one, and the last empty chair is the victim ("… never came down to breakfast"), then shows the usual murder card. Every phone, the victim's included, shows "Breakfast is served, watch the big screen" with a countdown until the entrance ends, so no phone spoils it. With the switch off, the reveal is instant as before.
 - The host or co-host can put a message on the big screen (up to 140 characters) until they clear it. Narrator lines under each stage come from the `narration` setting.
 
+**Private talks (owner, 30 October)**
+- With `privateTalks` on (the default), "Start private talks" (the old "Go to the Circle") opens a `PRIVATE_TALKS` phase with its own timer (`privateTalksSeconds`). Tapping "End private talks and open the Circle", or the timer running out, opens the Circle debate and marks the event `afterTalks`. Every phone then vibrates (Android) and shows a full-screen "Private talks are over, come to the Circle of Shaq" card with a chime (iPhones can't vibrate from a website; sound plays once the player has tapped the page). A phone that's locked or asleep can't be woken by a website; it shows the card when opened (within a minute).
+- Missions can't start during private talks. Ghosts may place banishment bets and lock in Crystal Ball from the start of private talks.
+
+**Ghost challenges (owner, 30 October)**
+- A mission of kind `ghost`. The host may start one at any choice point from the morning set in `ghostMissionFromMorning` (default 2, the second morning; morning 1 is day 2) when at least one ghost is visible. The ghosts play it offline.
+- If they win, the ability (shield or dagger, the host's pick) goes to a living player of the ghosts' choice: either every ghost votes in private on their phone (most votes wins; a tie is settled at random; nobody can hold two of the same), or the ghosts tell the host, who gives it directly. Only the host and the recipient learn who got it. If they lose, the host just moves on. Mission winners, if recorded, must be ghosts.
+- Eliminated Traitors are ghosts too and know every role, so they may push the item to a living Traitor.
+
 ---
 
 ## 6. Run sheet for the first game
@@ -490,6 +503,8 @@ A typical 3-day game runs 7:30 PM to about 11:05 PM: 3 h 35 min elapsed, made of
 
 If all Traitors (3 by default) are banished early, the Innocents win early and Housie starts sooner. Beyond the buffer, the host can shorten debates from the control screen.
 
+**Owner, 30 October: each day.** Breakfast (murder reveal), then optional missions, and from the second morning an optional ghost challenge; then **private talks** (10 minutes by default; phones alert when they end); then the **Circle of Shaq** (open discussion, ghosts included); then voting and the reveal; then night.
+
 **Owner, 27 October: no time constraint.** The times above are a rough guide only. The game runs until an end condition is met, so there's no buffer rule and nothing gets cut for time.
 
 **The run sheet is a guide, not a limit.** The game goes on until an end condition is met. Each extra day adds about 25 minutes without a mission (reveal, Circle and night) or about 40 with one. If the night runs long, the host can skip missions, shorten debates or lower the End Game threshold.
@@ -503,7 +518,7 @@ Run this with real phones before 31 October, following the run sheet above. Tick
 **Before guests arrive**
 - [ ] Wi-Fi works in every room the game uses; a phone hotspot is ready as a backup.
 - [x] Supabase: the anonymous sign-in limit is raised (Authentication, then Rate Limits; about 150 an hour; done by the owner on 27 October), since every phone shares the villa's internet address.
-- [ ] The live link opens on the TV or laptop for the big screen; Full screen on; Sound on (tap it once; the browser needs a tap before it plays sound); the screen stays awake.
+- [ ] The TV opens the big screen on its own (TV browser → `traitors-the-game.vercel.app/tv`, type the room code; 18.4); Full screen on; Sound on (tap it once; the browser needs a tap before it plays sound); the screen stays awake.
 - [ ] The host is signed in on their phone (and a second device signed in too, as a backup).
 - [ ] The game is created (or started from the saved preset), with every player's photo and display name checked; settings checked (3 Traitors, dagger ×2, End Game auto, recruitment on, ghost vote on, timers, ghost games on).
 - [x] No co-host: the host runs everything (owner, 27 October). The co-host feature stays available if that changes.
@@ -517,6 +532,8 @@ Run this with real phones before 31 October, following the run sheet above. Tick
 **Each day (follow the run sheet)**
 - [ ] Mission (optional): pick from the catalogue, read the win and tie rules aloud, reward the winners (direct or winners' vote).
 - [ ] Circle: debate timer, voting on phones, the reveal ballot by ballot, ties per the tie rule, the banishment card.
+- [ ] Private talks before each Circle: the timer shows everywhere; ending them makes every phone alert (vibrate on Android, card and chime on iPhone).
+- [ ] From the second morning: a ghost challenge; if the ghosts win, they vote on their phones (or tell you) who gets the item.
 - [ ] Night: Traitors pick (and chat); everyone else answers the suspect poll; ghosts bet and react.
 - [ ] Breakfast: reveal the murder; the entrance plays on the big screen; phones wait for it.
 - [ ] Ghosts: the ghost vote once, Bhoot Bets, Crystal Ball at the Circle, Bingo, reactions during the debate.
@@ -569,6 +586,8 @@ Missions are optional: after each murder reveal the host decides whether to run 
 
 **In the app (Step 5, 27 October):** this table is the default mission catalogue (`DEFAULT_MISSIONS` in `lib/game/settings.ts`), copied into every new game and saved with presets. The host or co-host picks a mission from it, can tweak the rules before starting, and can add, edit or remove missions; the big screen shows the mission's name, how it works and the win and tie rules. The suggested reward is a hint only; the Traitor angle shows only to the host and co-host.
 
+**Ghost challenges (owner, 30 October):** three pass/fail challenges for the ghosts, offered in the picker from the second morning: Ghost Memory Tray (study 20 items for 45 seconds, name 14 or more together in 2 minutes), Ghost Tower (a free-standing tower 40 cm or taller in 3 minutes, standing for 5 seconds), Ghost Taste Test (name 5 of 7 snacks blindfolded). All 20 games above stay in the catalogue (owner, 30 October); the host picks on the night. Games created before 30 October don't have the ghost challenges in their list; "Start one that isn't listed" (type: Ghosts) or "Add a mission" covers it.
+
 ---
 
 ## 8. Ghost mode
@@ -604,7 +623,7 @@ Murdered and banished players stay ghosts until the final reveal and never learn
 - To keep the Traitors fairly placed, pick at most one or two light powers. Dead Vote with Last Words is the most even pair. Hidden roles already help the Traitors, since Innocents never learn whether a banishment hit a Traitor.
 - Eliminated Traitors skip Crystal Ball and the "who was a Traitor?" bets.
 - Eliminated players win with their team (decided 26 October; see 5.3), so eliminated Traitors have every reason to keep quiet.
-- Ghosts don't discuss the game with living players (party rule).
+- ~~Ghosts don't discuss the game with living players.~~ Replaced 30 October: ghosts join every discussion. Eliminated Traitors know every role, so their talk can now steer the living.
 - The top-scoring ghost wins Best Ghost at Sunday breakfast.
 
 **How it's built (Step 5, 27 October).** Every score-only game is built, each behind its own switch (default on): Bhoot Bets (banishment and murder bets, plus Traitor calls), Crystal Ball, Live reactions and Bhoot Bingo. Exact rules are in 5.10. A ghost's phone has two tabs, "Ghost games" and "What's happening" (the public feed), with the ghost vote above them when it can be used. Points are settings (`ghostPoints`); Best Ghost appears at the final reveal on every screen.
@@ -707,6 +726,8 @@ The main risks on the night are an accidental leak or a stuck game, not an attac
 Writes go through two database functions, callable only with the secret key: `create_game` (inserts the game and its ping) and `apply_game_action(game, expected version, idempotency key, actor, action, next state)`. The second runs in one transaction: a repeated key returns `duplicate`; a version that moved on returns `stale` (the `update … where version = expected` touched no row); otherwise it saves the state, writes the ledger row and bumps the ping. Row Level Security is on for every table; only `game_pings` has a read policy, and `anon` and `authenticated` have no other grants.
 
 **Step 5 (migration `20261027180000_reactions_and_preset_missions.sql`, applied 27 October):** the `game_reactions` table above and `presets.missions`. The game state gained `missionCatalogue`, `cohostId`, `screenMessage` and `ghostGames` (bets, Traitor calls, Crystal Ball guesses, Bingo marks and winner); missions gained `templateId` and `howItWorks`. Games saved before Step 5 are filled in on load (`normaliseState`).
+
+**30 October (migration `20261030120000_private_talks_phase.sql`, applied that day):** the `games.phase` check now accepts `PRIVATE_TALKS`. Without it, saving the new phase failed; caught in a local run before going live.
 
 **Original proposal (superseded by the design above; kept for reference):**
 
@@ -1013,6 +1034,7 @@ All decisions dated 26 October 2026 unless noted.
 | Requests carry the access token (26 Oct, Step 2) | The browser sends its Supabase access token on each request; no cookie session or proxy | Simplest reliable setup with Cache Components on; the server verifies every request |
 | Vercel region (26 Oct, Step 2; updated 27 Oct) | Server functions run in Mumbai (`bom1`), next to the database, set in the Vercel project settings (Settings → Functions). A `vercel.json` with `regions` stopped Vercel creating deployments at all on 26 October, so it was removed | Vercel's default region is in the US; every game action would otherwise cross the world twice |
 | Big screen holds results (27 Oct, Step 3) | A banishment, murder reveal or End Game result stays on the big screen for 20 seconds, and a spin plays for 4.5 seconds, timed from when the screen first sees it (a screen opened later doesn't replay old results). Phones show "X was banished" for a minute after | The engine moves straight to night after a banishment, so without this the room would never see who went |
+| Private talks, ghosts in discussions, ghost challenges, TV (30 Oct) | Each Circle starts with private talks (on by default, 10 minutes, ended by the host or the timer, phones alert when they end); ghosts take part in every discussion (replaces the party rule); from the second morning the host may run a ghost challenge whose prize, if the ghosts win, goes to a living player the ghosts choose (they vote on their phones, or tell the host); three ghost challenges added to the catalogue, all 20 missions kept; the TV opens the big screen on its own through `/tv`. Phone alert only when private talks end | Owner's changes, 30 October. Note: this adds a second ghost power that affects the living game (earlier only the ghost vote) |
 | Open decisions settled (27 Oct) | The owner answered every open decision in section 16: keep the section 17 ideas for later; pick missions on the night from the catalogue; no co-host (the host runs everything); keep the ghost-game details as built; recruitment on; the ghost vote also in tie revotes and End Game banishments (never the End or Banish choice); confirmed the three rule flags (2 players left ends the game, a unanimous sacrifice ignores the target's own pick, a missing End Game ballot blocks End); no time constraint on the run sheet | Owner's answers, 27 October |
 | Recruitment on (27 Oct, replaces "stays off by default") | The default is now `lastTraitor`: when one Traitor is left, they may recruit an Innocent instead of murdering. Games created earlier keep their own setting | Owner's decision; gate tests pass |
 | Ghost vote in revotes and the End Game (27 Oct) | A ghost's one vote can be used at a standard Circle, a tie revote, or an End Game banishment and its revote; never in the End or Banish choice (that needs every living player). Still once per game, counts 1, no dagger. Voting waits for ghosts who could still vote until the host locks it or the timer ends | Owner's decision |
@@ -1133,6 +1155,16 @@ Dashboard labels change over time; confirm the current names while clicking thro
 
 **Function region:** Vercel → Settings → Functions → Function Region → Mumbai, India (`bom1`), next to the database (set 27 October).
 
+### 18.4 The big screen on a TV (owner, 30 October)
+
+The TV and the Mac are separate screens, not connected. The Mac runs the host panel (roles, votes, controls); the TV runs only the big screen, which needs no sign-in and never shows a secret.
+
+1. On the TV, open its web browser: Samsung "Internet", LG "Web Browser", or on Android TV, Google TV or a Fire TV Stick a browser such as Chrome, Silk or "TV Bro" from the app store.
+2. Go to `traitors-the-game.vercel.app/tv` and type the room code with the remote (the host panel shows it). The big screen opens.
+3. Press the remote's button to hide the browser's bars if it has one; the page's "Full screen" button works on most TV browsers. Turn "Sound" on with the remote once (browsers only allow sound after a press), and set the TV volume.
+4. Turn off the TV's screensaver or auto power-off for the night (TV settings, often under General or Power).
+5. Test it today: some older TV browsers are slow. If the TV browser struggles, use any spare laptop, tablet or phone plugged into the TV by HDMI (or a Fire TV Stick or Chromecast with Google TV and its browser), and open the same `/tv` address there. Never mirror or cast the Mac's own screen: the host panel shows every role.
+
 ### 18.3 Local development
 
 | Command | What it does |
@@ -1210,6 +1242,9 @@ Add it to the table in section 9.4, give it a branch in `viewFor`, and add it to
 - **Anonymous sign-ins are rate-limited per internet address.** Supabase's default is 30 an hour per IP, and every phone on the villa Wi-Fi shares one address. Each phone and each browser on it (Chrome, Safari, an Instagram or WhatsApp in-app browser) needs one, so a busy start could hit the limit. Raise it in the Supabase dashboard before the night (Authentication, then Rate Limits). **Done 27 October:** the owner raised it to 150 an hour.
 - **The schedule is tight.** Cut from the lowest tier first; never ship half a feature.
 - **The co-host is also a player.** A co-host who is a Traitor could give themselves a shield or dagger at a mission. Every co-host action is logged under the co-host, and the host can undo it or take it back in the Fix tab. A refused award doesn't say why, but a co-host could still guess that the player already holds one.
+- **Phone alerts can't wake a locked phone.** A website can't buzz a phone whose screen is off; players see the "come to the Circle" card when they next look. iPhones never vibrate (Apple doesn't allow it for websites); they get the card and a chime. Tell players to keep the game open on their screen during private talks.
+- **Ghosts now talk and can win items for the living.** Eliminated Traitors know every role, so their talk and their ghost-challenge picks can help the Traitors. The host can skip ghost challenges any morning.
+- **TV browsers vary.** Test the TV's browser today; have a spare device with HDMI as the fallback (18.4).
 - **Bhoot Bingo is on the honour system.** Ghosts tap their own squares; it only affects Best Ghost.
 
 ---

@@ -26,7 +26,7 @@ const currentRound = (s: GameState) => (s.currentRoundId ? s.rounds.find((r) => 
 
 /** Banishment bets: during a Circle or the End Game, until the reveal starts. */
 export function banishBetsOpen(s: GameState): boolean {
-  if (!["CIRCLE_DEBATE", "CIRCLE_VOTE", "ENDGAME_VOTE", "ENDGAME_BANISH"].includes(s.phase)) return false;
+  if (!["PRIVATE_TALKS", "CIRCLE_DEBATE", "CIRCLE_VOTE", "ENDGAME_VOTE", "ENDGAME_BANISH"].includes(s.phase)) return false;
   const r = currentRound(s);
   return !r || r.status === "open";
 }
@@ -37,9 +37,9 @@ export function murderBetsOpen(s: GameState): boolean {
   return s.phase === "NIGHT" && !!n && !n.resolved;
 }
 
-/** Crystal Ball: at each Circle, from the debate until voting closes. */
+/** Crystal Ball: at each Circle, from private talks until voting closes. */
 export function crystalOpen(s: GameState): boolean {
-  if (s.phase === "CIRCLE_DEBATE") return true;
+  if (s.phase === "PRIVATE_TALKS" || s.phase === "CIRCLE_DEBATE") return true;
   const r = currentRound(s);
   return s.phase === "CIRCLE_VOTE" && !!r && r.kind === "circle" && r.status === "open";
 }

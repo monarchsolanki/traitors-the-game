@@ -333,7 +333,7 @@ function Stage({ game }: { game: GameHandle }) {
       const m = view.missions.find((x) => x.id === view.currentMissionId);
       return (
         <div className="flex flex-1 flex-col items-center justify-center gap-[3vh] text-center">
-          <p className="text-[min(2.2vw,2.2rem)] tracking-[0.3em] text-marigold uppercase">{m?.kind === "team" ? "Team mission" : "Mission"}</p>
+          <p className="text-[min(2.2vw,2.2rem)] tracking-[0.3em] text-marigold uppercase">{m?.kind === "ghost" ? "Ghost challenge" : m?.kind === "team" ? "Team mission" : "Mission"}</p>
           <Big>{m?.name ?? "Mission"}</Big>
           <Sub>{m?.howItWorks || view.settings.narration.mission}</Sub>
           {m?.winRule ? <Sub>To win: {m.winRule}</Sub> : null}
@@ -341,6 +341,15 @@ function Stage({ game }: { game: GameHandle }) {
         </div>
       );
     }
+    case "PRIVATE_TALKS":
+      return (
+        <div className="flex flex-1 flex-col items-center justify-center gap-[3vh]">
+          <Big>Private talks</Big>
+          <Sub>{view.settings.narration.talks}</Sub>
+          <Countdown deadline={view.deadline} pausedRemainingMs={view.pausedRemainingMs} now={game.now} className="text-[min(10vw,10rem)]" />
+          <PhotoWall game={game} players={alive} size="sm" />
+        </div>
+      );
     case "CIRCLE_DEBATE":
       return (
         <div className="flex flex-1 flex-col items-center justify-center gap-[3vh]">

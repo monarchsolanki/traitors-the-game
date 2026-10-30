@@ -1,6 +1,6 @@
 import { COHOST_ACTIONS } from "./actions";
 import { applyGameAction, createGame } from "./engine";
-import { banishBetsOpen, bingoCard, crystalOpen, crystalSize, murderBetsOpen } from "./ghosts";
+import { banishBetsOpen, bingoCard, crystalOpen, crystalSize, isVisibleGhost, murderBetsOpen } from "./ghosts";
 import { checkInvariants } from "./invariants";
 import { allViewers, findLeaks } from "./leaks";
 import { pickOne, seededRand, shuffle, type Rand } from "./random";
@@ -135,6 +135,11 @@ export function hostProgress(s: GameState, rand: Rand, o: Required<Pick<SimOptio
     tieRule: "Sudden death",
   });
   const itemType = (): ItemType => (rand() < o.shieldRate ? "shield" : "dagger");
+  const ghosts = s.players.filter((p) => isVisibleGhost(s, p.id)).map((p) => p.id);
+  const ghostChallenge = (): ActionPayload[] =>
+    ghosts.length && s.day - 1 >= s.settings.ghostMissionFromMorning && rand() < 0.3
+      ? [{ type: "startMission", name: pickOne(["Ghost Memory Tray", "Ghost Tower", "Ghost Taste Test"], rand), kind: "ghost" }]
+      : [];
   switch (s.phase) {
     case "LOBBY": {
       const toConfirm = s.players.filter((p) => p.seatClaimed && !p.seatConfirmed);
@@ -143,11 +148,17 @@ export function hostProgress(s: GameState, rand: Rand, o: Required<Pick<SimOptio
     case "ROLES":
     case "MURDER_REVEAL": {
       if (s.phase === "MURDER_REVEAL" && !lastNight(s)?.revealed) return [{ type: "revealMurder" }];
-      return rand() < o.missionRate ? [startMission(), { type: "openCircle" }] : [{ type: "openCircle" }];
+      return [...ghostChallenge(), ...(rand() < o.missionRate ? [startMission(), { type: "openCircle" } as const] : [{ type: "openCircle" } as const])];
     }
     case "MISSION": {
       const r = currentRound(s);
       if (r && r.kind === "reward" && r.status === "open") return rand() < 0.2 ? [{ type: "lockRewardVote" }] : [];
+      const m = s.missions.find((x) => x.id === s.currentMissionId);
+      if (m?.kind === "ghost") {
+        // The ghosts won (or not): the host gives it as they ask, or they vote; then the Circle.
+        const won: ActionPayload[] = rand() < 0.5 ? [] : [rand() < 0.5 ? { type: "openRewardVote", itemType: itemType(), voterIds: ghosts } : { type: "awardItem", itemType: itemType(), playerIds: sample(alive, 1, 1, rand) }];
+        return [...won, { type: "openCircle" }];
+      }
       const moves: ActionPayload[] = [];
       if (rand() < 0.7) moves.push({ type: "awardItem", itemType: itemType(), playerIds: sample(alive, 1, 3, rand) });
       if (rand() < 0.15) moves.push({ type: "openRewardVote", itemType: itemType(), voterIds: sample(alive, 2, 3, rand) });
@@ -156,6 +167,8 @@ export function hostProgress(s: GameState, rand: Rand, o: Required<Pick<SimOptio
       moves.push({ type: "openCircle" });
       return moves;
     }
+    case "PRIVATE_TALKS":
+      return rand() < 0.5 ? [{ type: "openCircle" }] : [];
     case "CIRCLE_DEBATE":
       return [{ type: "openVoting" }];
     case "CIRCLE_VOTE":

@@ -30,12 +30,14 @@ function MissionPanel({ game }: { game: GameHandle }) {
     <div className="flex flex-col gap-4">
       <Card>
         <p className="font-display text-2xl text-gold">{mission?.name}</p>
-        <p className="text-ink-muted">{mission?.kind === "team" ? "Team game" : "Individual game"}</p>
+        <p className="text-ink-muted">{mission?.kind === "ghost" ? "Ghost challenge" : mission?.kind === "team" ? "Team game" : "Individual game"}</p>
         {mission?.howItWorks ? <p className="mt-2 text-ink-muted">{mission.howItWorks}</p> : null}
         {mission?.winRule ? <p className="mt-2">To win: {mission.winRule}</p> : null}
         {mission?.tieRule ? <p>Tie: {mission.tieRule}</p> : null}
       </Card>
-      {reward ? (
+      {mission?.kind === "ghost" ? (
+        <Notice>A ghost challenge: the host hands out its reward.</Notice>
+      ) : reward ? (
         <Card className="flex flex-col gap-3">
           <p className="font-semibold text-gold">Winners are voting for the {reward.itemType}</p>
           <p className="text-ink-muted">

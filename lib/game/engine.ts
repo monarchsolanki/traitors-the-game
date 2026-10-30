@@ -5,6 +5,7 @@ import {
   crystalSize,
   emptyGhostGames,
   hasBingoLine,
+  isVisibleGhost,
   murderBetsOpen,
   pendingVictimId,
 } from "./ghosts";
@@ -12,7 +13,6 @@ import { pickOne, seededRand, shuffle } from "./random";
 import {
   DEFAULT_MISSIONS,
   DEFAULT_ROSTER,
-  DEFAULT_SETTINGS,
   DISPLAY_NAME_MAX,
   MAX_PLAYERS,
   MISSION_LIMITS,
@@ -25,6 +25,7 @@ import {
   validatePlayerCount,
   validateSettingValue,
   validateSettings,
+  withDefaults,
   type GameSettings,
   type GhostGame,
   type MissionTemplate,
@@ -74,6 +75,7 @@ const PHASE_LABEL: Record<Phase, string> = {
   LOBBY: "in the lobby",
   ROLES: "during the role reveal",
   MISSION: "during a mission",
+  PRIVATE_TALKS: "during private talks",
   CIRCLE_DEBATE: "during the debate",
   CIRCLE_VOTE: "while voting is open",
   CIRCLE_REVEAL: "during the vote reveal",
@@ -101,7 +103,7 @@ export interface CreateGameOptions {
 export function createGame(o: CreateGameOptions): GameState {
   if (!/^[A-Z0-9]{4,8}$/.test(o.code)) throw new Error("Room code must be 4 to 8 capital letters or digits.");
   if (!o.seed) throw new Error("A seed is required.");
-  const settings = settingsSchema.parse({ ...DEFAULT_SETTINGS, ...o.settings });
+  const settings = settingsSchema.parse(withDefaults(o.settings));
   const roster = o.roster ?? DEFAULT_ROSTER;
   if (roster.length > MAX_PLAYERS) throw new Error(`At most ${MAX_PLAYERS} players.`);
   const s: GameState = {
@@ -157,7 +159,7 @@ export function createGame(o: CreateGameOptions): GameState {
  * ghost games, new settings), so an older saved game keeps working. Mutates and returns the state.
  */
 export function normaliseState(s: GameState): GameState {
-  s.settings = { ...structuredClone(DEFAULT_SETTINGS), ...s.settings };
+  s.settings = withDefaults(s.settings);
   s.missionCatalogue ??= structuredClone([...DEFAULT_MISSIONS]);
   s.cohostId ??= null;
   s.screenMessage ??= null;
@@ -693,7 +695,8 @@ function startMission(ctx: Ctx, a: ActionOf<"startMission">): void {
   const template = a.templateId ? s.missionCatalogue.find((t) => t.id === a.templateId) : null;
   if (a.templateId && !template) fail("That mission isn't in the catalogue any more.");
   const name = cleanText(a.name, MISSION_LIMITS.name, "Mission name");
-  if (a.kind !== "team" && a.kind !== "individual") fail("A mission is a team game or an individual game.");
+  if (a.kind !== "team" && a.kind !== "individual" && a.kind !== "ghost") fail("A mission is a team game, an individual game or a ghost challenge.");
+  if (a.kind === "ghost") requireGhostMissionAllowed(s);
   const winRule = cleanText(a.winRule, MISSION_LIMITS.rule, "Win rule", true);
   const tieRule = cleanText(a.tieRule, MISSION_LIMITS.rule, "Tie rule", true);
   const howItWorks = cleanText(a.howItWorks ?? template?.howItWorks, MISSION_LIMITS.howItWorks, "How it works", true);
@@ -723,7 +726,10 @@ function setMissionWinners(ctx: Ctx, a: ActionOf<"setMissionWinners">): void {
   requireHostOrCohost(ctx);
   const m = requireActiveMission(ctx);
   const ids = distinctIds(ctx.s, a.playerIds, "winner");
-  for (const id of ids) if (!isAlive(getPlayer(ctx.s, id))) fail(`${nameOf(ctx.s, id)} is a ghost and can't win a mission.`);
+  for (const id of ids) {
+    if (m.kind === "ghost" && !isVisibleGhost(ctx.s, id)) fail(`${nameOf(ctx.s, id)} isn't a ghost; only ghosts play a ghost challenge.`);
+    if (m.kind !== "ghost" && !isAlive(getPlayer(ctx.s, id))) fail(`${nameOf(ctx.s, id)} is a ghost and can't win a mission.`);
+  }
   m.winnerIds = ids;
   log(ctx, `Mission "${m.name}" winners: ${names(ctx.s, ids)}`);
 }
@@ -746,6 +752,16 @@ function openRewardVote(ctx: Ctx, a: ActionOf<"openRewardVote">): void {
   const { s } = ctx;
   if (a.itemType !== "shield" && a.itemType !== "dagger") fail("The ability is a shield or a dagger.");
   const voters = distinctIds(s, a.voterIds, "winner");
+  if (m.kind === "ghost") {
+    // Ghost challenge won: the ghosts vote in private for any living player to receive it.
+    for (const id of voters) if (!isVisibleGhost(s, id)) fail(`${nameOf(s, id)} isn't a ghost; only ghosts vote after a ghost challenge.`);
+    const candidates = aliveIds(s).filter((id) => !heldItem(s, id, a.itemType));
+    if (!candidates.length) fail(`Nobody alive is free to receive the ${a.itemType}.`);
+    openRound(ctx, "reward", { voters, candidates, itemType: a.itemType, missionId: m.id, seconds: s.settings.rewardVoteSeconds });
+    voters.forEach((id) => emit(ctx, "rewardVoteOpened", toPlayer(id), { itemType: a.itemType }));
+    log(ctx, `Opened the ghosts' vote for a ${a.itemType} among ${names(s, voters)}`);
+    return;
+  }
   if (voters.length < 2) fail("A reward vote needs at least two winners.");
   for (const id of voters) if (!isAlive(getPlayer(s, id))) fail(`${nameOf(s, id)} is a ghost.`);
   const candidates = voters.filter((id) => !heldItem(s, id, a.itemType));
@@ -910,14 +926,45 @@ function tally(r: VoteRound, candidates: string[]): Record<string, number> {
   return totals;
 }
 
+/**
+ * Owner, 30 October: each day's Circle starts with private talks (players split up to talk), then the
+ * open discussion. From private talks, the same button (or the timer) opens the Circle.
+ */
 function openCircle(ctx: Ctx): void {
   requireHost(ctx);
+  const { s } = ctx;
+  if (s.phase === "PRIVATE_TALKS") {
+    log(ctx, "Ended private talks and opened the Circle of Shaq");
+    startDebate(ctx, true);
+    return;
+  }
   requireChoicePoint(ctx);
   closeMission(ctx);
+  if (s.settings.privateTalks) {
+    s.phase = "PRIVATE_TALKS";
+    setTimer(s, ctx.at, s.settings.privateTalksSeconds);
+    emit(ctx, "privateTalksStarted", PUBLIC, {});
+    log(ctx, "Started private talks");
+    return;
+  }
+  startDebate(ctx, false);
+  log(ctx, "Opened the Circle of Shaq");
+}
+
+/** afterTalks: phones alert everyone to come back from private talks. */
+function startDebate(ctx: Ctx, afterTalks: boolean): void {
   ctx.s.phase = "CIRCLE_DEBATE";
   setTimer(ctx.s, ctx.at, ctx.s.settings.debateSeconds);
-  emit(ctx, "circleOpened", PUBLIC, {});
-  log(ctx, "Opened the Circle of Shaq");
+  emit(ctx, "circleOpened", PUBLIC, { afterTalks });
+}
+
+/** Ghost challenges: from the morning set in settings (morning 1 is day 2), with at least one ghost. */
+function requireGhostMissionAllowed(s: GameState): void {
+  const morning = s.day - 1;
+  if (morning < s.settings.ghostMissionFromMorning) {
+    fail(`Ghost challenges start from morning ${s.settings.ghostMissionFromMorning}; this is ${morning < 1 ? "day 1" : `morning ${morning}`}.`);
+  }
+  if (!s.players.some((p) => isVisibleGhost(s, p.id))) fail("There are no ghosts yet.");
 }
 
 /**
@@ -1527,6 +1574,10 @@ function tick(ctx: Ctx): void {
   if (s.paused) fail("The game is paused.");
   if (s.deadline === null || ctx.at < s.deadline) fail("The timer hasn't run out yet.");
   switch (s.phase) {
+    case "PRIVATE_TALKS":
+      log(ctx, "Private talks timer ran out; the Circle opened");
+      startDebate(ctx, true);
+      return;
     case "CIRCLE_DEBATE":
       log(ctx, "Debate timer ran out; voting opened");
       startCircleVote(ctx);
@@ -1756,7 +1807,7 @@ function finale(ctx: Ctx, reason: string, early = false): void {
 
 function cleanTemplate(raw: ActionOf<"saveMissionTemplate">["template"], id: string): MissionTemplate {
   if (!raw || typeof raw !== "object") fail("The mission is missing.");
-  if (raw.kind !== "team" && raw.kind !== "individual") fail("A mission is a team game or an individual game.");
+  if (raw.kind !== "team" && raw.kind !== "individual" && raw.kind !== "ghost") fail("A mission is a team game, an individual game or a ghost challenge.");
   if (!Number.isInteger(raw.minutes) || raw.minutes < 1 || raw.minutes > MISSION_LIMITS.minutes) {
     fail(`Minutes: between 1 and ${MISSION_LIMITS.minutes}.`);
   }
@@ -1839,7 +1890,7 @@ function applyPreset(ctx: Ctx, a: ActionOf<"applyPreset">): void {
   requireHost(ctx);
   requirePhase(ctx, "LOBBY");
   const { s } = ctx;
-  const v = validateSettings({ ...DEFAULT_SETTINGS, ...a.settings }, s.players.length);
+  const v = validateSettings(withDefaults(a.settings), s.players.length);
   if (!v.ok) fail(v.errors.join(" "));
   if (!Array.isArray(a.missions) || a.missions.length > MISSION_LIMITS.max) fail("The preset's missions aren't valid.");
   const missions = a.missions.map((t) => cleanTemplate(t, typeof t.id === "string" && t.id ? t.id : newId(s, "t")));

@@ -40,6 +40,9 @@ describe("defaults (section 4.2)", () => {
       bingoMoments: DEFAULT_SETTINGS.bingoMoments,
       breakfastEntrance: true,
       entranceSeconds: 20,
+      privateTalks: true,
+      privateTalksSeconds: 600,
+      ghostMissionFromMorning: 2,
       narration: DEFAULT_SETTINGS.narration,
     });
     expect(DEFAULT_SETTINGS.bingoMoments.length).toBeGreaterThanOrEqual(9);
@@ -87,6 +90,9 @@ describe("defaults (section 4.2)", () => {
       "bingoMoments",
       "breakfastEntrance",
       "entranceSeconds",
+      "privateTalks",
+      "privateTalksSeconds",
+      "ghostMissionFromMorning",
       "narration",
     ] as const) {
       expect(SETTING_META[k].afterDealing).toBe("anyTime");

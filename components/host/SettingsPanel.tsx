@@ -32,6 +32,7 @@ const NARRATION_LABELS: Record<NarrationKey, string> = {
   lobby: "Lobby",
   roles: "Roles dealt",
   mission: "Mission",
+  talks: "Private talks",
   debate: "Debate",
   vote: "Voting",
   reveal: "Vote reveal",
@@ -94,6 +95,22 @@ export function SettingsPanel({ game }: { game: GameHandle }) {
         {GHOST_GAME_LABELS.map(([k, label, hint]) => (
           <Toggle key={k} label={label} hint={hint} checked={s.ghostGames[k]} onChange={(v) => set("ghostGames", { ...s.ghostGames, [k]: v })} />
         ))}
+      </Card>
+      <Card>
+        <p className="mb-1 font-semibold text-gold">Each day</p>
+        <Toggle label={SETTING_META.privateTalks.label} hint={SETTING_META.privateTalks.help} checked={s.privateTalks} onChange={(v) => set("privateTalks", v)} />
+        {s.privateTalks ? (
+          <Stepper label={SETTING_META.privateTalksSeconds.label} value={s.privateTalksSeconds} min={60} max={1800} step={60} format={clock} onChange={(v) => set("privateTalksSeconds", v)} />
+        ) : null}
+        <Stepper
+          label={SETTING_META.ghostMissionFromMorning.label}
+          hint={SETTING_META.ghostMissionFromMorning.help}
+          value={s.ghostMissionFromMorning}
+          min={1}
+          max={10}
+          format={(v) => (v === 1 ? "1st morning" : v === 2 ? "2nd morning" : v === 3 ? "3rd morning" : `${v}th morning`)}
+          onChange={(v) => set("ghostMissionFromMorning", v)}
+        />
       </Card>
       <GhostScoring game={game} />
       <Card>

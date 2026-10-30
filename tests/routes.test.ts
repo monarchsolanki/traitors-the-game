@@ -58,6 +58,12 @@ async function call(
 const state = (): GameState => globalThis.__fakeDb.tables.games.find((g) => g.code === code)!.state as GameState;
 const act = (token: string, as: "host" | "player" | "system", action: unknown, extra: Record<string, unknown> = {}) =>
   call(actionRoute.POST, { token, body: { as, key: key(), action, ...extra } });
+/** Opens the Circle; with private talks on (the default since 30 October) that takes two taps. */
+async function openCircle() {
+  const r = await act("host-a", "host", { type: "openCircle" });
+  if (state().phase === "PRIVATE_TALKS") return act("host-a", "host", { type: "openCircle" });
+  return r;
+}
 const PHONES = Array.from({ length: 12 }, (_, i) => `phone-${i + 1}`);
 const pid = (i: number) => `p${i + 1}`;
 
@@ -130,7 +136,7 @@ describe("view route: every viewer gets exactly its own view", () => {
     const t = traitors.map((id) => PHONES[Number(id.slice(1)) - 1]);
     const chat = await act(t[0], "player", { type: "sendChat", text: "secret-chat-zz9" });
     expect(`${chat.status} ${chat.body.error ?? ""}`).toBe("200 ");
-    await act("host-a", "host", { type: "openCircle" });
+    await openCircle();
     await act("host-a", "host", { type: "openVoting" });
     const innocent = Object.keys(state().roles).find((id) => state().roles[id] === "innocent")!;
     const vote = await act(t[0], "player", { type: "castVote", targetId: innocent });
@@ -317,7 +323,7 @@ describe("elimination, reconnecting and recovery", () => {
   it("a new phone takes the seat back with the PIN, mid-vote, and the ballot already cast stands", async () => {
     await seatEveryone();
     await act("host-a", "host", { type: "dealRoles" });
-    await act("host-a", "host", { type: "openCircle" });
+    await openCircle();
     await act("host-a", "host", { type: "openVoting" });
     expect((await act("phone-3", "player", { type: "castVote", targetId: "p5" })).status).toBe(200);
     globalThis.__fakeDb.addUser("phone-3-new", "u-phone-3-new", true);
@@ -354,7 +360,7 @@ describe("concurrency through the routes", () => {
     await seatEveryone();
     await act("host-a", "host", { type: "dealRoles" });
     await act("host-a", "host", { type: "updateSettings", patch: { suspectPoll: true } });
-    await act("host-a", "host", { type: "openCircle" });
+    await openCircle();
     await act("host-a", "host", { type: "openVoting" });
     const results = await Promise.all(PHONES.map((t, i) => act(t, "player", { type: "castVote", targetId: i === 0 ? "p2" : "p1" })));
     expect(results.filter((r) => r.status !== 200).map((r) => `${r.status} ${r.body.error}`)).toEqual([]);
@@ -376,7 +382,7 @@ describe("concurrency through the routes", () => {
   it("two host taps on the same screen at once: one lands, the other is refused as stale", async () => {
     await seatEveryone();
     await act("host-a", "host", { type: "dealRoles" });
-    await act("host-a", "host", { type: "openCircle" });
+    await openCircle();
     await act("host-a", "host", { type: "openVoting" });
     await act("phone-1", "player", { type: "castVote", targetId: "p2" });
     await act("phone-2", "player", { type: "castVote", targetId: "p1" });
@@ -399,7 +405,7 @@ describe("concurrency through the routes", () => {
   it("a storm of timer nudges from every screen applies one tick", async () => {
     await seatEveryone();
     await act("host-a", "host", { type: "dealRoles" });
-    await act("host-a", "host", { type: "openCircle" });
+    await openCircle();
     const g = globalThis.__fakeDb.tables.games[0];
     (g.state as GameState).deadline = Date.now() - 1000;
     const v = state().version;
@@ -447,7 +453,7 @@ describe("live reactions (Step 5)", () => {
     await seatEveryone();
     await act("host-a", "host", { type: "dealRoles" });
     await act("host-a", "host", { type: "eliminatePlayer", playerId: "p12", status: "banished", reason: "Test" });
-    await act("host-a", "host", { type: "openCircle" });
+    await openCircle();
   }
   const react = (token: string | undefined, emoji: string) => call(reactRoute.POST, { token, body: { emoji } });
 

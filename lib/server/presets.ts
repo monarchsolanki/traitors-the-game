@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes, randomUUID } from "node:crypto";
-import { DEFAULT_SETTINGS, type GameSettings, type MissionTemplate } from "@/lib/game/settings";
+import { withDefaults, type GameSettings, type MissionTemplate } from "@/lib/game/settings";
 import { createStoredGame, loadGame, runAction, runActionOrThrow, type StoredGame } from "./games";
 import { HttpError } from "./http";
 import { adminClient, PHOTO_BUCKET } from "./supabase";
@@ -109,7 +109,7 @@ export async function createGameFromPreset(userId: string, presetId: string): Pr
   try {
     game = await createStoredGame(userId, {
       roster: preset.roster.map((r) => ({ name: r.name, displayName: r.displayName })),
-      settings: { ...DEFAULT_SETTINGS, ...preset.settings },
+      settings: withDefaults(preset.settings),
       missions: preset.missions,
     });
   } catch (err) {
@@ -134,7 +134,7 @@ export async function applyPresetToGame(userId: string, game: StoredGame, preset
   return runAction(
     game.code,
     { kind: "host" },
-    { type: "applyPreset", settings: { ...DEFAULT_SETTINGS, ...preset.settings }, missions: preset.missions },
+    { type: "applyPreset", settings: withDefaults(preset.settings), missions: preset.missions },
     key,
   );
 }

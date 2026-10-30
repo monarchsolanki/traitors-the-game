@@ -46,9 +46,10 @@ describe("mission catalogue (section 7: missions are data the host edits in the 
   it("starts with the section 7 catalogue, team games first", () => {
     const g = lobby();
     expect(g.state.missionCatalogue).toEqual(DEFAULT_MISSIONS);
-    expect(g.state.missionCatalogue).toHaveLength(20);
+    expect(g.state.missionCatalogue).toHaveLength(23);
     expect(g.state.missionCatalogue.slice(0, 10).every((t) => t.kind === "team")).toBe(true);
-    expect(g.state.missionCatalogue.slice(10).every((t) => t.kind === "individual")).toBe(true);
+    expect(g.state.missionCatalogue.slice(10, 20).every((t) => t.kind === "individual")).toBe(true);
+    expect(g.state.missionCatalogue.slice(20).every((t) => t.kind === "ghost")).toBe(true);
   });
 
   it("the host adds, edits and removes missions; names stay unique; limits hold", () => {
@@ -140,7 +141,7 @@ describe("co-host (tier 2): missions and the big screen, never roles", () => {
     g.host({ type: "openRewardVote", itemType: "shield", voterIds: ["p5", "p6"] });
     g.by("p5", { type: "castRewardVote", targetId: "p6" });
     const v = viewFor(g.state, { kind: "cohost" });
-    expect(v.cohost!.catalogue).toHaveLength(20);
+    expect(v.cohost!.catalogue).toHaveLength(23);
     expect(v.cohost!.rewardVote).toEqual({ itemType: "shield", voterIds: ["p5", "p6"], votedIds: ["p5"] });
     expect(JSON.stringify(v)).not.toContain('"targetId":"p6"');
     expect(v.players.every((p) => p.role === null)).toBe(true);
@@ -376,10 +377,105 @@ describe("presets and older saved games", () => {
     delete m.howItWorks;
     delete m.templateId;
     const s = normaliseState(old as GameState);
-    expect(s.missionCatalogue).toHaveLength(20);
+    expect(s.missionCatalogue).toHaveLength(23);
     expect(s.settings.narration).toEqual(DEFAULT_SETTINGS.narration);
     expect(s.missions[0]).toMatchObject({ howItWorks: "", templateId: null });
     expect(s.ghostGames.bets).toEqual([]);
     expect(viewFor(s, { kind: "screen" }).screenMessage).toBeNull();
+  });
+});
+
+describe("private talks before each Circle (owner, 30 October)", () => {
+  it("'Go to the Circle' starts private talks; the host or the timer then opens the Circle, flagged so phones alert", () => {
+    const g = dealt(12, { settings: { privateTalks: true, privateTalksSeconds: 300 } });
+    g.host({ type: "openCircle" });
+    expect(g.phase).toBe("PRIVATE_TALKS");
+    expect(g.state.deadline).toBe(g.now + 300_000);
+    expect(g.state.events.at(-1)).toMatchObject({ type: "privateTalksStarted", audience: { kind: "public" } });
+    expect(g.no(HOST, { type: "openVoting" })).toMatch(/private talks/);
+    expect(g.no(HOST, { type: "startMission", name: "Late", kind: "team" })).toMatch(/private talks/);
+    noLeaks(g.state);
+    g.host({ type: "openCircle" });
+    expect(g.phase).toBe("CIRCLE_DEBATE");
+    expect(g.state.events.at(-1)).toMatchObject({ type: "circleOpened", data: { afterTalks: true } });
+  });
+
+  it("the timer running out opens the Circle too", () => {
+    const g = dealt(12, { settings: { privateTalks: true } });
+    g.host({ type: "openCircle" });
+    g.expire();
+    expect(g.phase).toBe("CIRCLE_DEBATE");
+    expect(g.state.events.at(-1)).toMatchObject({ type: "circleOpened", data: { afterTalks: true } });
+    expect(g.state.deadline).toBe(g.now + g.state.settings.debateSeconds * 1000);
+  });
+
+  it("switched off, the Circle opens at once and phones don't alert", () => {
+    const g = dealt();
+    g.host({ type: "openCircle" });
+    expect(g.phase).toBe("CIRCLE_DEBATE");
+    expect(g.state.events.at(-1)).toMatchObject({ type: "circleOpened", data: { afterTalks: false } });
+  });
+
+  it("ghosts can bet and use Crystal Ball during private talks", () => {
+    const g = ghostGame({ privateTalks: true });
+    murder(g, "p7");
+    g.host({ type: "openCircle" });
+    expect(g.phase).toBe("PRIVATE_TALKS");
+    g.by("p12", { type: "ghostBet", kind: "banish", targetId: "p5" });
+    g.by("p12", { type: "crystalBall", playerIds: ["p1", "p2", "p4"] });
+    noLeaks(g.state);
+  });
+});
+
+describe("ghost challenges (owner, 30 October): ghosts win an item for a living player", () => {
+  /** Morning 2 (day 3): p12 and p11 banished, p7 and p8 murdered. */
+  function secondMorning(settings = {}) {
+    const g = ghostGame(settings);
+    murder(g, "p7");
+    expect(g.no(HOST, { type: "startMission", name: "Ghost Tower", kind: "ghost" })).toMatch(/from morning 2/);
+    g.circle();
+    g.banish("p11");
+    murder(g, "p8");
+    expect(g.state.day).toBe(3);
+    return g;
+  }
+
+  it("not on day 1 or the first morning by default; any morning from the set one", () => {
+    const d = dealt();
+    expect(d.no(HOST, { type: "startMission", name: "Ghost Tower", kind: "ghost" })).toMatch(/from morning 2/);
+    const g = secondMorning();
+    g.host({ type: "startMission", name: "Ghost Tower", kind: "ghost" });
+    expect(g.state.missions.at(-1)).toMatchObject({ kind: "ghost", name: "Ghost Tower" });
+    const early = ghostGame({ ghostMissionFromMorning: 1 });
+    murder(early, "p7");
+    early.host({ type: "startMission", name: "Ghost Tower", kind: "ghost" });
+  });
+
+  it("the ghosts vote in private for any living player; the item goes to the top pick", () => {
+    const g = secondMorning();
+    g.host({ type: "startMission", name: "Ghost Tower", kind: "ghost" });
+    expect(g.no(HOST, { type: "openRewardVote", itemType: "shield", voterIds: ["p12", "p5"] })).toMatch(/isn't a ghost/);
+    expect(g.no(HOST, { type: "setMissionWinners", playerIds: ["p5"] })).toMatch(/isn't a ghost/);
+    g.host({ type: "setMissionWinners", playerIds: ["p12", "p7", "p11", "p8"] });
+    g.host({ type: "openRewardVote", itemType: "shield", voterIds: ["p12", "p7", "p11", "p8"] });
+    expect(g.round().candidateIds).toEqual(g.alive());
+    expect(viewFor(g.state, { kind: "player", playerId: "p12" }).me!.rewardVote).toMatchObject({ itemType: "shield", submitted: false });
+    expect(g.no(as("p5"), { type: "castRewardVote", targetId: "p6" })).toMatch(/winners/);
+    g.by("p12", { type: "castRewardVote", targetId: "p5" });
+    g.by("p7", { type: "castRewardVote", targetId: "p5" });
+    g.by("p11", { type: "castRewardVote", targetId: "p6" });
+    noLeaks(g.state);
+    g.by("p8", { type: "castRewardVote", targetId: "p5" });
+    expect(g.items("p5", "shield")).toHaveLength(1);
+    expect(g.state.events.filter((e) => e.type === "itemAwarded").at(-1)!.audience).toEqual({ kind: "player", playerId: "p5" });
+    noLeaks(g.state);
+  });
+
+  it("or the ghosts tell the host, who gives it directly", () => {
+    const g = secondMorning();
+    g.host({ type: "startMission", name: "Ghost Taste Test", kind: "ghost" });
+    g.host({ type: "awardItem", itemType: "dagger", playerIds: ["p6"] });
+    expect(g.items("p6", "dagger")).toHaveLength(1);
+    expect(g.no(HOST, { type: "awardItem", itemType: "dagger", playerIds: ["p12"] })).toMatch(/ghost/);
   });
 });

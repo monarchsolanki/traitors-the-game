@@ -13,7 +13,7 @@ const points = z.number().int().min(0).max(20);
 const line = (max: number) => z.string().trim().max(max);
 
 /** Big-screen narrator lines, one per stage (section 9.8). */
-export const NARRATION_KEYS = ["lobby", "roles", "mission", "debate", "vote", "reveal", "night", "breakfast", "endgame", "finale"] as const;
+export const NARRATION_KEYS = ["lobby", "roles", "mission", "talks", "debate", "vote", "reveal", "night", "breakfast", "endgame", "finale"] as const;
 export type NarrationKey = (typeof NARRATION_KEYS)[number];
 
 /** Emoji ghosts can float across the big screen (Live reactions). Never aimed at a player. */
@@ -56,6 +56,9 @@ export const settingSchemas = {
   bingoMoments: z.array(line(60).min(1)).min(BINGO_SIDE * BINGO_SIDE).max(40),
   breakfastEntrance: z.boolean(),
   entranceSeconds: seconds(5, 60),
+  privateTalks: z.boolean(),
+  privateTalksSeconds: seconds(60, 1800),
+  ghostMissionFromMorning: z.number().int().min(1).max(10),
   narration: z.object(Object.fromEntries(NARRATION_KEYS.map((k) => [k, line(140)])) as Record<NarrationKey, ReturnType<typeof line>>).strict(),
 } as const;
 
@@ -179,6 +182,17 @@ export const SETTING_META: Record<
     help: "Seconds for everyone to walk in. Phones wait this long before showing who died.",
     afterDealing: "anyTime",
   },
+  privateTalks: {
+    label: "Private talks before each Circle",
+    help: "Players split into small groups to talk in private; then the Circle of Shaq opens. Phones alert when it ends.",
+    afterDealing: "anyTime",
+  },
+  privateTalksSeconds: { label: "Private talks timer", help: "Seconds of private talks before each Circle.", afterDealing: "anyTime" },
+  ghostMissionFromMorning: {
+    label: "Ghost missions from morning",
+    help: "From this morning on, the host may run an offline challenge for ghosts; if they win, they give a shield or dagger to a living player.",
+    afterDealing: "anyTime",
+  },
   narration: {
     label: "Big-screen narrator lines",
     help: "The line under each stage's title on the big screen.",
@@ -228,10 +242,14 @@ export const DEFAULT_SETTINGS: GameSettings = {
   ],
   breakfastEntrance: true,
   entranceSeconds: 20,
+  privateTalks: true,
+  privateTalksSeconds: 600,
+  ghostMissionFromMorning: 2,
   narration: {
     lobby: "Scan to join. Tap your photo and choose a PIN.",
     roles: "Look at your role in secret. Trust no one.",
     mission: "A mission is under way.",
+    talks: "Private talks. Split up, whisper, plot. The Circle opens when the timer ends.",
     debate: "The Circle of Shaq is open. Speak your suspicions.",
     vote: "Vote on your phone. Votes can't be changed.",
     reveal: "The votes, one by one.",
@@ -262,7 +280,8 @@ export const DEFAULT_ROSTER: ReadonlyArray<{ name: string; displayName: string }
 export interface MissionTemplate {
   id: string;
   name: string;
-  kind: "team" | "individual";
+  /** ghost: an offline challenge for the ghosts; if they win, they give the ability to a living player. */
+  kind: "team" | "individual" | "ghost";
   howItWorks: string;
   minutes: number;
   props: string;
@@ -275,7 +294,7 @@ export interface MissionTemplate {
 
 export const MISSION_LIMITS = { max: 60, name: 60, howItWorks: 300, props: 120, rule: 200, traitorAngle: 200, minutes: 120 } as const;
 
-/** The mission catalogue from section 7: team games first, then individual games. */
+/** The mission catalogue from section 7: team games, individual games, then ghost challenges (owner, 30 October). */
 export const DEFAULT_MISSIONS: ReadonlyArray<MissionTemplate> = [
   { id: "dumb-charades", name: "Bhoot-Bollywood Dumb Charades", kind: "team", howItWorks: "Two teams act out horror and thriller film titles.", minutes: 20, props: "Title chits, phone timer", winRule: "Most titles guessed in the time wins", tieRule: "One sudden-death title each", reward: "shield", traitorAngle: "Act badly on purpose" },
   { id: "antakshari", name: "Antakshari", kind: "team", howItWorks: "Teams take turns singing a song that starts with the last letter of the one before.", minutes: 15, props: "None", winRule: "The last team still singing wins", tieRule: "One more round", reward: "shield", traitorAngle: "Blank on easy songs" },
@@ -297,7 +316,22 @@ export const DEFAULT_MISSIONS: ReadonlyArray<MissionTemplate> = [
   { id: "lemon-spoon", name: "Lemon and Spoon Race", kind: "individual", howItWorks: "Race with a lemon on a spoon held in your mouth.", minutes: 10, props: "Spoons, lemons", winRule: "First across the line wins", tieRule: "Rerun between the tied", reward: "shield", traitorAngle: "" },
   { id: "ring-toss", name: "Ring Toss", kind: "individual", howItWorks: "Toss rings onto bottles.", minutes: 10, props: "Rings, bottles", winRule: "Most rings wins", tieRule: "Sudden death, one ring each", reward: "shield", traitorAngle: "" },
   { id: "buzzer-quiz", name: "Buzzer Quiz", kind: "individual", howItWorks: "The host reads quick-fire questions; the first correct answer scores.", minutes: 10, props: "Question list", winRule: "Most points wins", tieRule: "First to the next answer", reward: "dagger", traitorAngle: "" },
+  { id: "ghost-memory-tray", name: "Ghost Memory Tray", kind: "ghost", howItWorks: "The ghosts study 20 items on a tray for 45 seconds, then list them together in 2 minutes.", minutes: 5, props: "Tray, 20 small items, paper", winRule: "The ghosts win if they name 14 or more", tieRule: "", reward: "shield", traitorAngle: "" },
+  { id: "ghost-tower", name: "Ghost Tower", kind: "ghost", howItWorks: "The ghosts build one free-standing tower from cups, or spaghetti and marshmallows, in 3 minutes.", minutes: 5, props: "Cups, or spaghetti and marshmallows; a measuring tape", winRule: "The ghosts win if it stands 40 cm or taller for 5 seconds", tieRule: "", reward: "dagger", traitorAngle: "" },
+  { id: "ghost-taste-test", name: "Ghost Taste Test", kind: "ghost", howItWorks: "Blindfolded, the ghosts taste 7 mithai, chips or drinks and name them together.", minutes: 5, props: "7 snacks, blindfold", winRule: "The ghosts win if they name 5 of the 7", tieRule: "", reward: "shield", traitorAngle: "" },
 ];
+
+/** Settings with every missing key (and nested key) filled from the defaults: older games and presets. */
+export function withDefaults(raw: Partial<GameSettings> = {}): GameSettings {
+  const d = DEFAULT_SETTINGS;
+  return {
+    ...structuredClone(d),
+    ...raw,
+    ghostGames: { ...d.ghostGames, ...raw.ghostGames },
+    ghostPoints: { ...d.ghostPoints, ...raw.ghostPoints },
+    narration: { ...d.narration, ...raw.narration },
+  };
+}
 
 export function maxTraitors(playerCount: number): number {
   return Math.floor(playerCount / 3);
