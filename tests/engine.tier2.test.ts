@@ -14,9 +14,11 @@ function noLeaks(s: GameState) {
   for (const v of allViewers(s)) expect(findLeaks(s, v)).toEqual([]);
 }
 
-/** Day 1: p12 banished, now night. Traitors are p1, p2, p3. */
+const ALL_GHOST_GAMES = { bhootBets: true, crystalBall: true, liveReactions: true, bhootBingo: true };
+
+/** Day 1: p12 banished, now night. Traitors are p1, p2, p3. The ghost side games are switched on (off by default). */
 function ghostGame(settings = {}): G {
-  const g = dealt(12, { settings });
+  const g = dealt(12, { settings: { ghostGames: ALL_GHOST_GAMES, ...settings } });
   g.circle();
   g.banish("p12");
   expect(g.phase).toBe("NIGHT");
@@ -233,8 +235,19 @@ describe("ghost games (section 8): score-only, for ghosts only", () => {
     noLeaks(g.state);
   });
 
-  it("a bet on 'nobody dies' wins on a shield save, and the bet never says why", () => {
+  it("off by default except Live reactions (owner, 30 October): the rest wait for the host", () => {
     const g = dealt();
+    g.circle();
+    g.banish("p12");
+    expect(ghostsOf(g, "p12")).toMatchObject({ bets: null, crystalBall: null, bingo: null, reactions: { open: false } });
+    expect(g.no(as("p12"), { type: "ghostBet", kind: "murder", targetId: "p7" })).toMatch(/switched off/);
+    g.host({ type: "updateSettings", patch: { ghostGames: { bhootBets: true, crystalBall: false, liveReactions: false, bhootBingo: false } } });
+    expect(ghostsOf(g, "p12")!.bets).not.toBeNull();
+    g.by("p12", { type: "ghostBet", kind: "murder", targetId: "p7" });
+  });
+
+  it("a bet on 'nobody dies' wins on a shield save, and the bet never says why", () => {
+    const g = dealt(12, { settings: { ghostGames: ALL_GHOST_GAMES } });
     g.host({ type: "startMission", name: "Ring Toss", kind: "individual" });
     g.host({ type: "awardItem", itemType: "shield", playerIds: ["p7"] });
     g.circle();

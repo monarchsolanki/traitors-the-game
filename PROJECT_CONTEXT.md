@@ -179,7 +179,7 @@ The keys are final as of Step 1 and live in `lib/game/settings.ts` (each with it
 | Tie rule | `tieRule` | `revote` | `revote` (revotes between the tied players, then the host chooses), `spin` (a spin at once), `hostDecides` | Override |
 | Revotes before the host may spin | `tieRevotesBeforeChoice` | 2 | 1 to 5 | Override |
 | Decoy suspect poll | `suspectPoll` | on | on, off | Any time |
-| Ghost games | `ghostGames` | all on: `bhootBets`, `crystalBall`, `liveReactions`, `bhootBingo` | any combination, including none | Any time |
+| Ghost games | `ghostGames` | only `liveReactions` on; `bhootBets`, `crystalBall`, `bhootBingo` off until the host switches them on (owner, 30 October) | any combination, including none | Any time |
 | Ghost vote | `ghostVote` | on | on, off | Override |
 | Eliminated players win with their team | `eliminatedWinWithTeam` | on | on, off | Override |
 | Debate timer | `debateSeconds` | 720 (12 min) | 60 to 1800 | Any time |
@@ -520,7 +520,7 @@ Run this with real phones before 31 October, following the run sheet above. Tick
 - [x] Supabase: the anonymous sign-in limit is raised (Authentication, then Rate Limits; about 150 an hour; done by the owner on 27 October), since every phone shares the villa's internet address.
 - [ ] The TV opens the big screen on its own (TV browser → `traitors-the-game.vercel.app/tv`, type the room code; 18.4); Full screen on; Sound on (tap it once; the browser needs a tap before it plays sound); the screen stays awake.
 - [ ] The host is signed in on their phone (and a second device signed in too, as a backup).
-- [ ] The game is created (or started from the saved preset), with every player's photo and display name checked; settings checked (3 Traitors, dagger ×2, End Game auto, recruitment on, ghost vote on, timers, ghost games on).
+- [ ] The game is created (or started from the saved preset), with every player's photo and display name checked; settings checked (3 Traitors, dagger ×2, End Game auto, recruitment on, ghost vote on, timers; Live reactions on, and the other ghost games only if you want them).
 - [x] No co-host: the host runs everything (owner, 27 October). The co-host feature stays available if that changes.
 - [ ] Props for the missions you might run are ready (section 7).
 
@@ -592,7 +592,7 @@ Missions are optional: after each murder reveal the host decides whether to run 
 
 ## 8. Ghost mode
 
-**Version 1 (owner's call, 26 October):** a ghost spectator screen (public event feed), **every** score-only ghost game below (each a host toggle, default on), and **one ghost power: the ghost vote** (Dead Vote). No other power that affects the living game.
+**Version 1 (owner's call, 26 October):** a ghost spectator screen (public event feed), **every** score-only ghost game below (each a host toggle; since 30 October only Live reactions is on by default), and **one ghost power: the ghost vote** (Dead Vote). No other power that affects the living game.
 
 Murdered and banished players stay ghosts until the final reveal and never learn who the Traitors are. Their phones switch to the ghost screen and its side games. Score-only games never touch the living game; ghost powers do, lightly, so they're picked with care.
 
@@ -626,7 +626,7 @@ Murdered and banished players stay ghosts until the final reveal and never learn
 - ~~Ghosts don't discuss the game with living players.~~ Replaced 30 October: ghosts join every discussion. Eliminated Traitors know every role, so their talk can now steer the living.
 - The top-scoring ghost wins Best Ghost at Sunday breakfast.
 
-**How it's built (Step 5, 27 October).** Every score-only game is built, each behind its own switch (default on): Bhoot Bets (banishment and murder bets, plus Traitor calls), Crystal Ball, Live reactions and Bhoot Bingo. Exact rules are in 5.10. A ghost's phone has two tabs, "Ghost games" and "What's happening" (the public feed), with the ghost vote above them when it can be used. Points are settings (`ghostPoints`); Best Ghost appears at the final reveal on every screen.
+**How it's built (Step 5, 27 October).** Every score-only game is built, each behind its own switch (since 30 October only Live reactions starts on; the host switches the others on in Settings): Bhoot Bets (banishment and murder bets, plus Traitor calls), Crystal Ball, Live reactions and Bhoot Bingo. Exact rules are in 5.10. A ghost's phone has two tabs, "Ghost games" and "What's happening" (the public feed), with the ghost vote above them when it can be used. Points are settings (`ghostPoints`); Best Ghost appears at the final reveal on every screen.
 
 ---
 
@@ -1034,6 +1034,7 @@ All decisions dated 26 October 2026 unless noted.
 | Requests carry the access token (26 Oct, Step 2) | The browser sends its Supabase access token on each request; no cookie session or proxy | Simplest reliable setup with Cache Components on; the server verifies every request |
 | Vercel region (26 Oct, Step 2; updated 27 Oct) | Server functions run in Mumbai (`bom1`), next to the database, set in the Vercel project settings (Settings → Functions). A `vercel.json` with `regions` stopped Vercel creating deployments at all on 26 October, so it was removed | Vercel's default region is in the US; every game action would otherwise cross the world twice |
 | Big screen holds results (27 Oct, Step 3) | A banishment, murder reveal or End Game result stays on the big screen for 20 seconds, and a spin plays for 4.5 seconds, timed from when the screen first sees it (a screen opened later doesn't replay old results). Phones show "X was banished" for a minute after | The engine moves straight to night after a banishment, so without this the room would never see who went |
+| Ghost side games off by default, except Live reactions (30 Oct) | Nothing a player or ghost plays starts without the host: missions and ghost challenges already wait for the host; Bhoot Bets, Crystal Ball and Bhoot Bingo now start off (the host can switch any on in Settings); Live reactions stays on. Best Ghost shows only if someone scored. The night suspect poll stays on: it isn't a game but the decoy that keeps Traitors' phones looking like everyone else's | Owner's request |
 | Private talks, ghosts in discussions, ghost challenges, TV (30 Oct) | Each Circle starts with private talks (on by default, 10 minutes, ended by the host or the timer, phones alert when they end); ghosts take part in every discussion (replaces the party rule); from the second morning the host may run a ghost challenge whose prize, if the ghosts win, goes to a living player the ghosts choose (they vote on their phones, or tell the host); three ghost challenges added to the catalogue, all 20 missions kept; the TV opens the big screen on its own through `/tv`. Phone alert only when private talks end | Owner's changes, 30 October. Note: this adds a second ghost power that affects the living game (earlier only the ghost vote) |
 | Open decisions settled (27 Oct) | The owner answered every open decision in section 16: keep the section 17 ideas for later; pick missions on the night from the catalogue; no co-host (the host runs everything); keep the ghost-game details as built; recruitment on; the ghost vote also in tie revotes and End Game banishments (never the End or Banish choice); confirmed the three rule flags (2 players left ends the game, a unanimous sacrifice ignores the target's own pick, a missing End Game ballot blocks End); no time constraint on the run sheet | Owner's answers, 27 October |
 | Recruitment on (27 Oct, replaces "stays off by default") | The default is now `lastTraitor`: when one Traitor is left, they may recruit an Innocent instead of murdering. Games created earlier keep their own setting | Owner's decision; gate tests pass |

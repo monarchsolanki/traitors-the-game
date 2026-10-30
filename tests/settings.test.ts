@@ -27,7 +27,7 @@ describe("defaults (section 4.2)", () => {
       tieRule: "revote",
       tieRevotesBeforeChoice: 2,
       suspectPoll: true,
-      ghostGames: { bhootBets: true, crystalBall: true, liveReactions: true, bhootBingo: true },
+      ghostGames: { bhootBets: false, crystalBall: false, liveReactions: true, bhootBingo: false },
       ghostVote: true,
       eliminatedWinWithTeam: true,
       debateSeconds: 720,

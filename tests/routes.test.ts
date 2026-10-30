@@ -453,6 +453,8 @@ describe("live reactions (Step 5)", () => {
     await seatEveryone();
     await act("host-a", "host", { type: "dealRoles" });
     await act("host-a", "host", { type: "eliminatePlayer", playerId: "p12", status: "banished", reason: "Test" });
+    const ghostGames = { bhootBets: true, crystalBall: true, liveReactions: true, bhootBingo: true };
+    await act("host-a", "host", { type: "updateSettings", patch: { ghostGames } });
     await openCircle();
   }
   const react = (token: string | undefined, emoji: string) => call(reactRoute.POST, { token, body: { emoji } });

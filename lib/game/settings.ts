@@ -212,7 +212,8 @@ export const DEFAULT_SETTINGS: GameSettings = {
   tieRule: "revote",
   tieRevotesBeforeChoice: 2,
   suspectPoll: true,
-  ghostGames: { bhootBets: true, crystalBall: true, liveReactions: true, bhootBingo: true },
+  // Owner, 30 October: the ghost side games start off (switch each on in Settings), except Live reactions.
+  ghostGames: { bhootBets: false, crystalBall: false, liveReactions: true, bhootBingo: false },
   ghostVote: true,
   eliminatedWinWithTeam: true,
   debateSeconds: 720,

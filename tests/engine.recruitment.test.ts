@@ -54,6 +54,7 @@ describe("recruitment gate tests", () => {
 
   it("with ghost games: nothing leaks while the offer waits, and a bet on 'nobody dies' pays without saying why", () => {
     const g = lastTraitorNight();
+    g.host({ type: "updateSettings", patch: { ghostGames: { bhootBets: true, crystalBall: true, liveReactions: true, bhootBingo: true } } });
     // p2, the banished Traitor, is a ghost; give the ghosts an Innocent too.
     g.host({ type: "eliminatePlayer", playerId: "p12", status: "left", reason: "Went home" });
     g.by("p12", { type: "ghostBet", kind: "murder", targetId: null });

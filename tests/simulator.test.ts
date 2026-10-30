@@ -9,6 +9,13 @@ const COUNTS = [5, 10, 11, 12, 20];
 
 const PROFILES: Array<{ name: string; settings: (n: number) => Partial<GameSettings>; mission: number; shield: number; chaos: number }> = [
   { name: "party defaults", settings: (n) => ({ traitorCount: Math.min(3, Math.floor(n / 3)) }), mission: 0.6, shield: 0.5, chaos: 0 },
+  {
+    name: "party defaults with every ghost game on",
+    settings: (n) => ({ traitorCount: Math.min(3, Math.floor(n / 3)), ghostGames: { bhootBets: true, crystalBall: true, liveReactions: true, bhootBingo: true } }),
+    mission: 0.6,
+    shield: 0.5,
+    chaos: 0,
+  },
   { name: "no missions", settings: (n) => ({ traitorCount: Math.min(3, Math.floor(n / 3)) }), mission: 0, shield: 0, chaos: 0 },
   { name: "shields everywhere, low threshold (long games)", settings: (n) => ({ traitorCount: Math.max(1, Math.floor(n / 6)), endGameThreshold: 2 }), mission: 1, shield: 1, chaos: 0 },
   { name: "high threshold (short games)", settings: (n) => ({ traitorCount: 1, endGameThreshold: n - 1 }), mission: 0.3, shield: 0.5, chaos: 0 },
@@ -33,7 +40,13 @@ const PROFILES: Array<{ name: string; settings: (n: number) => Partial<GameSetti
     shield: 0.5,
     chaos: 0,
   },
-  { name: "chaos: host overrides, pauses, players leaving", settings: (n) => ({ traitorCount: Math.floor(n / 3), recruitment: "lastTraitor" }), mission: 0.6, shield: 0.5, chaos: 0.08 },
+  {
+    name: "chaos: host overrides, pauses, players leaving",
+    settings: (n) => ({ traitorCount: Math.floor(n / 3), recruitment: "lastTraitor", ghostGames: { bhootBets: true, crystalBall: true, liveReactions: false, bhootBingo: true } }),
+    mission: 0.6,
+    shield: 0.5,
+    chaos: 0.08,
+  },
   {
     name: "heavy chaos with unanimous and host ties",
     settings: (n) => ({ traitorCount: Math.max(1, Math.floor(n / 4)), murderRule: "unanimous", tieRule: "hostDecides", recruitment: "lastTraitor", endGameThreshold: 2 }),

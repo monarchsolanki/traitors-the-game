@@ -669,11 +669,11 @@ function FinaleControls({ game }: { game: GameHandle }) {
         <p className="text-ink-muted">{f.reason}</p>
         <p className="mt-2">Winners: {names(game, f.winnerIds)}</p>
       </Card>
-      {f.ghostScores.length ? (
+      {f.ghostScores.some((g) => g.total > 0) ? (
         <Card>
           <p className="mb-2 font-semibold text-gold">Best Ghost</p>
           <ol className="flex flex-col gap-1">
-            {f.ghostScores.map((g, i) => (
+            {f.ghostScores.filter((g) => g.total > 0).map((g, i) => (
               <li key={g.playerId} className="flex justify-between gap-2">
                 <span>
                   {i + 1}. {playerById(view, g.playerId)?.displayName}
