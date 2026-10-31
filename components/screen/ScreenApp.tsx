@@ -10,6 +10,7 @@ import { Countdown } from "@/components/ui/Countdown";
 import { Diya } from "@/components/ui/Diya";
 import { Toran } from "@/components/ui/Toran";
 import { Entrance } from "./Entrance";
+import { FitBox } from "./FitBox";
 import { PhotoWall } from "./PhotoWall";
 import { QrCode } from "./QrCode";
 import { Reactions } from "./Reactions";
@@ -56,7 +57,7 @@ function Lobby({ game }: { game: GameHandle }) {
   const url = typeof window !== "undefined" ? `${window.location.origin}/play/${view.code}` : "";
   const joined = view.players.filter((p) => p.seatClaimed).length;
   return (
-    <div className="grid w-full flex-1 grid-cols-1 items-center gap-[4vw] lg:grid-cols-[auto_1fr]">
+    <div className="grid w-full flex-1 grid-cols-1 items-center gap-[4vw] landscape:grid-cols-[auto_1fr]">
       <div className="flex flex-col items-center gap-[2vh]">
         <p className="text-[min(2.4vw,2.4rem)] text-ink">{view.settings.narration.lobby || "Scan to join"}</p>
         <QrCode value={url} className="size-[min(32vh,26vw)]" />
@@ -113,7 +114,7 @@ function Reveal({ game, round }: { game: GameHandle; round: RoundView }) {
   const target = latest?.targetId ? byId(view, latest.targetId) : undefined;
   const endgame = round.kind === "endgame";
   return (
-    <div className="grid w-full flex-1 grid-cols-1 gap-[4vw] lg:grid-cols-2">
+    <div className="grid w-full flex-1 grid-cols-1 gap-[4vw] landscape:grid-cols-2">
       <div className="flex flex-col items-center justify-center gap-[3vh]">
         <p className="text-[min(2.2vw,2.2rem)] text-ink-muted">
           Vote {round.ballots.length} of {round.ballotCount ?? round.ballots.length}
@@ -236,7 +237,7 @@ function Finale({ game }: { game: GameHandle }) {
         <Big className={f.winner === "traitors" ? "!text-kumkum" : ""}>{f.winner === "traitors" ? "The Traitors win" : "The Innocents win"}</Big>
       </div>
       <PhotoWall game={game} players={view.players} size="sm" flip />
-      <div className="grid w-full max-w-[80vw] grid-cols-1 gap-[3vw] lg:grid-cols-2">
+      <div className="grid w-full max-w-[80vw] grid-cols-1 gap-[3vw] landscape:grid-cols-2">
         {suspects.length ? (
           <div className="flex flex-col gap-[1vh]">
             <p className="text-[min(2vw,2rem)] text-gold">The suspicion meter</p>
@@ -436,7 +437,7 @@ export function ScreenApp({ code }: { code: string }) {
   }
   if (!view) return <main className="flex min-h-dvh items-center justify-center text-[2vw] text-ink-muted">Opening the big screen…</main>;
   return (
-    <div className="relative flex min-h-dvh flex-col overflow-hidden px-[4vw] pt-[6vh] pb-[3vh]">
+    <div className="relative flex h-screen flex-col overflow-hidden px-[4vw] pt-[6vh] pb-[4vh]">
       <Toran className="absolute inset-x-0 top-0" />
       <header className="flex items-center justify-between text-[min(1.8vw,1.8rem)] text-ink-muted">
         <span>
@@ -458,8 +459,10 @@ export function ScreenApp({ code }: { code: string }) {
           </button>
         </span>
       </header>
-      <main className="flex flex-1 flex-col items-center justify-center py-[3vh]">
-        <Stage game={game} />
+      <main className="flex min-h-0 flex-1 flex-col py-[2vh]">
+        <FitBox>
+          <Stage game={game} />
+        </FitBox>
       </main>
       <ScreenMessage game={game} />
       <BingoToast game={game} />
