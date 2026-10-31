@@ -101,6 +101,9 @@ export function SettingsPanel({ game }: { game: GameHandle }) {
         <Toggle label={SETTING_META.traitorChat.label} hint={help("traitorChat")} checked={s.traitorChat} disabled={locked("traitorChat")} onChange={(v) => set("traitorChat", v)} />
         <Toggle label={SETTING_META.revealOnElimination.label} hint={help("revealOnElimination")} checked={s.revealOnElimination} disabled={locked("revealOnElimination")} onChange={(v) => set("revealOnElimination", v)} />
         <Segmented label={SETTING_META.recruitment.label} hint={help("recruitment")} value={s.recruitment} disabled={locked("recruitment")} options={[{ value: "off", label: "Off" }, { value: "lastTraitor", label: "Last Traitor may recruit" }]} onChange={(v) => set("recruitment", v)} />
+        {s.recruitment === "lastTraitor" ? (
+          <Stepper label={SETTING_META.recruitOffersPerNight.label} hint={help("recruitOffersPerNight")} value={s.recruitOffersPerNight} min={1} max={5} disabled={locked("recruitOffersPerNight")} onChange={(v) => set("recruitOffersPerNight", v)} />
+        ) : null}
         <Toggle label={SETTING_META.eliminatedWinWithTeam.label} hint={help("eliminatedWinWithTeam")} checked={s.eliminatedWinWithTeam} disabled={locked("eliminatedWinWithTeam")} onChange={(v) => set("eliminatedWinWithTeam", v)} />
       </Card>
       <Card>

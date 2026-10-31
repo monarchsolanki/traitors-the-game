@@ -308,6 +308,7 @@ const RULE_KEYS: SettingKey[] = [
   "traitorChat",
   "revealOnElimination",
   "recruitment",
+  "recruitOffersPerNight",
   "ghostVote",
   "eliminatedWinWithTeam",
 ];
@@ -341,6 +342,7 @@ function RuleFix({ game }: { game: GameHandle }) {
     else if (key === "daggerWeight") control = <Segmented label="Dagger" value={Number(cur)} options={[{ value: 2, label: "×2" }, { value: 3, label: "×3" }]} onChange={setValue} />;
     else if (key === "murderRule") control = <Segmented label="Murder rule" value={String(cur)} options={[{ value: "majority", label: "Majority" }, { value: "unanimous", label: "Unanimous" }]} onChange={setValue} />;
     else if (key === "tieRule") control = <Segmented label="Tie rule" value={String(cur)} options={[{ value: "revote", label: "Revote" }, { value: "spin", label: "Spin at once" }, { value: "hostDecides", label: "I decide" }]} onChange={setValue} />;
+    else if (key === "recruitOffersPerNight") control = <Stepper label="Offers" value={Number(cur)} min={1} max={5} onChange={setValue} />;
     else if (key === "recruitment") control = <Segmented label="Recruitment" value={String(cur)} options={[{ value: "off", label: "Off" }, { value: "lastTraitor", label: "Last Traitor" }]} onChange={setValue} />;
   }
   return (

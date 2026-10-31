@@ -72,6 +72,11 @@ export function findLeaks(s: GameState, viewer: Viewer): string[] {
   const offer = night?.recruit;
   if (v.me?.recruitOffer && (!offer || offer.targetId !== me)) add("recruit offer shown to the wrong player");
   if (v.traitor?.night?.offer && (!offer || offer.traitorId !== me)) add("recruit offer shown to the wrong Traitor");
+  for (const a of v.traitor?.offerAnswers ?? []) {
+    const mine =
+      !!night?.refused.some((r) => r.traitorId === me && r.targetId === a.playerId) || (offer?.traitorId === me && offer.targetId === a.playerId);
+    if (!mine) add("another Traitor's recruit answers shown");
+  }
 
   if (v.me) {
     const mine = new Set(s.items.filter((i) => i.holderId === me).map((i) => i.id));

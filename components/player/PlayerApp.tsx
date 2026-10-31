@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { PHASE_TITLE } from "@/lib/client/labels";
 import { useGame } from "@/lib/client/useGame";
@@ -29,6 +29,44 @@ import {
 } from "./PhaseScreens";
 import { RoleCard } from "./RoleCard";
 import { playerById } from "./shared";
+
+/**
+ * Owner, 1 November: the last Traitor hears how each recruit offer went. A refusal sends them back to
+ * pick again; an acceptance shows at breakfast. Android phones also buzz (iPhones can't from a website).
+ */
+function OfferNews({ game }: { game: ReturnType<typeof useGame> }) {
+  const view = game.view!;
+  const answers = view.traitor?.offerAnswers ?? [];
+  const last = answers[answers.length - 1];
+  const key = last ? `${answers.length}:${last.playerId}:${last.answer}` : "";
+  const seen = useRef(key);
+  useEffect(() => {
+    if (key && key !== seen.current) {
+      try {
+        navigator.vibrate?.([300, 150, 300]);
+      } catch {
+        // Not supported (iPhone): the card does the job.
+      }
+    }
+    seen.current = key;
+  }, [key]);
+  if (!last) return null;
+  const name = playerById(view, last.playerId)?.displayName ?? "Your recruit";
+  if (last.answer === "accepted") {
+    return (
+      <div className="mb-4">
+        <Notice title="Recruitment done">{name} said yes and is now a Traitor with you.</Notice>
+      </div>
+    );
+  }
+  return (
+    <div className="mb-4">
+      <Notice title={last.answer === "refused" ? `${name} said no` : `${name} didn't answer in time`}>
+        {view.traitor?.night?.recruitmentAvailable ? "Pick again: murder someone, or send an offer to someone else." : "Pick someone to murder."}
+      </Notice>
+    </div>
+  );
+}
 
 /** A banishment moves the game straight on, so phones say who went for a minute afterwards. */
 function RecentNews({ game }: { game: ReturnType<typeof useGame> }) {
@@ -159,6 +197,7 @@ export function PlayerApp({ code }: { code: string }) {
           </div>
         ) : null}
         {game.seated ? <RecentNews game={game} /> : null}
+        {game.seated && !view.paused ? <OfferNews game={game} /> : null}
         {game.seated && me?.isCohost && view.phase !== "FINALE" ? (
           <Link href={`/cohost/${view.code}`} className="mb-4 block rounded-2xl bg-gold/10 px-4 py-3 text-center text-gold ring-1 ring-gold/30">
             You&apos;re the co-host · open the co-host controls

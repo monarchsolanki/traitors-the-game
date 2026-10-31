@@ -84,8 +84,10 @@ export function botMove(
       if (!night.picks[playerId] || rand() < 0.1) {
         const traitorsAlive = alive.filter((id) => s.roles[id] === "traitor");
         const innocents = others.filter((id) => s.roles[id] === "innocent");
-        if (s.settings.recruitment === "lastTraitor" && traitorsAlive.length === 1 && innocents.length && rand() < 0.4) {
-          return { type: "nightPick", targetId: pickOne(innocents, rand), mode: "recruit" };
+        const recruitable = innocents.filter((id) => !night.refused.some((r) => r.targetId === id));
+        const canOffer = night.refused.length < s.settings.recruitOffersPerNight;
+        if (s.settings.recruitment === "lastTraitor" && traitorsAlive.length === 1 && canOffer && recruitable.length && rand() < 0.4) {
+          return { type: "nightPick", targetId: pickOne(recruitable, rand), mode: "recruit" };
         }
         const pool = s.settings.allowTraitorOnTraitor ? others : innocents;
         if (!pool.length) return null;

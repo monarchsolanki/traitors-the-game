@@ -360,7 +360,7 @@ export function NightScreen({ game }: { game: GameHandle }) {
         <Heading title="Night falls" />
         <Card className="flex flex-col items-center gap-4 text-center">
           <p className="font-display text-3xl text-kumkum">The Traitors want you</p>
-          <p className="text-ink">Join them and become a Traitor, or refuse. If you refuse, nobody dies tonight.</p>
+          <p className="text-ink">Join them and become a Traitor, or refuse. Nobody else sees your answer.</p>
           <Countdown deadline={me.recruitOffer.deadline} pausedRemainingMs={null} now={game.now} className="text-3xl" />
           <ErrorLine message={error} />
           <Button variant="danger" busy={busy} onClick={() => send({ type: "answerRecruit", accept: true })}>
@@ -385,7 +385,12 @@ export function NightScreen({ game }: { game: GameHandle }) {
         </div>
       );
     }
-    const pool = others.filter((p) => (recruitMode ? !(tv.fellowTraitorIds.includes(p.id)) : view.settings.allowTraitorOnTraitor || !tv.fellowTraitorIds.includes(p.id)));
+    // An offer that was turned down can't go to the same player again tonight.
+    const recruiting = recruitMode && night.recruitmentAvailable;
+    const turnedDown = new Set(tv.offerAnswers.map((x) => x.playerId));
+    const pool = others.filter((p) =>
+      recruiting ? !tv.fellowTraitorIds.includes(p.id) && !turnedDown.has(p.id) : view.settings.allowTraitorOnTraitor || !tv.fellowTraitorIds.includes(p.id),
+    );
     const statuses = Object.values(night.pickStatus);
     const confirm = playerById(view, confirmId);
     return (
@@ -395,7 +400,7 @@ export function NightScreen({ game }: { game: GameHandle }) {
           players={gridPlayers(game, pool, (p) => ({
             badge: tv.fellowTraitorIds.includes(p.id) ? <span className="block size-3 rounded-full bg-kumkum ring-2 ring-night" aria-label="fellow" /> : undefined,
           }))}
-          selectedId={recruitMode ? null : night.myPickId}
+          selectedId={recruiting ? null : night.myPickId}
           onSelect={setConfirmId}
         />
         {statuses.length > 1 ? (
@@ -411,7 +416,7 @@ export function NightScreen({ game }: { game: GameHandle }) {
           ) : null}
           {night.recruitmentAvailable ? (
             <Button variant="secondary" size="md" className="flex-1" onClick={() => setRecruitMode((r) => !r)}>
-              {recruitMode ? "Murder instead" : "Recruit instead"}
+              {recruiting ? "Murder instead" : `Recruit instead (${night.offersLeft} ${night.offersLeft === 1 ? "offer" : "offers"} left)`}
             </Button>
           ) : null}
         </div>
@@ -422,21 +427,21 @@ export function NightScreen({ game }: { game: GameHandle }) {
             <div className="flex flex-col items-center gap-4">
               <Avatar name={confirm.displayName} url={game.photoFor(confirm.photoPath)} size={112} />
               <h2 className="text-center font-display text-3xl font-semibold text-kumkum">
-                {recruitMode ? `Recruit ${confirm.displayName}?` : `Pick ${confirm.displayName}?`}
+                {recruiting ? `Recruit ${confirm.displayName}?` : `Pick ${confirm.displayName}?`}
               </h2>
               <p className="-mt-2 text-center text-ink-muted">
-                {recruitMode
-                  ? "They get a private offer. If they refuse or don't answer, nobody dies."
+                {recruiting
+                  ? "They get a private offer. If they refuse or don't answer, you pick again."
                   : "You can change your pick until every Traitor has picked."}
               </p>
               <Button
                 variant="danger"
                 busy={busy}
                 onClick={async () => {
-                  if (await send({ type: "nightPick", targetId: confirm.id, mode: recruitMode ? "recruit" : "murder" })) setConfirmId(null);
+                  if (await send({ type: "nightPick", targetId: confirm.id, mode: recruiting ? "recruit" : "murder" })) setConfirmId(null);
                 }}
               >
-                {recruitMode ? "Send the offer" : "Pick"}
+                {recruiting ? "Send the offer" : "Pick"}
               </Button>
               <Button variant="quiet" size="md" onClick={() => setConfirmId(null)}>
                 Cancel

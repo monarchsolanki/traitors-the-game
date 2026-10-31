@@ -31,6 +31,7 @@ export const settingSchemas = {
   murderRule: z.enum(["majority", "unanimous"]),
   traitorChat: z.boolean(),
   recruitment: z.enum(["off", "lastTraitor"]),
+  recruitOffersPerNight: z.number().int().min(1).max(5),
   revealOnElimination: z.boolean(),
   tieRule: z.enum(["revote", "spin", "hostDecides"]),
   tieRevotesBeforeChoice: z.number().int().min(1).max(5),
@@ -113,6 +114,11 @@ export const SETTING_META: Record<
   recruitment: {
     label: "Recruitment",
     help: "The last Traitor may recruit an Innocent instead of murdering.",
+    afterDealing: "override",
+  },
+  recruitOffersPerNight: {
+    label: "Recruit offers per night",
+    help: "If an offer is refused or runs out, the Traitor picks again: a murder, or another offer while offers are left.",
     afterDealing: "override",
   },
   revealOnElimination: {
@@ -216,6 +222,8 @@ export const DEFAULT_SETTINGS: GameSettings = {
   murderRule: "majority",
   traitorChat: true,
   recruitment: "lastTraitor",
+  // Owner, 1 November: a refused offer doesn't end the night; two offers, then the Traitor can still murder.
+  recruitOffersPerNight: 2,
   revealOnElimination: false,
   tieRule: "revote",
   tieRevotesBeforeChoice: 2,

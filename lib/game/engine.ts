@@ -166,6 +166,7 @@ export function normaliseState(s: GameState): GameState {
   s.cohostId ??= null;
   s.screenMessage ??= null;
   s.ghostGames ??= emptyGhostGames();
+  for (const n of s.nights) n.refused ??= [];
   for (const m of s.missions) {
     m.templateId ??= null;
     m.howItWorks ??= "";
@@ -1388,6 +1389,7 @@ function startNight(ctx: Ctx): void {
     picks: {},
     mode: null,
     recruit: null,
+    refused: [],
     suspectAnswers: {},
     resolved: false,
     targetId: null,
@@ -1405,6 +1407,11 @@ function recruitmentAvailable(s: GameState): boolean {
   return s.settings.recruitment === "lastTraitor" && aliveTraitorIds(s).length === 1;
 }
 
+/** Recruit offers the Traitor can still send tonight. */
+function offersLeft(s: GameState, n: NightRound): number {
+  return Math.max(0, s.settings.recruitOffersPerNight - n.refused.length);
+}
+
 function requireActiveNight(ctx: Ctx): NightRound {
   requirePhase(ctx, "NIGHT");
   const n = activeNight(ctx.s);
@@ -1418,7 +1425,7 @@ function nightPick(ctx: Ctx, a: ActionOf<"nightPick">): void {
   const { s } = ctx;
   const n = requireActiveNight(ctx);
   if (!isAlive(p) || s.roles[p.id] !== "traitor") fail("Only a living Traitor can pick at night.");
-  if (n.recruit) fail("You've already sent a recruitment offer tonight.");
+  if (n.recruit) fail("Wait for the answer to your offer.");
   const target = getPlayer(s, a.targetId);
   if (target.id === p.id) fail("You can't pick yourself.");
   if (!isAlive(target)) fail(`${target.displayName} is no longer in the game.`);
@@ -1426,6 +1433,8 @@ function nightPick(ctx: Ctx, a: ActionOf<"nightPick">): void {
   if (mode === "recruit") {
     if (!recruitmentAvailable(s)) fail("Recruitment isn't available tonight.");
     if (s.roles[target.id] !== "innocent") fail("You can only recruit an Innocent.");
+    if (n.refused.some((r) => r.targetId === target.id)) fail(`${target.displayName} already turned you down tonight.`);
+    if (!offersLeft(s, n)) fail("No recruit offers left tonight. Pick someone to murder.");
     n.mode = "recruit";
     n.picks = {};
     n.recruit = {
@@ -1456,7 +1465,27 @@ function answerRecruit(ctx: Ctx, a: ActionOf<"answerRecruit">): void {
   if (ctx.at > n.recruit.deadline) fail("This offer has run out.");
   n.recruit.answer = a.accept ? "accepted" : "refused";
   log(ctx, `${p.displayName} ${a.accept ? "accepted" : "refused"} the offer`);
-  resolveNight(ctx, n, null);
+  if (a.accept) resolveNight(ctx, n, null);
+  else offerFailed(ctx, n);
+}
+
+/**
+ * Owner, 1 November: a refused or unanswered offer doesn't end the night. The Traitor picks again, a
+ * murder or (while offers are left) an offer to someone else, with a fresh night timer.
+ */
+function offerFailed(ctx: Ctx, n: NightRound): void {
+  const { s } = ctx;
+  const offer = n.recruit!;
+  n.refused.push({
+    traitorId: offer.traitorId,
+    targetId: offer.targetId,
+    answer: offer.answer === "refused" ? "refused" : "timeout",
+    at: ctx.at,
+  });
+  n.recruit = null;
+  n.mode = null;
+  n.picks = {};
+  setTimer(s, ctx.at, s.settings.nightSeconds);
 }
 
 function suspectAnswer(ctx: Ctx, a: ActionOf<"suspectAnswer">): void {
@@ -1539,6 +1568,9 @@ function resolveNight(ctx: Ctx, n: NightRound, hostChoice: { targetId: string | 
     const chosen = chooseNightTarget(s, n);
     target = chosen.target;
     reason = chosen.reason;
+    // No pick after a refused offer: the night ends the way the last offer did.
+    const last = n.refused[n.refused.length - 1];
+    if (!target && reason === "noValidPicks" && last) reason = last.answer === "refused" ? "recruitRefused" : "recruitTimeout";
   }
   n.targetId = target;
   let victim: string | null = null;
@@ -1637,6 +1669,12 @@ function tick(ctx: Ctx): void {
     case "NIGHT": {
       const n = activeNight(s);
       if (n) {
+        if (n.recruit && !n.recruit.answer) {
+          log(ctx, "Recruit offer timed out; the Traitor picks again");
+          n.recruit.answer = "timeout";
+          offerFailed(ctx, n);
+          return;
+        }
         log(ctx, n.recruit && !n.recruit.answer ? "Recruit offer timed out" : "Night timer ran out");
         resolveNight(ctx, n, null);
         return;
@@ -1745,6 +1783,8 @@ function eliminatePlayer(ctx: Ctx, a: ActionOf<"eliminatePlayer">): void {
     delete n.picks[p.id];
     if (n.recruit && !n.recruit.answer && (n.recruit.targetId === p.id || n.recruit.traitorId === p.id)) {
       n.recruit.answer = "timeout";
+      // The recruit left: the Traitor picks again.
+      if (n.recruit.targetId === p.id) offerFailed(ctx, n);
     }
   }
   emit(ctx, "playerEliminated", PUBLIC, { playerId: p.id, status: a.status, role: revealedRole(s, p.id) });

@@ -143,6 +143,8 @@ export interface NightRound {
     deadline: number;
     answer: RecruitAnswer | null;
   } | null;
+  /** Offers refused or left unanswered tonight, oldest first (owner, 1 November: the Traitor then picks again). */
+  refused: Array<{ traitorId: string; targetId: string; answer: "refused" | "timeout"; at: number }>;
   suspectAnswers: Record<string, string>;
   resolved: boolean;
   /** The chosen target before any shield check (host only). */

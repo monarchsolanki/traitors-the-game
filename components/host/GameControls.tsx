@@ -516,6 +516,11 @@ function NightControls({ game }: { game: GameHandle }) {
             </li>
           ))}
         </ul>
+        {night?.refused.map((r) => (
+          <p key={r.targetId} className="mt-2 text-ink-muted">
+            Recruit offer to {playerById(view, r.targetId)?.displayName}: {r.answer === "refused" ? "refused" : "no answer"}
+          </p>
+        ))}
         {night?.recruit ? (
           <p className="mt-2">
             Recruit offer to {playerById(view, night.recruit.targetId)?.displayName}: {night.recruit.answer ?? "waiting"}

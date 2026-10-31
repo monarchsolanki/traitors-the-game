@@ -38,7 +38,7 @@ describe("recruitment gate tests", () => {
     expect(screen.me).toBeUndefined();
     expect(screen.traitor).toBeUndefined();
     expect(screen.host).toBeUndefined();
-    expect(g.no(as("p1"), { type: "nightPick", targetId: "p6" })).toMatch(/already sent/);
+    expect(g.no(as("p1"), { type: "nightPick", targetId: "p6" })).toMatch(/Wait for the answer/);
   });
 
   it("accept: the recruit becomes a Traitor at the end of the night, in one step; nobody dies", () => {
@@ -69,15 +69,67 @@ describe("recruitment gate tests", () => {
     for (const v of allViewers(g.state)) expect(findLeaks(g.state, v)).toEqual([]);
   });
 
-  it("refuse: nobody dies, no role changes", () => {
+  it("refuse: no role change, the night goes on and the Traitor is told and picks again", () => {
     const g = lastTraitorNight();
     g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
     g.by("p5", { type: "answerRecruit", accept: false });
     expect(g.state.roles.p5).toBe("innocent");
-    expect(g.night()).toMatchObject({ victimId: null, reason: "recruitRefused" });
+    expect(g.phase).toBe("NIGHT");
+    expect(g.night()).toMatchObject({ resolved: false, recruit: null, mode: null });
+    expect(g.state.deadline).toBe(g.now + g.state.settings.nightSeconds * 1000);
+    const v = viewFor(g.state, { kind: "player", playerId: "p1" }).traitor!;
+    expect(v.offerAnswers).toEqual([{ playerId: "p5", answer: "refused" }]);
+    expect(v.night).toMatchObject({ recruitmentAvailable: true, offersLeft: 1, offer: null });
+    // The refuser sees nothing new; nobody else hears about it.
+    expect(viewFor(g.state, { kind: "player", playerId: "p5" }).me!.recruitOffer).toBeNull();
+    for (const viewer of allViewers(g.state)) expect(findLeaks(g.state, viewer)).toEqual([]);
   });
 
-  it("timeout: nobody dies, and a late answer is rejected", () => {
+  it("after a refusal the Traitor can murder instead, even the player who refused", () => {
+    const g = lastTraitorNight();
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    g.by("p5", { type: "answerRecruit", accept: false });
+    g.by("p1", { type: "nightPick", targetId: "p5" });
+    expect(g.p("p5").status).toBe("murdered");
+    expect(g.night()).toMatchObject({ victimId: "p5", reason: "murdered" });
+  });
+
+  it("after a refusal the Traitor can offer to someone else, but not the same player again", () => {
+    const g = lastTraitorNight();
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    g.by("p5", { type: "answerRecruit", accept: false });
+    expect(g.no(as("p1"), { type: "nightPick", targetId: "p5", mode: "recruit" })).toMatch(/turned you down/);
+    g.by("p1", { type: "nightPick", targetId: "p6", mode: "recruit" });
+    g.by("p6", { type: "answerRecruit", accept: true });
+    expect(g.state.roles.p6).toBe("traitor");
+    expect(g.night()).toMatchObject({ victimId: null, reason: "recruitAccepted" });
+    expect(viewFor(g.state, { kind: "player", playerId: "p1" }).traitor!.offerAnswers).toEqual([{ playerId: "p6", answer: "accepted" }]);
+  });
+
+  it("after two refusals there are no offers left, but the Traitor still gets to murder", () => {
+    const g = lastTraitorNight();
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    g.by("p5", { type: "answerRecruit", accept: false });
+    g.by("p1", { type: "nightPick", targetId: "p6", mode: "recruit" });
+    g.by("p6", { type: "answerRecruit", accept: false });
+    expect(g.phase).toBe("NIGHT");
+    const v = viewFor(g.state, { kind: "player", playerId: "p1" }).traitor!;
+    expect(v.offerAnswers.map((x) => x.playerId)).toEqual(["p5", "p6"]);
+    expect(v.night).toMatchObject({ recruitmentAvailable: false, offersLeft: 0 });
+    expect(g.no(as("p1"), { type: "nightPick", targetId: "p7", mode: "recruit" })).toMatch(/No recruit offers left/);
+    g.by("p1", { type: "nightPick", targetId: "p7" });
+    expect(g.p("p7").status).toBe("murdered");
+  });
+
+  it("the offers per night come from the settings", () => {
+    const g = lastTraitorNight();
+    g.host({ type: "overrideSetting", key: "recruitOffersPerNight", value: 1, reason: "One offer only" });
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    g.by("p5", { type: "answerRecruit", accept: false });
+    expect(g.no(as("p1"), { type: "nightPick", targetId: "p6", mode: "recruit" })).toMatch(/No recruit offers left/);
+  });
+
+  it("timeout: a late answer is rejected and the Traitor picks again", () => {
     const g = lastTraitorNight();
     g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
     expect(g.state.deadline).toBe(g.night().recruit!.deadline);
@@ -85,7 +137,28 @@ describe("recruitment gate tests", () => {
     expect(g.no(as("p5"), { type: "answerRecruit", accept: true })).toMatch(/run out/);
     g.expire();
     expect(g.state.roles.p5).toBe("innocent");
-    expect(g.night()).toMatchObject({ victimId: null, reason: "recruitTimeout" });
+    expect(g.phase).toBe("NIGHT");
+    expect(viewFor(g.state, { kind: "player", playerId: "p1" }).traitor!.offerAnswers).toEqual([{ playerId: "p5", answer: "timeout" }]);
+  });
+
+  it("no pick after a refusal: the night timer ends it and nobody dies", () => {
+    const g = lastTraitorNight();
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    g.by("p5", { type: "answerRecruit", accept: false });
+    g.now = g.state.deadline! + 1;
+    g.expire();
+    expect(g.phase).toBe("MURDER_REVEAL");
+    expect(g.night()).toMatchObject({ victimId: null, reason: "recruitRefused" });
+  });
+
+  it("the recruit leaving mid-offer sends the Traitor back to pick", () => {
+    const g = lastTraitorNight();
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    g.host({ type: "eliminatePlayer", playerId: "p5", status: "left", reason: "Went home" });
+    expect(g.phase).toBe("NIGHT");
+    expect(g.night().recruit).toBeNull();
+    g.by("p1", { type: "nightPick", targetId: "p6" });
+    expect(g.p("p6").status).toBe("murdered");
   });
 
   it("the murder and recruit reveals look the same as a shield save", () => {
@@ -157,6 +230,7 @@ describe("recruitment gate tests", () => {
     g.host({ type: "resume" });
     expect(g.night().recruit!.deadline).toBeGreaterThan(before + 590_000);
     g.by("p5", { type: "answerRecruit", accept: false });
+    expect(g.phase).toBe("NIGHT");
     void HOST;
   });
 });

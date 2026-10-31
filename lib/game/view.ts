@@ -202,10 +202,14 @@ export interface TraitorView {
     nightId: string;
     myPickId: string | null;
     pickStatus: Record<string, boolean>;
+    /** Recruitment is on, this is the last Traitor, and offers are left tonight. */
     recruitmentAvailable: boolean;
+    offersLeft: number;
     mode: "murder" | "recruit" | null;
     offer: { targetId: string; deadline: number; answer: string | null } | null;
   } | null;
+  /** Offers this Traitor saw refused tonight (oldest first), or, at breakfast, the one accepted last night. */
+  offerAnswers: Array<{ playerId: string; answer: "accepted" | "refused" | "timeout" }>;
 }
 
 export type HostSecrets = Omit<GameState, "seed">;
@@ -436,7 +440,14 @@ function playerView(s: GameState, playerId: string): GameView {
   const view: GameView = { ...pub, me };
   if (isTraitor) {
     const aliveTraitors = s.players.filter((x) => s.roles[x.id] === "traitor" && maskedStatus(s, x.id, false) === "alive");
-    const recruitmentAvailable = s.settings.recruitment === "lastTraitor" && aliveTraitors.length === 1;
+    const offersLeft = night ? Math.max(0, s.settings.recruitOffersPerNight - night.refused.length) : 0;
+    const recruitmentAvailable = s.settings.recruitment === "lastTraitor" && aliveTraitors.length === 1 && offersLeft > 0;
+    const offerAnswers: TraitorView["offerAnswers"] = [];
+    if (nightActive) {
+      for (const r of night.refused) if (r.traitorId === p.id) offerAnswers.push({ playerId: r.targetId, answer: r.answer });
+    } else if (s.phase === "MURDER_REVEAL" && night?.resolved && night.recruit?.traitorId === p.id && night.recruit.answer === "accepted") {
+      offerAnswers.push({ playerId: night.recruit.targetId, answer: "accepted" });
+    }
     view.traitor = {
       fellowTraitorIds: s.players.filter((x) => x.id !== p.id && s.roles[x.id] === "traitor").map((x) => x.id),
       chat: s.settings.traitorChat ? s.chat.map((c) => ({ ...c })) : null,
@@ -446,6 +457,7 @@ function playerView(s: GameState, playerId: string): GameView {
             myPickId: night.picks[p.id] ?? null,
             pickStatus: Object.fromEntries(aliveTraitors.map((t) => [t.id, !!night.picks[t.id]])),
             recruitmentAvailable,
+            offersLeft,
             mode: night.mode,
             offer:
               night.recruit && night.recruit.traitorId === p.id
@@ -453,6 +465,7 @@ function playerView(s: GameState, playerId: string): GameView {
                 : null,
           }
         : null,
+      offerAnswers,
     };
   }
   return view;
