@@ -131,16 +131,39 @@ describe("recruitment gate tests", () => {
     expect(g.no(as("p1"), { type: "nightPick", targetId: "p6", mode: "recruit" })).toMatch(/No recruit offers left/);
   });
 
-  it("timeout: a late answer is rejected and the Traitor picks again", () => {
+  it("timeout: the Traitor picks again, and an answer after that is rejected", () => {
     const g = lastTraitorNight();
     g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
     expect(g.state.deadline).toBe(g.night().recruit!.deadline);
-    g.now = g.night().recruit!.deadline + 1;
-    expect(g.no(as("p5"), { type: "answerRecruit", accept: true })).toMatch(/run out/);
     g.expire();
+    expect(g.no(as("p5"), { type: "answerRecruit", accept: true })).toMatch(/no offer waiting/);
     expect(g.state.roles.p5).toBe("innocent");
     expect(g.phase).toBe("NIGHT");
     expect(viewFor(g.state, { kind: "player", playerId: "p1" }).traitor!.offerAnswers).toEqual([{ playerId: "p5", answer: "timeout" }]);
+  });
+
+  it("the night timer stays hidden from the room, so an offer can't be spotted by it jumping", () => {
+    const g = lastTraitorNight();
+    const hidden = [{ kind: "screen" }, { kind: "cohost" }, { kind: "player", playerId: "p6" }, { kind: "player", playerId: "p5" }] as const;
+    for (const v of hidden) expect(viewFor(g.state, v).deadline).toBeNull();
+    expect(viewFor(g.state, { kind: "player", playerId: "p1" }).deadline).toBe(g.state.deadline);
+    expect(viewFor(g.state, HOST_VIEWER).deadline).toBe(g.state.deadline);
+    // The offer goes out: the timer moves, the room still sees nothing, and the chosen player sees their time.
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    expect(viewFor(g.state, { kind: "player", playerId: "p5" }).deadline).toBe(g.state.deadline);
+    for (const v of hidden.slice(0, 3)) expect(viewFor(g.state, v).deadline).toBeNull();
+    for (const v of allViewers(g.state)) expect(findLeaks(g.state, v)).toEqual([]);
+    // A pause doesn't give it away either.
+    g.host({ type: "pause" });
+    expect(viewFor(g.state, { kind: "screen" }).pausedRemainingMs).toBeNull();
+    expect(viewFor(g.state, { kind: "player", playerId: "p5" }).pausedRemainingMs).toBe(g.state.pausedRemainingMs);
+    g.host({ type: "resume" });
+    // By day the timer is everyone's again.
+    g.by("p5", { type: "answerRecruit", accept: true });
+    g.host({ type: "revealMurder" });
+    g.host({ type: "openCircle" });
+    expect(g.phase).toBe("CIRCLE_DEBATE");
+    expect(viewFor(g.state, { kind: "screen" }).deadline).toBe(g.state.deadline);
   });
 
   it("no pick after a refusal: the night timer ends it and nobody dies", () => {
@@ -333,14 +356,60 @@ describe("blackmail nights", () => {
     noLeaks(g);
   });
 
-  it("no answer in time counts as refusing, and a late answer is rejected", () => {
+  it("no answer in time counts as refusing, and an answer after that is rejected", () => {
+    const g = blackmailNight();
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    g.expire();
+    expect(g.no(as("p5"), { type: "answerRecruit", accept: true })).toBeTruthy();
+    expect(g.phase).toBe("MURDER_REVEAL");
+    expect(g.night()).toMatchObject({ victimId: "p5", reason: "blackmailTimeout" });
+  });
+
+  it("a tap that reaches the server just after the deadline still counts, until the timer fires", () => {
     const g = blackmailNight();
     g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
     g.now = g.night().recruit!.deadline + 1;
-    expect(g.no(as("p5"), { type: "answerRecruit", accept: true })).toMatch(/run out/);
+    g.by("p5", { type: "answerRecruit", accept: true });
+    expect(g.state.roles.p5).toBe("traitor");
+    expect(g.p("p5").status).toBe("alive");
+    expect(g.night()).toMatchObject({ victimId: null, reason: "recruitAccepted" });
+  });
+
+  it("the host can't shorten the timer while a blackmail offer waits, so −1 min can't kill anyone", () => {
+    const g = blackmailNight();
+    g.host({ type: "adjustTimer", deltaSeconds: -60 }); // No offer out yet: this is fine.
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    const deadline = g.night().recruit!.deadline;
+    expect(g.no(HOST, { type: "adjustTimer", deltaSeconds: -60 })).toMatch(/can't be shortened/);
+    g.host({ type: "pause" });
+    expect(g.no(HOST, { type: "adjustTimer", deltaSeconds: -60 })).toMatch(/can't be shortened/);
+    g.host({ type: "resume" });
+    expect(g.phase).toBe("NIGHT");
+    const resumed = g.night().recruit!.deadline;
+    expect(resumed).toBeGreaterThanOrEqual(deadline);
+    g.host({ type: "adjustTimer", deltaSeconds: 60 });
+    expect(g.night().recruit!.deadline).toBe(resumed + 60_000);
+  });
+
+  it("a normal offer's timer can still be shortened: running out isn't fatal there", () => {
+    const g = lastTraitorNight();
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    g.host({ type: "adjustTimer", deltaSeconds: -30 });
+    expect(g.state.deadline).toBe(g.night().recruit!.deadline);
+  });
+
+  it("switching it on clears a pick already made, so that pick can't murder on a blackmail night", () => {
+    const g = dealt(12, { settings: { traitorCount: 2 }, traitors: ["p1", "p2"] });
+    g.circle();
+    g.banish("p12");
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "murder" });
+    g.host({ type: "eliminatePlayer", playerId: "p2", status: "left", reason: "Went home" });
+    expect(g.phase).toBe("NIGHT");
+    g.host({ type: "setBlackmail", on: true });
+    expect(g.night().picks).toEqual({});
     g.expire();
-    expect(g.phase).toBe("MURDER_REVEAL");
-    expect(g.night()).toMatchObject({ victimId: "p5", reason: "blackmailTimeout" });
+    expect(g.p("p5").status).toBe("alive");
+    expect(g.night()).toMatchObject({ victimId: null, reason: "noValidPicks" });
   });
 
   it("a shield still blocks the murder", () => {

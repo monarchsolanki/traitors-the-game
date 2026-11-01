@@ -72,6 +72,9 @@ export function findLeaks(s: GameState, viewer: Viewer): string[] {
   const offer = night?.recruit;
   if (v.me?.recruitOffer && (!offer || offer.targetId !== me)) add("recruit offer shown to the wrong player");
   if (json.includes('"blackmailNext"')) add("a planned blackmail night leaked");
+  if (s.phase === "NIGHT" && (v.deadline !== null || v.pausedRemainingMs !== null) && !meAliveTraitor && !v.me?.recruitOffer) {
+    add("the night timer, which moves when an offer goes out, shown outside the night");
+  }
   if (json.includes('"blackmail":true') && !v.traitor?.night?.blackmail && !v.me?.recruitOffer?.blackmail) add("a blackmail night shown to someone outside it");
   if (v.traitor?.night?.offer && (!offer || offer.traitorId !== me)) add("recruit offer shown to the wrong Traitor");
   for (const a of v.traitor?.offerAnswers ?? []) {

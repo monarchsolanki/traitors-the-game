@@ -288,6 +288,9 @@ function buildPublic(
   });
   const current = s.currentRoundId ? s.rounds.find((r) => r.id === s.currentRoundId) ?? null : null;
   const night = s.nights[s.nights.length - 1];
+  // Owner, 2 November: a recruit offer moves the night timer and only a lone Traitor can send one, so a jump
+  // would tell the room how many Traitors are left. At night only the host has it here; see playerView.
+  const showTimer = s.phase !== "NIGHT" || viewer === "host";
   return {
     viewer,
     code: s.code,
@@ -295,8 +298,8 @@ function buildPublic(
     phase: s.phase,
     day: s.day,
     paused: s.paused,
-    deadline: s.deadline,
-    pausedRemainingMs: s.pausedRemainingMs,
+    deadline: showTimer ? s.deadline : null,
+    pausedRemainingMs: showTimer ? s.pausedRemainingMs : null,
     closed: s.closed,
     settings: structuredClone(s.settings),
     startingPlayerCount: s.frozen?.startingPlayerCount ?? null,
@@ -440,6 +443,10 @@ function playerView(s: GameState, playerId: string): GameView {
     ghostGames: ghostGamesView(s, p.id),
   };
   const view: GameView = { ...pub, me };
+  if (isTraitor || me.recruitOffer) {
+    view.deadline = s.deadline;
+    view.pausedRemainingMs = s.pausedRemainingMs;
+  }
   if (isTraitor) {
     const aliveTraitors = s.players.filter((x) => s.roles[x.id] === "traitor" && maskedStatus(s, x.id, false) === "alive");
     const offersLeft = night ? Math.max(0, s.settings.recruitOffersPerNight - night.refused.length) : 0;

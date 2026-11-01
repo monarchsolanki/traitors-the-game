@@ -411,7 +411,6 @@ function Stage({ game }: { game: GameHandle }) {
           <Diya className="size-[min(22vh,18vw)] opacity-80" />
           <Big>Night falls</Big>
           <Sub>{view.settings.narration.night}</Sub>
-          <Countdown deadline={view.deadline} pausedRemainingMs={view.pausedRemainingMs} now={game.now} className="text-[min(5vw,5rem)]" />
         </div>
       );
     case "MURDER_REVEAL":

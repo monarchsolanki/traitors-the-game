@@ -375,14 +375,22 @@ export function NightScreen({ game }: { game: GameHandle }) {
           <Button variant="danger" busy={busy} onClick={() => send({ type: "answerRecruit", accept: true })}>
             Join the Traitors
           </Button>
-          <Button
-            variant="secondary"
-            busy={busy}
-            onClick={() => (blackmail && !refusing ? setRefusing(true) : send({ type: "answerRecruit", accept: false }))}
-          >
-            {!blackmail ? "Refuse" : refusing ? "Yes, refuse" : shielded ? "Refuse" : "Refuse and die"}
+          <Button variant="secondary" busy={busy} onClick={() => (blackmail ? setRefusing(true) : send({ type: "answerRecruit", accept: false }))}>
+            {blackmail && !shielded ? "Refuse and die" : "Refuse"}
           </Button>
         </Card>
+        <Sheet open={refusing} onClose={() => setRefusing(false)} title={shielded ? "Refuse?" : "Refuse and die?"}>
+          <div className="flex flex-col gap-3">
+            <p className="text-center text-ink-muted">{shielded ? "Only your shield can save you now." : "You die tonight. This can't be undone."}</p>
+            <ErrorLine message={error} />
+            <Button variant="danger" busy={busy} onClick={() => send({ type: "answerRecruit", accept: false })}>
+              Yes, refuse
+            </Button>
+            <Button variant="quiet" size="md" onClick={() => setRefusing(false)}>
+              Go back
+            </Button>
+          </div>
+        </Sheet>
       </div>
     );
   }

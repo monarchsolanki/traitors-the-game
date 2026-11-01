@@ -1424,6 +1424,7 @@ function setBlackmail(ctx: Ctx, a: ActionOf<"setBlackmail">): void {
   if (n && aliveTraitorIds(s).length === 1) {
     if (n.recruit) fail("An offer is already out tonight.");
     n.blackmail = a.on;
+    if (a.on) n.picks = {};
     s.blackmailNext = false;
     log(ctx, a.on ? "Made tonight a blackmail night" : "Tonight is no longer a blackmail night");
     return;
@@ -1493,7 +1494,7 @@ function answerRecruit(ctx: Ctx, a: ActionOf<"answerRecruit">): void {
   requireNotPaused(ctx);
   const n = requireActiveNight(ctx);
   if (!n.recruit || n.recruit.targetId !== p.id || n.recruit.answer) fail("There's no offer waiting for you.");
-  if (ctx.at > n.recruit.deadline) fail("This offer has run out.");
+  // No deadline check: the offer stays open until the timer fires, so a tap that's a moment late on slow Wi-Fi counts.
   n.recruit.answer = a.accept ? "accepted" : "refused";
   log(ctx, `${p.displayName} ${a.accept ? "accepted" : "refused"} the offer`);
   if (a.accept || n.blackmail) resolveNight(ctx, n, null);
@@ -1775,6 +1776,9 @@ function adjustTimer(ctx: Ctx, a: ActionOf<"adjustTimer">): void {
   const { s } = ctx;
   const d = a.deltaSeconds;
   if (!Number.isInteger(d) || d === 0 || Math.abs(d) > 3600) fail("Change the timer by 1 second to 1 hour.");
+  const n = activeNight(s);
+  // Owner, 2 November: running out is fatal on a blackmail night, so the host can't cut the player's time.
+  if (d < 0 && n?.blackmail && n.recruit && !n.recruit.answer) fail("A blackmail offer is waiting, so the timer can't be shortened.");
   if (s.paused) {
     if (s.pausedRemainingMs === null) fail("There's no timer running.");
     s.pausedRemainingMs = Math.max(0, s.pausedRemainingMs + d * 1000);
@@ -1782,7 +1786,6 @@ function adjustTimer(ctx: Ctx, a: ActionOf<"adjustTimer">): void {
     if (s.deadline === null) fail("There's no timer running.");
     s.deadline = Math.max(ctx.at, s.deadline + d * 1000);
   }
-  const n = activeNight(s);
   if (n?.recruit && !n.recruit.answer) n.recruit.deadline = Math.max(ctx.at, n.recruit.deadline + d * 1000);
   emit(ctx, "timerChanged", PUBLIC, { deltaSeconds: d });
   log(ctx, `${d > 0 ? "Extended" : "Shortened"} the timer by ${Math.abs(d)} seconds`);
