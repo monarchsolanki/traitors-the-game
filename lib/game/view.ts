@@ -157,7 +157,7 @@ export interface MeView {
   } | null;
   ghostVote: { enabled: boolean; used: boolean };
   suspectPoll: { myAnswer: string | null } | null;
-  recruitOffer: { deadline: number } | null;
+  recruitOffer: { deadline: number; blackmail: boolean } | null;
   rewardVote: {
     roundId: string;
     itemType: ItemType;
@@ -205,10 +205,12 @@ export interface TraitorView {
     /** Recruitment is on, this is the last Traitor, and offers are left tonight. */
     recruitmentAvailable: boolean;
     offersLeft: number;
+    /** A blackmail night: this lone Traitor can only send an offer. */
+    blackmail: boolean;
     mode: "murder" | "recruit" | null;
     offer: { targetId: string; deadline: number; answer: string | null } | null;
   } | null;
-  /** Offers this Traitor saw refused tonight (oldest first), or, at breakfast, the one accepted last night. */
+  /** Offers this Traitor saw refused tonight (oldest first), or, at breakfast, last night's accepted or blackmail offer. */
   offerAnswers: Array<{ playerId: string; answer: "accepted" | "refused" | "timeout" }>;
 }
 
@@ -431,7 +433,7 @@ function playerView(s: GameState, playerId: string): GameView {
         : null,
     recruitOffer:
       nightActive && night.recruit && night.recruit.targetId === p.id && !night.recruit.answer
-        ? { deadline: night.recruit.deadline }
+        ? { deadline: night.recruit.deadline, blackmail: night.blackmail }
         : null,
     rewardVote,
     isCohost: s.cohostId === p.id,
@@ -445,8 +447,8 @@ function playerView(s: GameState, playerId: string): GameView {
     const offerAnswers: TraitorView["offerAnswers"] = [];
     if (nightActive) {
       for (const r of night.refused) if (r.traitorId === p.id) offerAnswers.push({ playerId: r.targetId, answer: r.answer });
-    } else if (s.phase === "MURDER_REVEAL" && night?.resolved && night.recruit?.traitorId === p.id && night.recruit.answer === "accepted") {
-      offerAnswers.push({ playerId: night.recruit.targetId, answer: "accepted" });
+    } else if (s.phase === "MURDER_REVEAL" && night?.resolved && night.recruit?.traitorId === p.id && night.recruit.answer) {
+      if (night.recruit.answer === "accepted" || night.blackmail) offerAnswers.push({ playerId: night.recruit.targetId, answer: night.recruit.answer });
     }
     view.traitor = {
       fellowTraitorIds: s.players.filter((x) => x.id !== p.id && s.roles[x.id] === "traitor").map((x) => x.id),
@@ -458,6 +460,7 @@ function playerView(s: GameState, playerId: string): GameView {
             pickStatus: Object.fromEntries(aliveTraitors.map((t) => [t.id, !!night.picks[t.id]])),
             recruitmentAvailable,
             offersLeft,
+            blackmail: night.blackmail && aliveTraitors.length === 1,
             mode: night.mode,
             offer:
               night.recruit && night.recruit.traitorId === p.id

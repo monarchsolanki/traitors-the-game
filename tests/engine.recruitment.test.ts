@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { normaliseState } from "@/lib/game/engine";
 import { allViewers, findLeaks } from "@/lib/game/leaks";
 import { viewFor } from "@/lib/game/view";
 import { HOST, as, dealt } from "./helpers";
@@ -7,6 +8,7 @@ import { HOST, as, dealt } from "./helpers";
  * Recruitment gate (section 5.4): accept, refuse, timeout, the role change, the new Traitor's
  * place in the next night, and the win check afterwards. Recruitment stays off until these pass.
  */
+const HOST_VIEWER = { kind: "host" } as const;
 const lastTraitorNight = (recruitment: "off" | "lastTraitor" = "lastTraitor") => {
   const g = dealt(12, { settings: { recruitment, traitorCount: 2 }, traitors: ["p1", "p2"] });
   g.circle();
@@ -232,5 +234,212 @@ describe("recruitment gate tests", () => {
     g.by("p5", { type: "answerRecruit", accept: false });
     expect(g.phase).toBe("NIGHT");
     void HOST;
+  });
+});
+
+/** Owner, 2 November: the host chooses blackmail nights. The lone Traitor picks someone to join them; not accepting is fatal. */
+describe("blackmail nights", () => {
+  /** Two Traitors alive during the day, with blackmail chosen; banishing p2 brings the night. */
+  const blackmailNight = (recruitment: "off" | "lastTraitor" = "lastTraitor") => {
+    const g = dealt(12, { settings: { recruitment, traitorCount: 2 }, traitors: ["p1", "p2"] });
+    g.circle();
+    g.host({ type: "setBlackmail", on: true });
+    g.banish("p2");
+    expect(g.phase).toBe("NIGHT");
+    expect(g.night().blackmail).toBe(true);
+    return g;
+  };
+  const noLeaks = (g: ReturnType<typeof dealt>) => {
+    for (const v of allViewers(g.state)) expect(findLeaks(g.state, v)).toEqual([]);
+  };
+
+  it("only the host can choose one, once roles are dealt and before the final reveal", () => {
+    const g = dealt(12, { settings: { traitorCount: 2 }, traitors: ["p1", "p2"] });
+    expect(g.no(as("p1"), { type: "setBlackmail", on: true })).toBeTruthy();
+    expect(g.no(as("p5"), { type: "setBlackmail", on: true })).toBeTruthy();
+    g.host({ type: "setBlackmail", on: true });
+    expect(g.state.blackmailNext).toBe(true);
+    g.host({ type: "setBlackmail", on: false });
+    expect(g.state.blackmailNext).toBe(false);
+    g.host({ type: "endGameEarly", reason: "Done" });
+    expect(g.no(HOST, { type: "setBlackmail", on: true })).toBeTruthy();
+  });
+
+  it("applies to one night only: the next night is a normal one", () => {
+    const g = blackmailNight();
+    expect(g.state.blackmailNext).toBe(false);
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    g.by("p5", { type: "answerRecruit", accept: false });
+    g.host({ type: "revealMurder" });
+    g.circle();
+    g.banish("p12");
+    expect(g.night().blackmail).toBe(false);
+    g.by("p1", { type: "nightPick", targetId: "p6", mode: "murder" });
+    expect(g.p("p6").status).toBe("murdered");
+  });
+
+  it("waits while two Traitors are alive, then applies to the first lone-Traitor night", () => {
+    const g = dealt(12, { settings: { traitorCount: 2 }, traitors: ["p1", "p2"] });
+    g.circle();
+    g.host({ type: "setBlackmail", on: true });
+    g.banish("p12");
+    expect(g.night().blackmail).toBe(false);
+    expect(g.state.blackmailNext).toBe(true);
+    g.pickAll("p11");
+    g.host({ type: "revealMurder" });
+    g.circle();
+    g.banish("p2");
+    expect(g.night().blackmail).toBe(true);
+    expect(g.state.blackmailNext).toBe(false);
+  });
+
+  it("the Traitor can't murder, can only offer to an Innocent, and it works with recruitment switched off", () => {
+    const g = blackmailNight("off");
+    expect(g.no(as("p1"), { type: "nightPick", targetId: "p5", mode: "murder" })).toMatch(/blackmail night/);
+    expect(g.no(as("p1"), { type: "nightPick", targetId: "p5" })).toMatch(/blackmail night/);
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    expect(g.state.deadline).toBe(g.night().recruit!.deadline);
+    const v = viewFor(g.state, { kind: "player", playerId: "p5" });
+    expect(v.me!.recruitOffer).toMatchObject({ blackmail: true });
+  });
+
+  it("accept: they become a Traitor, nobody dies, and the Traitor is told", () => {
+    const g = blackmailNight();
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    g.by("p5", { type: "answerRecruit", accept: true });
+    expect(g.state.roles.p5).toBe("traitor");
+    expect(g.phase).toBe("MURDER_REVEAL");
+    expect(g.night()).toMatchObject({ victimId: null, reason: "recruitAccepted" });
+    expect(viewFor(g.state, { kind: "player", playerId: "p1" }).traitor!.offerAnswers).toEqual([{ playerId: "p5", answer: "accepted" }]);
+    noLeaks(g);
+  });
+
+  it("refuse: the night ends at once and they die, with no second pick, revealed like any murder", () => {
+    const g = blackmailNight();
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    g.by("p5", { type: "answerRecruit", accept: false });
+    expect(g.state.roles.p5).toBe("innocent");
+    expect(g.phase).toBe("MURDER_REVEAL");
+    expect(g.night()).toMatchObject({ victimId: "p5", reason: "blackmailRefused", resolved: true });
+    expect(g.p("p5").status).toBe("murdered");
+    expect(viewFor(g.state, { kind: "player", playerId: "p1" }).traitor!.offerAnswers).toEqual([{ playerId: "p5", answer: "refused" }]);
+    // Nobody sees it until the host reveals it.
+    expect(viewFor(g.state, { kind: "screen" }).players.find((p) => p.id === "p5")!.status).toBe("alive");
+    noLeaks(g);
+    g.host({ type: "revealMurder" });
+    const reveal = g.state.events.filter((e) => e.type === "murderRevealed").pop()!;
+    expect(reveal.audience).toEqual({ kind: "public" });
+    expect(reveal.data).toMatchObject({ victimId: "p5" });
+    noLeaks(g);
+  });
+
+  it("no answer in time counts as refusing, and a late answer is rejected", () => {
+    const g = blackmailNight();
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    g.now = g.night().recruit!.deadline + 1;
+    expect(g.no(as("p5"), { type: "answerRecruit", accept: true })).toMatch(/run out/);
+    g.expire();
+    expect(g.phase).toBe("MURDER_REVEAL");
+    expect(g.night()).toMatchObject({ victimId: "p5", reason: "blackmailTimeout" });
+  });
+
+  it("a shield still blocks the murder", () => {
+    const g = blackmailNight();
+    g.host({ type: "giveItem", itemType: "shield", playerId: "p5", reason: "Test" });
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    g.by("p5", { type: "answerRecruit", accept: false });
+    expect(g.p("p5").status).toBe("alive");
+    expect(g.night()).toMatchObject({ victimId: null, targetId: "p5", reason: "shield" });
+  });
+
+  it("no pick before the night timer ends: nobody dies", () => {
+    const g = blackmailNight();
+    g.now = g.state.deadline! + 1;
+    g.expire();
+    expect(g.phase).toBe("MURDER_REVEAL");
+    expect(g.night()).toMatchObject({ victimId: null, reason: "noValidPicks" });
+  });
+
+  it("the host ending the night with an offer out cancels it: nobody dies", () => {
+    const g = blackmailNight();
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    g.host({ type: "resolveNight" });
+    expect(g.p("p5").status).toBe("alive");
+    expect(g.night()).toMatchObject({ victimId: null, reason: "host" });
+  });
+
+  it("the recruit leaving mid-offer lets the Traitor choose someone else, past the normal offer limit", () => {
+    const g = blackmailNight();
+    g.host({ type: "overrideSetting", key: "recruitOffersPerNight", value: 1, reason: "One offer only" });
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    g.host({ type: "eliminatePlayer", playerId: "p5", status: "left", reason: "Went home" });
+    expect(g.phase).toBe("NIGHT");
+    g.by("p1", { type: "nightPick", targetId: "p6", mode: "recruit" });
+    g.by("p6", { type: "answerRecruit", accept: false });
+    expect(g.night()).toMatchObject({ victimId: "p6", reason: "blackmailRefused" });
+  });
+
+  it("the host can switch it on or off during the night, until an offer is out", () => {
+    const g = lastTraitorNight();
+    expect(g.night().blackmail).toBe(false);
+    g.host({ type: "setBlackmail", on: true });
+    expect(g.night().blackmail).toBe(true);
+    expect(g.no(as("p1"), { type: "nightPick", targetId: "p5", mode: "murder" })).toMatch(/blackmail night/);
+    g.host({ type: "setBlackmail", on: false });
+    expect(g.night().blackmail).toBe(false);
+    g.host({ type: "setBlackmail", on: true });
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    expect(g.no(HOST, { type: "setBlackmail", on: false })).toMatch(/already out/);
+  });
+
+  it("with two Traitors alive, a night switch waits for the next lone-Traitor night instead", () => {
+    const g = dealt(12, { settings: { traitorCount: 2 }, traitors: ["p1", "p2"] });
+    g.circle();
+    g.banish("p12");
+    g.host({ type: "setBlackmail", on: true });
+    expect(g.night().blackmail).toBe(false);
+    expect(g.state.blackmailNext).toBe(true);
+    g.by("p1", { type: "nightPick", targetId: "p6", mode: "murder" });
+    expect(g.phase).toBe("NIGHT");
+  });
+
+  it("only the host and the blackmailed players can tell: no screen, Innocent or ghost sees it", () => {
+    const g = blackmailNight();
+    noLeaks(g);
+    expect(viewFor(g.state, { kind: "player", playerId: "p1" }).traitor!.night!.blackmail).toBe(true);
+    expect(JSON.stringify(viewFor(g.state, { kind: "screen" }))).not.toContain("blackmail");
+    expect(JSON.stringify(viewFor(g.state, { kind: "player", playerId: "p6" }))).not.toContain('"blackmail":true');
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "recruit" });
+    noLeaks(g);
+    expect(JSON.stringify(viewFor(g.state, { kind: "player", playerId: "p6" }))).not.toContain('"blackmail":true');
+    expect(viewFor(g.state, HOST_VIEWER).host!.nights.at(-1)!.blackmail).toBe(true);
+  });
+
+  it("a refusal that leaves the Traitors level hands them the win at the reveal", () => {
+    const g = dealt(6, { settings: { traitorCount: 1, endCondition: "parity" }, traitors: ["p1"] });
+    g.circle();
+    g.banish("p6");
+    g.by("p1", { type: "nightPick", targetId: "p5", mode: "murder" });
+    g.host({ type: "revealMurder" });
+    g.circle();
+    g.host({ type: "setBlackmail", on: true });
+    g.banish("p4");
+    expect(g.night().blackmail).toBe(true);
+    g.by("p1", { type: "nightPick", targetId: "p2", mode: "recruit" });
+    g.by("p2", { type: "answerRecruit", accept: false });
+    expect(g.phase).toBe("MURDER_REVEAL");
+    g.host({ type: "revealMurder" });
+    expect(g.phase).toBe("FINALE");
+    expect(g.state.finale!.winner).toBe("traitors");
+  });
+
+  it("older saved games load with no blackmail fields and play on", () => {
+    const g = lastTraitorNight();
+    const old = structuredClone(g.state) as unknown as Record<string, unknown> & { nights: Array<Record<string, unknown>> };
+    delete old.blackmailNext;
+    for (const n of old.nights) delete n.blackmail;
+    const s = normaliseState(old as unknown as typeof g.state);
+    expect(s.blackmailNext).toBe(false);
+    expect(s.nights.at(-1)!.blackmail).toBe(false);
   });
 });

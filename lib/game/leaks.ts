@@ -48,7 +48,7 @@ export function findLeaks(s: GameState, viewer: Viewer): string[] {
   if (v.me?.suspectPoll && lastNight && v.me.suspectPoll.myAnswer !== (lastNight.suspectAnswers[me!] ?? null)) {
     add("someone else's poll answer");
   }
-  if (json.includes('"reason":"shield"') || json.includes('"recruitAccepted"') || json.includes('"recruitRefused"')) {
+  if (json.includes('"reason":"shield"') || json.includes('"recruitAccepted"') || json.includes('"recruitRefused"') || json.includes('"blackmailRefused"') || json.includes('"blackmailTimeout"')) {
     add("why nobody died leaked");
   }
   if (json.includes('"lostNightId"') || json.includes('"nightResolved"')) add("private night fields leaked");
@@ -71,6 +71,8 @@ export function findLeaks(s: GameState, viewer: Viewer): string[] {
   const night = lastNight;
   const offer = night?.recruit;
   if (v.me?.recruitOffer && (!offer || offer.targetId !== me)) add("recruit offer shown to the wrong player");
+  if (json.includes('"blackmailNext"')) add("a planned blackmail night leaked");
+  if (json.includes('"blackmail":true') && !v.traitor?.night?.blackmail && !v.me?.recruitOffer?.blackmail) add("a blackmail night shown to someone outside it");
   if (v.traitor?.night?.offer && (!offer || offer.traitorId !== me)) add("recruit offer shown to the wrong Traitor");
   for (const a of v.traitor?.offerAnswers ?? []) {
     const mine =

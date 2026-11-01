@@ -32,7 +32,7 @@ import { playerById } from "./shared";
 
 /**
  * Owner, 1 November: the last Traitor hears how each recruit offer went. A refusal sends them back to
- * pick again; an acceptance shows at breakfast. Android phones also buzz (iPhones can't from a website).
+ * pick again; an acceptance, or a blackmail answer, shows at breakfast. Android phones also buzz (iPhones can't from a website).
  */
 function OfferNews({ game }: { game: ReturnType<typeof useGame> }) {
   const view = game.view!;
@@ -59,10 +59,17 @@ function OfferNews({ game }: { game: ReturnType<typeof useGame> }) {
       </div>
     );
   }
+  const night = view.traitor?.night;
   return (
     <div className="mb-4">
       <Notice title={last.answer === "refused" ? `${name} said no` : `${name} didn't answer in time`}>
-        {view.traitor?.night?.recruitmentAvailable ? "Pick again: murder someone, or send an offer to someone else." : "Pick someone to murder."}
+        {!night
+          ? "The host reveals what happens next."
+          : night.blackmail
+            ? "Choose someone else to join you."
+            : night.recruitmentAvailable
+              ? "Pick again: murder someone, or send an offer to someone else."
+              : "Pick someone to murder."}
       </Notice>
     </div>
   );

@@ -352,22 +352,35 @@ export function NightScreen({ game }: { game: GameHandle }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [recruitMode, setRecruitMode] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [refusing, setRefusing] = useState(false);
   const others = view.players.filter((p) => p.status === "alive" && p.id !== me.playerId);
 
   if (me.recruitOffer) {
+    const blackmail = me.recruitOffer.blackmail;
+    const shielded = me.items.some((i) => i.type === "shield" && i.state === "held");
     return (
       <div className="flex flex-col gap-5">
         <Heading title="Night falls" />
         <Card className="flex flex-col items-center gap-4 text-center">
-          <p className="font-display text-3xl text-kumkum">The Traitors want you</p>
-          <p className="text-ink">Join them and become a Traitor, or refuse. Nobody else sees your answer.</p>
+          <p className="font-display text-3xl text-kumkum">{blackmail ? "Join the Traitors or die" : "The Traitors want you"}</p>
+          <p className="text-ink">
+            {!blackmail
+              ? "Join them and become a Traitor, or refuse. Nobody else sees your answer."
+              : shielded
+                ? "The Traitors have chosen you. Join them, or refuse and trust your shield. No answer counts as refusing."
+                : "The Traitors have chosen you. Join them, or refuse and die tonight. No answer counts as refusing."}
+          </p>
           <Countdown deadline={me.recruitOffer.deadline} pausedRemainingMs={null} now={game.now} className="text-3xl" />
           <ErrorLine message={error} />
           <Button variant="danger" busy={busy} onClick={() => send({ type: "answerRecruit", accept: true })}>
             Join the Traitors
           </Button>
-          <Button variant="secondary" busy={busy} onClick={() => send({ type: "answerRecruit", accept: false })}>
-            Refuse
+          <Button
+            variant="secondary"
+            busy={busy}
+            onClick={() => (blackmail && !refusing ? setRefusing(true) : send({ type: "answerRecruit", accept: false }))}
+          >
+            {!blackmail ? "Refuse" : refusing ? "Yes, refuse" : shielded ? "Refuse" : "Refuse and die"}
           </Button>
         </Card>
       </div>
@@ -386,7 +399,7 @@ export function NightScreen({ game }: { game: GameHandle }) {
       );
     }
     // An offer that was turned down can't go to the same player again tonight.
-    const recruiting = recruitMode && night.recruitmentAvailable;
+    const recruiting = night.blackmail || (recruitMode && night.recruitmentAvailable);
     const turnedDown = new Set(tv.offerAnswers.map((x) => x.playerId));
     const pool = others.filter((p) =>
       recruiting ? !tv.fellowTraitorIds.includes(p.id) && !turnedDown.has(p.id) : view.settings.allowTraitorOnTraitor || !tv.fellowTraitorIds.includes(p.id),
@@ -395,7 +408,10 @@ export function NightScreen({ game }: { game: GameHandle }) {
     const confirm = playerById(view, confirmId);
     return (
       <div className="flex flex-col gap-5">
-        <Heading title="Night falls" help="Tap a player. Only you see your choice." />
+        <Heading
+          title="Night falls"
+          help={night.blackmail ? "Blackmail night. Choose who joins you. If they refuse or don't answer, they die." : "Tap a player. Only you see your choice."}
+        />
         <PlayerGrid
           players={gridPlayers(game, pool, (p) => ({
             badge: tv.fellowTraitorIds.includes(p.id) ? <span className="block size-3 rounded-full bg-kumkum ring-2 ring-night" aria-label="fellow" /> : undefined,
@@ -414,7 +430,7 @@ export function NightScreen({ game }: { game: GameHandle }) {
               Chat ({tv.chat?.length ?? 0})
             </Button>
           ) : null}
-          {night.recruitmentAvailable ? (
+          {night.recruitmentAvailable && !night.blackmail ? (
             <Button variant="secondary" size="md" className="flex-1" onClick={() => setRecruitMode((r) => !r)}>
               {recruiting ? "Murder instead" : `Recruit instead (${night.offersLeft} ${night.offersLeft === 1 ? "offer" : "offers"} left)`}
             </Button>
@@ -427,10 +443,12 @@ export function NightScreen({ game }: { game: GameHandle }) {
             <div className="flex flex-col items-center gap-4">
               <Avatar name={confirm.displayName} url={game.photoFor(confirm.photoPath)} size={112} />
               <h2 className="text-center font-display text-3xl font-semibold text-kumkum">
-                {recruiting ? `Recruit ${confirm.displayName}?` : `Pick ${confirm.displayName}?`}
+                {recruiting ? `${night.blackmail ? "Blackmail" : "Recruit"} ${confirm.displayName}?` : `Pick ${confirm.displayName}?`}
               </h2>
               <p className="-mt-2 text-center text-ink-muted">
-                {recruiting
+                {night.blackmail
+                  ? "They get a private offer: join you or die. You can't change this once it's sent."
+                  : recruiting
                   ? "They get a private offer. If they refuse or don't answer, you pick again."
                   : "You can change your pick until every Traitor has picked."}
               </p>

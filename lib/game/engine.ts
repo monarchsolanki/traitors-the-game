@@ -138,6 +138,7 @@ export function createGame(o: CreateGameOptions): GameState {
     missionCatalogue: structuredClone([...(o.missions ?? DEFAULT_MISSIONS)]),
     cohostId: null,
     screenMessage: null,
+    blackmailNext: false,
     ghostGames: emptyGhostGames(),
   };
   const seen = new Set<string>();
@@ -166,7 +167,11 @@ export function normaliseState(s: GameState): GameState {
   s.cohostId ??= null;
   s.screenMessage ??= null;
   s.ghostGames ??= emptyGhostGames();
-  for (const n of s.nights) n.refused ??= [];
+  s.blackmailNext ??= false;
+  for (const n of s.nights) {
+    n.refused ??= [];
+    n.blackmail ??= false;
+  }
   for (const m of s.missions) {
     m.templateId ??= null;
     m.howItWorks ??= "";
@@ -228,6 +233,7 @@ function dispatch(ctx: Ctx): void {
     case "spinTie": return spinTie(ctx);
     case "decideTie": return decideTie(ctx, a);
     case "noBanishment": return noBanishment(ctx);
+    case "setBlackmail": return setBlackmail(ctx, a);
     case "nightPick": return nightPick(ctx, a);
     case "answerRecruit": return answerRecruit(ctx, a);
     case "suspectAnswer": return suspectAnswer(ctx, a);
@@ -1383,11 +1389,15 @@ function startEndgameBanish(ctx: Ctx): void {
 
 function startNight(ctx: Ctx): void {
   const { s } = ctx;
+  // A blackmail night needs a lone Traitor; until there is one, the host's choice waits.
+  const blackmail = s.blackmailNext && aliveTraitorIds(s).length === 1;
+  if (blackmail) s.blackmailNext = false;
   const n: NightRound = {
     id: newId(s, "n"),
     day: s.day,
     picks: {},
     mode: null,
+    blackmail,
     recruit: null,
     refused: [],
     suspectAnswers: {},
@@ -1401,6 +1411,25 @@ function startNight(ctx: Ctx): void {
   s.phase = "NIGHT";
   setTimer(s, ctx.at, s.settings.nightSeconds);
   emit(ctx, "nightFell", PUBLIC, { nightId: n.id });
+  if (blackmail) log(ctx, "Tonight is a blackmail night");
+}
+
+/** The host chooses blackmail for tonight (with a lone Traitor and no offer out) or for the next lone-Traitor night. */
+function setBlackmail(ctx: Ctx, a: ActionOf<"setBlackmail">): void {
+  requireHost(ctx);
+  requireDealt(ctx);
+  requireNotFinale(ctx);
+  const { s } = ctx;
+  const n = activeNight(s);
+  if (n && aliveTraitorIds(s).length === 1) {
+    if (n.recruit) fail("An offer is already out tonight.");
+    n.blackmail = a.on;
+    s.blackmailNext = false;
+    log(ctx, a.on ? "Made tonight a blackmail night" : "Tonight is no longer a blackmail night");
+    return;
+  }
+  s.blackmailNext = a.on;
+  log(ctx, a.on ? "Chose blackmail for the next night with a lone Traitor" : "Took back the blackmail night");
 }
 
 function recruitmentAvailable(s: GameState): boolean {
@@ -1430,11 +1459,12 @@ function nightPick(ctx: Ctx, a: ActionOf<"nightPick">): void {
   if (target.id === p.id) fail("You can't pick yourself.");
   if (!isAlive(target)) fail(`${target.displayName} is no longer in the game.`);
   const mode = a.mode ?? "murder";
+  const blackmail = n.blackmail && aliveTraitorIds(s).length === 1;
   if (mode === "recruit") {
-    if (!recruitmentAvailable(s)) fail("Recruitment isn't available tonight.");
+    if (!blackmail && !recruitmentAvailable(s)) fail("Recruitment isn't available tonight.");
     if (s.roles[target.id] !== "innocent") fail("You can only recruit an Innocent.");
     if (n.refused.some((r) => r.targetId === target.id)) fail(`${target.displayName} already turned you down tonight.`);
-    if (!offersLeft(s, n)) fail("No recruit offers left tonight. Pick someone to murder.");
+    if (!blackmail && !offersLeft(s, n)) fail("No recruit offers left tonight. Pick someone to murder.");
     n.mode = "recruit";
     n.picks = {};
     n.recruit = {
@@ -1450,6 +1480,7 @@ function nightPick(ctx: Ctx, a: ActionOf<"nightPick">): void {
     return;
   }
   if (mode !== "murder") fail("Pick Murder or Recruit.");
+  if (blackmail) fail("Tonight is a blackmail night: pick someone to join you.");
   if (s.roles[target.id] === "traitor" && !s.settings.allowTraitorOnTraitor) fail("You can only pick an Innocent.");
   n.picks[p.id] = target.id;
   if (recruitmentAvailable(s)) n.mode = "murder";
@@ -1465,7 +1496,7 @@ function answerRecruit(ctx: Ctx, a: ActionOf<"answerRecruit">): void {
   if (ctx.at > n.recruit.deadline) fail("This offer has run out.");
   n.recruit.answer = a.accept ? "accepted" : "refused";
   log(ctx, `${p.displayName} ${a.accept ? "accepted" : "refused"} the offer`);
-  if (a.accept) resolveNight(ctx, n, null);
+  if (a.accept || n.blackmail) resolveNight(ctx, n, null);
   else offerFailed(ctx, n);
 }
 
@@ -1554,13 +1585,17 @@ function resolveNight(ctx: Ctx, n: NightRound, hostChoice: { targetId: string | 
     target = hostChoice.targetId;
     reason = "host";
   } else if (n.mode === "recruit" && n.recruit) {
-    const { answer, targetId } = n.recruit;
+    const { answer, targetId, traitorId } = n.recruit;
     if (answer === "accepted" && isAlive(getPlayer(s, targetId))) {
       s.roles[targetId] = "traitor";
       s.roleSeen[targetId] = false;
       emit(ctx, "recruited", toPlayer(targetId), {});
       emit(ctx, "newTraitor", TRAITORS, { playerId: targetId });
       reason = "recruitAccepted";
+    } else if (n.blackmail && isAlive(getPlayer(s, targetId)) && isAlive(getPlayer(s, traitorId))) {
+      // Owner, 2 November: on a blackmail night, not accepting is fatal. A shield still blocks the murder.
+      target = targetId;
+      reason = answer === "refused" ? "blackmailRefused" : "blackmailTimeout";
     } else {
       reason = answer === "refused" ? "recruitRefused" : "recruitTimeout";
     }
@@ -1585,7 +1620,6 @@ function resolveNight(ctx: Ctx, n: NightRound, hostChoice: { targetId: string | 
       p.status = "murdered";
       p.eliminatedDay = n.day;
       loseItems(s, target, n.id);
-      if (!hostChoice) reason = "murdered";
     }
   }
   for (const i of s.items) if (i.type === "shield" && i.state === "held") i.state = "expired";
@@ -1607,6 +1641,10 @@ function resolveNightByHost(ctx: Ctx, a: ActionOf<"resolveNight">): void {
     if (a.targetId !== null && !isAlive(getPlayer(ctx.s, a.targetId))) fail(`${nameOf(ctx.s, a.targetId)} is no longer in the game.`);
     log(ctx, `Resolved the night by hand: ${a.targetId ? nameOf(ctx.s, a.targetId) : "nobody"}`, { reason, override: true });
     resolveNight(ctx, n, { targetId: a.targetId });
+  } else if (n.blackmail && n.recruit && !n.recruit.answer) {
+    // The host stepping in isn't the player refusing: the offer is off and nobody dies.
+    log(ctx, "Ended the night early; the blackmail offer is off");
+    resolveNight(ctx, n, { targetId: null });
   } else {
     log(ctx, "Ended the night early with the current picks");
     resolveNight(ctx, n, null);
@@ -1670,9 +1708,14 @@ function tick(ctx: Ctx): void {
       const n = activeNight(s);
       if (n) {
         if (n.recruit && !n.recruit.answer) {
-          log(ctx, "Recruit offer timed out; the Traitor picks again");
           n.recruit.answer = "timeout";
-          offerFailed(ctx, n);
+          if (n.blackmail) {
+            log(ctx, "Blackmail offer timed out");
+            resolveNight(ctx, n, null);
+          } else {
+            log(ctx, "Recruit offer timed out; the Traitor picks again");
+            offerFailed(ctx, n);
+          }
           return;
         }
         log(ctx, n.recruit && !n.recruit.answer ? "Recruit offer timed out" : "Night timer ran out");

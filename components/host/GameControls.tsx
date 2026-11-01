@@ -516,6 +516,7 @@ function NightControls({ game }: { game: GameHandle }) {
             </li>
           ))}
         </ul>
+        {night?.blackmail ? <p className="mt-2 text-kumkum">Tonight is a blackmail night.</p> : null}
         {night?.refused.map((r) => (
           <p key={r.targetId} className="mt-2 text-ink-muted">
             Recruit offer to {playerById(view, r.targetId)?.displayName}: {r.answer === "refused" ? "refused" : "no answer"}
@@ -538,7 +539,7 @@ function NightControls({ game }: { game: GameHandle }) {
       <Confirm
         open={confirm}
         title="End the night now?"
-        body="The night resolves with the picks made so far."
+        body={night?.blackmail && night.recruit && !night.recruit.answer ? "The blackmail offer is off and nobody dies." : "The night resolves with the picks made so far."}
         action="End the night"
         busy={busy}
         error={error}
@@ -557,6 +558,8 @@ const REASON: Record<string, string> = {
   recruitAccepted: "The recruit accepted and is now a Traitor.",
   recruitRefused: "The recruit refused.",
   recruitTimeout: "The recruit didn't answer in time.",
+  blackmailRefused: "They refused the blackmail, so they die.",
+  blackmailTimeout: "They didn't answer the blackmail in time, so they die.",
   host: "You resolved it by hand.",
 };
 
@@ -818,11 +821,39 @@ export function GameControls({ game }: { game: GameHandle }) {
     <div className="flex flex-col gap-4">
       <TimerControls game={game} />
       {body}
+      {view.startingPlayerCount && view.phase !== "FINALE" ? <BlackmailCard game={game} /> : null}
       {view.startingPlayerCount && !(view.phase === "FINALE") ? <UndoButton game={game} /> : null}
       <BigScreenCard game={game} />
       <BotRunner game={game} />
       <RolesList game={game} />
     </div>
+  );
+}
+
+/** Owner, 2 November: the host chooses which nights are blackmail nights. Only the host and the Traitor know. */
+function BlackmailCard({ game }: { game: GameHandle }) {
+  const view = game.view!;
+  const host = view.host!;
+  const { busy, error, send } = useHostSend(game);
+  const night = host.nights[host.nights.length - 1];
+  const lone = view.players.filter((p) => p.status === "alive" && p.role === "traitor").length === 1;
+  const tonight = view.phase === "NIGHT" && lone && !!night && !night.resolved;
+  const offerOut = tonight && !!night.recruit;
+  return (
+    <Card>
+      <Toggle
+        label={tonight ? "Blackmail tonight" : "Blackmail night"}
+        hint={
+          offerOut
+            ? "The offer is out, so this can't change now."
+            : `${tonight ? "" : "Applies to the next night with one Traitor alive. "}The Traitor can't murder: they pick someone to join them, and if that player refuses or doesn't answer, they die.`
+        }
+        checked={tonight ? night.blackmail : host.blackmailNext}
+        disabled={busy || offerOut}
+        onChange={(on) => void send({ type: "setBlackmail", on })}
+      />
+      <ErrorLine message={error} />
+    </Card>
   );
 }
 

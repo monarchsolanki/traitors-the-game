@@ -86,9 +86,11 @@ export function botMove(
         const innocents = others.filter((id) => s.roles[id] === "innocent");
         const recruitable = innocents.filter((id) => !night.refused.some((r) => r.targetId === id));
         const canOffer = night.refused.length < s.settings.recruitOffersPerNight;
-        if (s.settings.recruitment === "lastTraitor" && traitorsAlive.length === 1 && canOffer && recruitable.length && rand() < 0.4) {
+        const blackmail = night.blackmail && traitorsAlive.length === 1;
+        if (recruitable.length && (blackmail || (s.settings.recruitment === "lastTraitor" && traitorsAlive.length === 1 && canOffer && rand() < 0.4))) {
           return { type: "nightPick", targetId: pickOne(recruitable, rand), mode: "recruit" };
         }
+        if (blackmail) return null;
         const pool = s.settings.allowTraitorOnTraitor ? others : innocents;
         if (!pool.length) return null;
         return { type: "nightPick", targetId: pickOne(pool, rand) };
@@ -128,6 +130,8 @@ function ghostGameMove(s: GameState, playerId: string, alive: string[], rand: Ra
 
 export function hostProgress(s: GameState, rand: Rand, o: Required<Pick<SimOptions, "missionRate" | "shieldRate">>): ActionPayload[] {
   const alive = aliveIds(s);
+  // The host chooses a blackmail night now and then, for a night with a lone Traitor.
+  if (s.frozen && s.phase !== "FINALE" && !s.blackmailNext && rand() < 0.02) return [{ type: "setBlackmail", on: true }];
   const missionsToday = s.missions.filter((m) => m.day === s.day).length;
   const startMission = (): ActionPayload => ({
     type: "startMission",

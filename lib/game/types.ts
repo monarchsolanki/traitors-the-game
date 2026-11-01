@@ -129,6 +129,8 @@ export type NightReason =
   | "recruitAccepted"
   | "recruitRefused"
   | "recruitTimeout"
+  | "blackmailRefused"
+  | "blackmailTimeout"
   | "host";
 
 export interface NightRound {
@@ -136,6 +138,8 @@ export interface NightRound {
   day: number;
   picks: Record<string, string>;
   mode: "murder" | "recruit" | null;
+  /** Owner, 2 November: the host chose this night. The lone Traitor can only send an offer, and not accepting is fatal. */
+  blackmail: boolean;
   recruit: {
     traitorId: string;
     targetId: string;
@@ -285,6 +289,8 @@ export interface GameState {
   /** A message the host or co-host put on the big screen. */
   screenMessage: { text: string; at: number } | null;
   ghostGames: GhostGamesState;
+  /** The host chose blackmail for the next night with exactly one Traitor alive. */
+  blackmailNext: boolean;
 }
 
 type WithReason = { reason: string };
@@ -329,6 +335,7 @@ export type ActionPayload =
   | { type: "spinTie" }
   | { type: "decideTie"; playerId: string; reason?: string }
   | { type: "noBanishment" }
+  | { type: "setBlackmail"; on: boolean }
   // Night
   | { type: "nightPick"; targetId: string; mode?: "murder" | "recruit" }
   | { type: "answerRecruit"; accept: boolean }
