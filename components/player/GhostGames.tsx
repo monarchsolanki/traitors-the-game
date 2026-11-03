@@ -6,6 +6,7 @@ import type { GameHandle } from "@/lib/client/useGame";
 import type { Role } from "@/lib/game/types";
 import { Button } from "@/components/ui/Button";
 import { Card, Notice } from "@/components/ui/Field";
+import { Icon } from "@/components/ui/Icon";
 import { PlayerGrid } from "@/components/ui/PlayerGrid";
 import { ErrorLine, gridPlayers, playerById } from "./shared";
 
@@ -39,21 +40,21 @@ function ReactionBar({ game, emoji }: { game: GameHandle; emoji: string[] }) {
   };
   return (
     <Card>
-      <p className="mb-2 font-semibold text-gold">React on the big screen</p>
+      <p className="mb-2 font-display text-xl text-accent">React on the big screen</p>
       <div className="grid grid-cols-4 gap-2">
         {emoji.map((e) => (
           <button
             key={e}
             type="button"
             onClick={() => react(e)}
-            className={`grid h-14 place-items-center rounded-2xl bg-surface-2 text-3xl ring-1 ring-gold/15 transition active:scale-90 ${last === e ? "scale-110 ring-gold" : ""}`}
+            className={`grid h-14 place-items-center bg-surface-2 text-3xl ring-1 ring-line/15 transition active:scale-90 ${last === e ? "scale-110 ring-line" : ""}`}
             aria-label={`React ${e}`}
           >
             {e}
           </button>
         ))}
       </div>
-      {note ? <p className="mt-2 text-sm text-ink-muted">{note}</p> : null}
+      {note ? <p className="mt-2 text-lg text-ink-muted">{note}</p> : null}
     </Card>
   );
 }
@@ -72,8 +73,8 @@ function BetsCard({ game }: { game: GameHandle }) {
   return (
     <Card className="flex flex-col gap-4">
       <div>
-        <p className="font-semibold text-gold">Bhoot Bets</p>
-        <p className="text-sm text-ink-muted">Guess what happens next. Right guesses score points for Best Ghost.</p>
+        <p className="font-display text-xl text-accent">Bhoot Bets</p>
+        <p className="text-lg text-ink-muted">Guess what happens next. Right guesses score points for Best Ghost.</p>
       </div>
       {kind ? (
         <div className="flex flex-col gap-3">
@@ -127,15 +128,17 @@ function BetsCard({ game }: { game: GameHandle }) {
         </div>
       ) : null}
       {madeCalls.length ? (
-        <p className="text-sm text-ink-muted">
+        <p className="text-lg text-ink-muted">
           Your calls: {madeCalls.map((c) => `${nameOf(game, c.playerId)} ${c.myCall === "traitor" ? "Traitor" : "Innocent"}`).join(" · ")}
         </p>
       ) : null}
       {bets.history.length ? (
-        <ul className="flex flex-col gap-1 text-sm">
+        <ul className="flex flex-col gap-1 text-lg">
           {bets.history.slice(0, 6).map((h, i) => (
-            <li key={i} className={h.correct ? "text-leaf" : "text-ink-muted"}>
-              {h.correct ? "✓" : "✗"} Day {h.day} {h.kind === "banish" ? "banishment" : "murder"}: {nameOf(game, h.pick)}
+            <li key={i} className={`flex items-center gap-1.5 ${h.correct ? "text-jade" : "text-ink-muted"}`}>
+              <Icon name={h.correct ? "check" : "cross"} className="size-4 shrink-0" />
+              <span className="sr-only">{h.correct ? "Right:" : "Wrong:"}</span>
+              Day {h.day} {h.kind === "banish" ? "banishment" : "murder"}: {nameOf(game, h.pick)}
             </li>
           ))}
         </ul>
@@ -154,8 +157,8 @@ function CrystalCard({ game }: { game: GameHandle }) {
   return (
     <Card className="flex flex-col gap-3">
       <div>
-        <p className="font-semibold text-gold">Crystal Ball</p>
-        <p className="text-sm text-ink-muted">At each Circle, name the {cb.size} Traitors. Scored at the final reveal.</p>
+        <p className="font-display text-xl text-accent">Crystal Ball</p>
+        <p className="text-lg text-ink-muted">At each Circle, name the {cb.size} Traitors. Scored at the final reveal.</p>
       </div>
       {cb.myPicks ? (
         <p>Locked in for this Circle: {cb.myPicks.map((id) => nameOf(game, id)).join(", ")}</p>
@@ -188,8 +191,8 @@ function BingoCard({ game }: { game: GameHandle }) {
   return (
     <Card className="flex flex-col gap-3">
       <div>
-        <p className="font-semibold text-gold">Bhoot Bingo</p>
-        <p className="text-sm text-ink-muted">Tap a square when it happens. First full line, across, down or diagonal, wins.</p>
+        <p className="font-display text-xl text-accent">Bhoot Bingo</p>
+        <p className="text-lg text-ink-muted">Tap a square when it happens. First full line, across, down or diagonal, wins.</p>
       </div>
       {winner ? <Notice title={winner} /> : b.hasLine ? <Notice title="You got a line!" /> : null}
       <div className="grid grid-cols-3 gap-2">
@@ -202,7 +205,7 @@ function BingoCard({ game }: { game: GameHandle }) {
               disabled={busy}
               onClick={() => send({ type: "markBingo", moment: m })}
               aria-pressed={on}
-              className={`min-h-24 rounded-2xl p-2 text-sm leading-snug ring-1 transition active:scale-95 ${on ? "bg-gold text-night ring-gold" : "bg-surface-2 text-ink ring-gold/15"}`}
+              className={`min-h-24 p-2 text-lg leading-snug ring-1 transition active:scale-95 ${on ? "bg-accent text-on-accent ring-line" : "bg-surface-2 text-ink ring-line/15"}`}
             >
               {m}
             </button>

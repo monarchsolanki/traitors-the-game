@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { PHASE_TITLE } from "@/lib/client/labels";
 import { useGame } from "@/lib/client/useGame";
+import { actOf, useHouseLights } from "@/lib/client/useHouseLights";
 import { useTicker } from "@/lib/client/useTicker";
 import { Button } from "@/components/ui/Button";
 import { Notice } from "@/components/ui/Field";
@@ -100,8 +101,9 @@ function RecentNews({ game }: { game: ReturnType<typeof useGame> }) {
 
 function HoldOn() {
   return (
-    <div className="flex flex-col items-center gap-3 pt-10 text-center">
-      <p className="font-display text-4xl font-semibold text-gold">Hold on</p>
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 pb-16 text-center">
+      <p className="font-display text-[2.8rem] leading-none">Hold on</p>
+      <div className="speed-lines w-16" aria-hidden />
       <p className="text-lg text-ink-muted">The host will tell you what happens next.</p>
     </div>
   );
@@ -112,13 +114,14 @@ export function PlayerApp({ code }: { code: string }) {
   const [roleOpen, setRoleOpen] = useState(false);
   const view = game.view;
   useTicker(500, view?.phase === "MURDER_REVEAL");
+  useHouseLights(actOf(view));
 
   if (game.notFound) {
     return (
       <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="font-display text-4xl text-gold">No game called {code.toUpperCase()}</p>
+        <p className="font-display text-[2.6rem] leading-tight">No game called {code.toUpperCase()}</p>
         <p className="text-ink-muted">Check the room code with the host.</p>
-        <Link href="/" className="text-gold underline">
+        <Link href="/" className="min-h-12 py-3 text-accent underline underline-offset-4">
           Back
         </Link>
       </main>
@@ -136,6 +139,10 @@ export function PlayerApp({ code }: { code: string }) {
   const dealt = view.startingPlayerCount !== null;
   const title = !game.seated ? "Join the game" : view.finalePending ? "Hold on" : PHASE_TITLE[view.phase];
   const subtitle = `Room ${view.code}${dealt && view.phase !== "FINALE" ? ` · Day ${view.day}` : ""}`;
+  // These screens open with the same words, so the bar doesn't say them twice.
+  const echoed = game.seated && !!me && !me.isGhost && !view.finalePending && ["NIGHT", "PRIVATE_TALKS", "CIRCLE_REVEAL"].includes(view.phase);
+  // Only some phones have a night clock. A clock in the bar would mark them out at a glance (section 9.8).
+  const night = view.phase === "NIGHT";
 
   let body: React.ReactNode;
   if (!game.seated || !me) body = <JoinScreen game={game} code={view.code} />;
@@ -182,10 +189,10 @@ export function PlayerApp({ code }: { code: string }) {
   return (
     <div className="flex min-h-dvh flex-col">
       <TopBar
-        title={title}
-        subtitle={subtitle}
-        deadline={view.deadline}
-        pausedRemainingMs={view.pausedRemainingMs}
+        title={echoed ? `Room ${view.code}` : title}
+        subtitle={echoed ? `Day ${view.day}` : subtitle}
+        deadline={night ? null : view.deadline}
+        pausedRemainingMs={night ? null : view.pausedRemainingMs}
         paused={view.paused}
         now={game.now}
         connection={game.connection}
@@ -197,7 +204,7 @@ export function PlayerApp({ code }: { code: string }) {
           ) : null
         }
       />
-      <main className="mx-auto w-full max-w-md flex-1 px-4 pt-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 pt-5 pb-[max(2rem,env(safe-area-inset-bottom))]">
         {view.paused ? (
           <div className="mb-4">
             <Notice title="The game is paused">Hang tight; the host will resume it.</Notice>
@@ -206,7 +213,7 @@ export function PlayerApp({ code }: { code: string }) {
         {game.seated ? <RecentNews game={game} /> : null}
         {game.seated && !view.paused ? <OfferNews game={game} /> : null}
         {game.seated && me?.isCohost && view.phase !== "FINALE" ? (
-          <Link href={`/cohost/${view.code}`} className="mb-4 block rounded-2xl bg-gold/10 px-4 py-3 text-center text-gold ring-1 ring-gold/30">
+          <Link href={`/cohost/${view.code}`} className="step frame mb-4 block px-4 py-3 text-center text-accent [--frame-strength:70%]">
             You&apos;re the co-host · open the co-host controls
           </Link>
         ) : null}

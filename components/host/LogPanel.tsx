@@ -22,11 +22,11 @@ export function LogPanel({ game }: { game: GameHandle }) {
       </Card>
       <ul className="flex flex-col gap-2">
         {entries.map((l) => (
-          <li key={l.id} className={`rounded-2xl px-4 py-3 ${l.override ? "bg-marigold/10 ring-1 ring-marigold/40" : "bg-surface"}`}>
+          <li key={l.id} className={` px-4 py-3 ${l.override ? "bg-notice/10 ring-1 ring-notice/40" : "bg-surface"}`}>
             <p className="text-sm text-ink-muted">
               {new Date(l.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })} · Day {l.day} · {PHASE_TITLE[l.phase]} ·{" "}
               <span className="text-ink">{who(l.actor)}</span>
-              {l.override ? <span className="ml-2 rounded-full bg-marigold/30 px-2 text-xs text-marigold">fix</span> : null}
+              {l.override ? <span className="ml-2 text-xs font-semibold text-notice">fix</span> : null}
             </p>
             <p className="text-ink">{l.summary}</p>
             {l.reason ? <p className="text-sm text-ink-muted italic">Reason: {l.reason}</p> : null}
@@ -34,7 +34,7 @@ export function LogPanel({ game }: { game: GameHandle }) {
         ))}
       </ul>
       {entries.length >= limit ? (
-        <button type="button" className="py-3 text-gold" onClick={() => setLimit((n) => n + 100)}>
+        <button type="button" className="min-h-12 py-3 text-accent" onClick={() => setLimit((n) => n + 100)}>
           Show older entries
         </button>
       ) : null}

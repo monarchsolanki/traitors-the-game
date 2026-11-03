@@ -7,8 +7,8 @@
 | | |
 | --- | --- |
 | Owner | Monarch Solanki (host of the first game) |
-| Last updated | 26 October 2026 |
-| Status | Feature-complete and live. Added after game night: a refused recruit offer sends the Traitor back to pick (1 November), and host-chosen blackmail nights (2 November). The owner's 30 October changes are built: the game ends only when a side wins (Mafia rule, no End Game vote), the host can banish nobody on a Circle tie, private talks before each Circle (phones alert when they end), ghosts in every discussion, ghost challenges from the second morning, ghost side games off by default except Live reactions, a `/tv` page for the TV, and the Mission Kit (7.1). Next: the rehearsal (6.1) and game night, 31 October. |
+| Last updated | 4 November 2026 |
+| Status | Feature-complete and live. Redesigned on 3 to 4 November as Maharaja Deco, a private-invitation look (9.8). Added after game night: a refused recruit offer sends the Traitor back to pick (1 November), and host-chosen blackmail nights (2 November). The owner's 30 October changes are built: the game ends only when a side wins (Mafia rule, no End Game vote), the host can banish nobody on a Circle tie, private talks before each Circle (phones alert when they end), ghosts in every discussion, ghost challenges from the second morning, ghost side games off by default except Live reactions, a `/tv` page for the TV, and the Mission Kit (7.1). Next: the rehearsal (6.1) and game night, 31 October. |
 | Live link | https://traitors-the-game.vercel.app |
 | First game | Diwali x Halloween ("Diwaloween: Lights & Frights") villa party, Saturday 31 October 2026, 12 players plus the host |
 | Planning doc | [Traitors Party App — Build Plan](https://claude.ai/artifact/4t3XeWf8tHKf7C9YoMmDqN); fully merged into this file on 26 October 2026, so this file alone is enough |
@@ -692,7 +692,7 @@ Same stack as Omertà. Secrets stay on the server: a phone only ever receives wh
 - Every action goes through server routes that check the phase and the player, so nobody can cheat from the browser.
 - The game moves through fixed phases: lobby, roles, mission, Circle, night, reveal, End Game, finale (exact list in 5.1).
 - **Vitest** for unit tests; scripted bot games for whole-game tests; a bot mode fills a game with fake players (10 or more) for solo testing.
-- Look: Diwali-led, elegant and uncluttered (section 9.8). Uses the show's format but none of its logos, music or images.
+- Look: Maharaja Deco, exclusive and rooted in India, not tied to Diwali (section 9.8). Uses the show's format but none of its logos, music or images.
 
 ### 9.2 Views
 
@@ -805,36 +805,54 @@ The planning doc's first, simpler data model (games, players, roles, items, vote
 
 ### 9.8 Look and feel
 
-**Direction (owner, 26 October):** Diwali-led, elegant and uncluttered, mobile-first, and easy for non-technical players. Halloween shows only as light touches (the ghost screens). Uses the show's format but none of its logos, music or images. Omertà (the owner's Mafia app) is the reference for patterns; its code isn't on this Mac, so the look was built fresh (share its link to compare).
+**Direction (owner, 3 November 2026; replaces "Diwali-led", 26 October):** exclusive, like a private invitation-only event. Rooted in Indian culture, not tied to Diwali, Halloween or any date. Black and gold is ruled out as generic luxury. The world is **Maharaja Deco**: Bombay's Eros and Regal cinemas and the 1930s Deco palaces (Umaid Bhawan, Manik Bagh). Players' phones and the big screen are expressive; the host and co-host panels stay plain working tools that borrow only the type, the palette, the density and one signature move. Uses the show's format but none of its logos, music or images. `PRODUCT.md` holds the product brief and `DESIGN.md` the full design system; `.impeccable/surfaces/app-page-tsx.md` holds the direction contract.
 
-**Colours** (tokens in `app/globals.css`; never hard-code a colour in a component):
+**House lights:** the ground colour follows the act, from public state only (`lib/client/useHouseLights.ts`), so every phone and the TV change together and it can never leak a role or an unrevealed winner. The host and co-host keep the peacock ground and plain rectangular controls; a band in the act's colour, and the rail on desktop, is their one signature.
 
-| Token | Use | Value |
+| Act | Ground | When |
 | --- | --- | --- |
-| `night` | Page background: a Diwali night | `#140a0f` |
-| `surface`, `surface-2` | Cards and sheets | `#1f1218`, `#2b1a22` |
-| `ink` | Main text, warm ivory | `#fbf3e4` |
-| `ink-muted` | Secondary text | `#c8b6a2` |
-| `gold` | Diya flame: the main accent and primary buttons | `#f2c14e` |
-| `marigold` | Genda-phool orange: highlights and the toran | `#f08a24` |
-| `kumkum` | Traitors, danger and irreversible actions | `#c8283e` |
-| `ghost` | Ghost screens (the Halloween touch) | `#a99bc4` |
+| Day | Peacock lacquer `#00474c` | Lobby, roles, missions, private talks, breakfast, "Hold on" |
+| Circle | Oxblood `#430d1a` | Debate, votes, reveal, End Game |
+| Night | Midnight indigo `#0f1440` | Night |
+| Innocents win | Rose sandstone `#f3a98f`, dark ink | Final reveal, once the host reveals |
+| Traitors win | Vermilion `#8f1d10` | Final reveal, once the host reveals |
 
-**Type:** Cormorant Garamond (bold) for titles and the big screen; Geist Sans for everything else. Body text at least 18 px on phones; titles 36 px and up; the big screen sizes text to the viewport so it reads across a room.
+**Colours** (tokens in `app/globals.css`, redefined per act; never hard-code a colour in a component):
+
+| Token | Use | Day value |
+| --- | --- | --- |
+| `ground`, `surface`, `surface-2` | Page, panels, raised or held surfaces | `#00474c`, `#025359`, `#055c62` |
+| `ink`, `ink-muted` | Main and secondary text, ivory | `#f6efe3`, `#bcd6cf` |
+| `accent`, `on-accent` | Rose sandstone: primary buttons, selection, numbers | `#f3a98f`, `#052a2d` |
+| `line` | Nickel hairlines and frames | `#a7c8c0` |
+| `danger`, `on-danger` | Irreversible buttons, dagger marks | `#c5301c`, `#fff6ee` |
+| `danger-ink`, `danger-bright` | Traitor words: small text, display size | `#ffa18d`, `#ff7f66` |
+| `notice`, `jade`, `ghost` | Paused and host fixes; connected and seated; ghost screens | `#f7c9b8`, `#86d9ae`, `#c9ccf2` |
+
+**Type:** Limelight (the sign: the tower and big-screen headlines, capitals only), Federo (titles, names, room codes, clocks), Jost (everything else). Body text at least 18 px on phones (bingo squares, the small ghost-game name labels, notes under portraits, the top bar's room line, small buttons, and control labels and hints are 16 px); titles about 42 px; the big screen sizes text to the viewport so it reads across a room.
+
+**Signatures**
+
+- **The stepped corner:** on guest screens and the big screen, every frame, button and portrait has two set-backs at each corner (`.step`, `.frame`), and three parallel speed lines divide headings (`.speed-lines`). `data-surface="operate"` turns both off for the host and co-host. No rounded corners except the small status dots.
+- **The tower sign:** TRAITORS stacked down a stepped rose tower on the home page, the TV page and the big-screen lobby. It is a picture; the page also carries the name as text.
+- **Portraits:** tall stepped plates, cropped towards the head, instead of round avatars. The guest wall is the main surface for joining, voting and night picks.
+- **Lift doors:** hold-to-reveal parts two inlaid doors. The secret exists only while held and is gone before they close.
+- **The ring:** at the vote reveal the big screen seats everyone on a real circle and draws each ballot across it, the newest at full strength, with the tally beside it.
+- **The keyhole:** the mark on the host page, "Hold on" and "Night falls" on the big screen.
 
 **Rules for every screen**
 
-- One screen, one job: a single primary action, full width at the bottom, within thumb reach.
+- One screen, one job: a single primary action, full width, within thumb reach.
 - Buttons at least 56 px tall; every tap target at least 48 px.
 - Plain words a non-technical guest understands: "Tap your photo", "Hold to see your role", "Vote", "Done". No jargon, no unlabeled icons.
 - Anything that can't be undone asks once, showing the person's name and photo ("Vote for Disha?").
-- Always visible at the top: what's happening now, the timer and a connection dot.
-- Text contrast at least 4.5:1; colour is never the only signal (always a word or icon too).
-- Ornament stays at the edges: a thin marigold toran (garland) at the top, a faint rangoli pattern behind the page, a diya as the mark. Never behind text that must be read.
-- Gentle motion only (a flickering diya flame); everything respects reduced-motion settings.
-- Secret screens look neutral until held; the role colour shows only while peeking.
+- Always visible at the top: what's happening now, the timer and a connection dot. At night the phones' top bar shows no timer, because only some phones have one: a Traitor's clock sits under the grid beside the pick count. Where a screen opens with the same words as the phase ("Night falls"), the bar shows the room and day instead.
+- Text contrast at least 4.5:1 (large display text at least 3:1); colour is never the only signal (always a word or icon too).
+- Empty ground is part of the look: one thing owns each stage, and nothing goes behind text that must be read. Icons are drawn (`components/ui/Icon.tsx`), never emoji or text symbols; ghosts' reactions are the only emoji.
+- Motion is one slow colour change per act and one-way ease-out moments; everything respects reduced-motion settings.
+- Secret screens look neutral until held; the role colour shows only while peeking, and only in the word, never as a coloured panel that could be read across a room.
 - Night looks the same for Traitors and Innocents at a glance: the same title and grid. A Traitor's screen marks fellow Traitors with a small dot, never the word "Traitor", and shows a pick count ("1 of 3 picks in"), never names.
-- **Step 5 polish:** eliminated players fade to grey; at the final reveal each player's card turns over in turn to show their role; the breakfast entrance brings photos in one by one; ghosts' reactions float up the big screen; sounds are synthesised in the browser (no files) and start only after a tap on "Sound"; every new animation stops under reduced-motion settings.
+- **Step 5 polish, kept:** eliminated players fade to grey; at the final reveal each player's card turns over in turn to show their role; the breakfast entrance brings photos in one by one into empty frames; ghosts' reactions float up the big screen; sounds are synthesised in the browser (no files) and start only after a tap on "Sound".
 
 ---
 
@@ -1074,6 +1092,7 @@ All decisions dated 26 October 2026 unless noted.
 | Eliminated players win with their team (26 Oct) | Eliminated Traitors win if any Traitor survives; eliminated Innocents win if the Innocents win; setting `eliminatedWinWithTeam`, default on | Owner's call; closes the open party-rule question |
 | Build schedule (26 Oct) | Not a constraint: build the full scope properly. Unfinished work at the freeze is still switched off, never half-shipped | Owner's instruction |
 | Player names and photos (26 Oct) | Uploaded later by the host in the roster editor, any time; initials avatars until then | Owner's instruction |
+| Exclusive look: Maharaja Deco (3 Nov, replaces "Look (26 Oct)") | The whole app redesigned as a private invitation-only event: peacock, oxblood and indigo house lights, rose sandstone, nickel, stepped corners, tower sign, tall portraits, lift doors, the vote ring; fonts Limelight, Federo, Jost. Indian but no longer Diwali-led; the home line "Diwaloween, Lights & Frights, Saturday 31 October" becomes "By invitation only", and the preset field's example changes from "Diwali night" to "Saturday night". No rule, function or other content changed. See 9.8 | Owner's instruction ("revamp the entire UI make it for exclusive"); the owner chose this world from three and ruled out black and gold as generic luxury; the party date has passed |
 | Look (26 Oct) | Diwali-led theme: elegant, uncluttered, mobile-first, easy for non-technical players; Omertà as a reference (section 9.8) | Owner's instruction |
 | Data model (26 Oct, finalizes 9.7) | The full engine state is stored as JSON in a server-only `games` table, saved by one version-checked database function with an idempotency ledger and per-action snapshots; browsers can read only room-code version pings | One atomic write per action; `viewFor` stays the only way out; no client ever touches a secret table; snapshots make undo and recovery simple |
 | Host sign-in (26 Oct, finalizes 9.5) | Supabase Auth email and password, allowed only if listed in `hosts` | No extra passcode system; works on the host's phone and laptop |

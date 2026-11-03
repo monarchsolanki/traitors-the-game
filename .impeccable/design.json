@@ -1,0 +1,1294 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-03T20:11:38+00:00",
+  "title": "Design System: Traitors: The Game",
+  "extensions": {
+    "colorMeta": {
+      "day-ground": {
+        "role": "secondary",
+        "displayName": "Peacock Lacquer",
+        "canonical": "#00474c",
+        "tonalRamp": [
+          "#000e10",
+          "#092a2d",
+          "#1f494d",
+          "#366b6f",
+          "#588d91",
+          "#82aeb2",
+          "#aed1d4",
+          "#daf5f7"
+        ]
+      },
+      "day-surface": {
+        "role": "neutral",
+        "displayName": "Lacquer Surface",
+        "canonical": "#025359",
+        "tonalRamp": [
+          "#000e10",
+          "#042b2e",
+          "#194a4e",
+          "#2f6c71",
+          "#528e93",
+          "#7eafb4",
+          "#abd2d5",
+          "#d8f5f8"
+        ]
+      },
+      "day-surface-2": {
+        "role": "neutral",
+        "displayName": "Lacquer Surface Raised",
+        "canonical": "#055c62",
+        "tonalRamp": [
+          "#000e10",
+          "#012b2e",
+          "#144b4f",
+          "#2a6c72",
+          "#4e8e94",
+          "#7bb0b4",
+          "#a8d2d6",
+          "#d6f6f8"
+        ]
+      },
+      "day-ink": {
+        "role": "neutral",
+        "displayName": "Terrazzo Ivory",
+        "canonical": "#f6efe3",
+        "tonalRamp": [
+          "#0d0b08",
+          "#28251f",
+          "#46413a",
+          "#666057",
+          "#878278",
+          "#a9a49c",
+          "#cdc9c1",
+          "#f1eee9"
+        ]
+      },
+      "day-ink-muted": {
+        "role": "neutral",
+        "displayName": "Weathered Ink",
+        "canonical": "#bcd6cf",
+        "tonalRamp": [
+          "#060d0b",
+          "#1c2825",
+          "#354642",
+          "#516761",
+          "#728882",
+          "#97aaa5",
+          "#becdc9",
+          "#e6f2ee"
+        ]
+      },
+      "day-accent": {
+        "role": "primary",
+        "displayName": "Rose Sandstone",
+        "canonical": "#f3a98f",
+        "tonalRamp": [
+          "#190401",
+          "#3c1a0d",
+          "#623323",
+          "#8b4f39",
+          "#af705a",
+          "#cd9683",
+          "#ebbdad",
+          "#fee9e2"
+        ]
+      },
+      "day-on-accent": {
+        "role": "primary",
+        "displayName": "Deep Peacock Ink",
+        "canonical": "#052a2d",
+        "tonalRamp": [
+          "#030d0f",
+          "#16292a",
+          "#2e4749",
+          "#48686b",
+          "#68898c",
+          "#8fabae",
+          "#b7ced0",
+          "#e1f2f4"
+        ]
+      },
+      "day-line": {
+        "role": "neutral",
+        "displayName": "Nickel",
+        "canonical": "#a7c8c0",
+        "tonalRamp": [
+          "#040d0b",
+          "#192925",
+          "#314742",
+          "#4c6861",
+          "#6d8983",
+          "#93aba5",
+          "#bacec9",
+          "#e3f2ef"
+        ]
+      },
+      "day-danger": {
+        "role": "tertiary",
+        "displayName": "Signal Vermilion",
+        "canonical": "#c5301c",
+        "tonalRamp": [
+          "#1e0000",
+          "#4b0400",
+          "#7d0f02",
+          "#ae2715",
+          "#d64f3b",
+          "#f27f6b",
+          "#ffb3a5",
+          "#fee9e5"
+        ]
+      },
+      "on-danger": {
+        "role": "tertiary",
+        "displayName": "On Danger",
+        "canonical": "#fff6ee",
+        "tonalRamp": [
+          "#0d0b08",
+          "#282421",
+          "#46413c",
+          "#67605a",
+          "#88817a",
+          "#aaa49e",
+          "#cdc8c3",
+          "#f2eeea"
+        ]
+      },
+      "day-danger-ink": {
+        "role": "tertiary",
+        "displayName": "Vermilion Ink",
+        "canonical": "#ffa18d",
+        "tonalRamp": [
+          "#1c0200",
+          "#41150c",
+          "#692d21",
+          "#944738",
+          "#ba6958",
+          "#d79081",
+          "#f4b9ac",
+          "#ffe9e4"
+        ]
+      },
+      "day-danger-bright": {
+        "role": "tertiary",
+        "displayName": "Bright Vermilion Ink",
+        "canonical": "#ff7f66",
+        "tonalRamp": [
+          "#1e0100",
+          "#4a0800",
+          "#761f0f",
+          "#a53723",
+          "#cc5b45",
+          "#e88673",
+          "#feb4a4",
+          "#fee9e5"
+        ]
+      },
+      "day-notice": {
+        "role": "tertiary",
+        "displayName": "Soft Rose Notice",
+        "canonical": "#f7c9b8",
+        "tonalRamp": [
+          "#140704",
+          "#341f18",
+          "#563a30",
+          "#7c574a",
+          "#9f786a",
+          "#be9c90",
+          "#dec2b8",
+          "#ffe9e1"
+        ]
+      },
+      "day-on-notice": {
+        "role": "tertiary",
+        "displayName": "Day On Notice",
+        "canonical": "#052a2d",
+        "tonalRamp": [
+          "#030d0f",
+          "#16292a",
+          "#2e4749",
+          "#48686b",
+          "#68898c",
+          "#8fabae",
+          "#b7ced0",
+          "#e1f2f4"
+        ]
+      },
+      "day-jade": {
+        "role": "tertiary",
+        "displayName": "Jade",
+        "canonical": "#86d9ae",
+        "tonalRamp": [
+          "#000f06",
+          "#012d1b",
+          "#0d4e34",
+          "#23714f",
+          "#49946f",
+          "#78b595",
+          "#a6d6bc",
+          "#d5f9e4"
+        ]
+      },
+      "day-ghost": {
+        "role": "tertiary",
+        "displayName": "Ghost Lilac",
+        "canonical": "#c9ccf2",
+        "tonalRamp": [
+          "#090a15",
+          "#222334",
+          "#3e4057",
+          "#5c5e7d",
+          "#7d7f9f",
+          "#a0a3be",
+          "#c5c7de",
+          "#ebedff"
+        ]
+      },
+      "circle-ground": {
+        "role": "secondary",
+        "displayName": "Oxblood Leather",
+        "canonical": "#430d1a",
+        "tonalRamp": [
+          "#180407",
+          "#3a1a1f",
+          "#5f333a",
+          "#864e56",
+          "#ab6f77",
+          "#c9959b",
+          "#e8bcc1",
+          "#fee8ea"
+        ]
+      },
+      "circle-surface": {
+        "role": "neutral",
+        "displayName": "Circle Surface",
+        "canonical": "#521223",
+        "tonalRamp": [
+          "#190307",
+          "#3c181f",
+          "#62303a",
+          "#8b4b56",
+          "#b06c77",
+          "#ce929b",
+          "#ecbac1",
+          "#ffe8eb"
+        ]
+      },
+      "circle-surface-2": {
+        "role": "neutral",
+        "displayName": "Circle Surface 2",
+        "canonical": "#62192c",
+        "tonalRamp": [
+          "#1b0207",
+          "#3e161e",
+          "#652e39",
+          "#8f4855",
+          "#b46976",
+          "#d2909a",
+          "#efb8c0",
+          "#fee8eb"
+        ]
+      },
+      "circle-ink": {
+        "role": "neutral",
+        "displayName": "Circle Ink",
+        "canonical": "#f8efe4",
+        "tonalRamp": [
+          "#0d0b08",
+          "#28241f",
+          "#46413a",
+          "#676057",
+          "#888178",
+          "#aaa49c",
+          "#cdc8c2",
+          "#f2eee9"
+        ]
+      },
+      "circle-ink-muted": {
+        "role": "neutral",
+        "displayName": "Circle Ink Muted",
+        "canonical": "#e4c6c1",
+        "tonalRamp": [
+          "#110907",
+          "#2f211f",
+          "#4f3d3a",
+          "#735b57",
+          "#957c77",
+          "#b59f9b",
+          "#d7c4c1",
+          "#f9ebe8"
+        ]
+      },
+      "circle-line": {
+        "role": "neutral",
+        "displayName": "Circle Line",
+        "canonical": "#d3b1aa",
+        "tonalRamp": [
+          "#120807",
+          "#30211e",
+          "#513c38",
+          "#755a54",
+          "#987a74",
+          "#b89e99",
+          "#d9c4bf",
+          "#fbeae7"
+        ]
+      },
+      "circle-danger": {
+        "role": "tertiary",
+        "displayName": "Circle Danger",
+        "canonical": "#cf3520",
+        "tonalRamp": [
+          "#1e0000",
+          "#4b0500",
+          "#7e0d00",
+          "#b02410",
+          "#d84d38",
+          "#f47e6a",
+          "#feb4a5",
+          "#fee9e5"
+        ]
+      },
+      "circle-danger-ink": {
+        "role": "tertiary",
+        "displayName": "Circle Danger Ink",
+        "canonical": "#ff9d88",
+        "tonalRamp": [
+          "#1d0100",
+          "#42140b",
+          "#6b2c1f",
+          "#964635",
+          "#bc6756",
+          "#d98f7f",
+          "#f6b8aa",
+          "#fee9e5"
+        ]
+      },
+      "circle-danger-bright": {
+        "role": "tertiary",
+        "displayName": "Circle Danger Bright",
+        "canonical": "#ff8a73",
+        "tonalRamp": [
+          "#1e0100",
+          "#470d04",
+          "#722417",
+          "#9f3d2b",
+          "#c65f4c",
+          "#e28a78",
+          "#feb4a4",
+          "#ffe9e4"
+        ]
+      },
+      "night-ground": {
+        "role": "secondary",
+        "displayName": "Midnight Indigo",
+        "canonical": "#0f1440",
+        "tonalRamp": [
+          "#06091b",
+          "#1d233e",
+          "#363f64",
+          "#525e8d",
+          "#7380b1",
+          "#97a3ce",
+          "#bec8eb",
+          "#e9eefe"
+        ]
+      },
+      "night-surface": {
+        "role": "neutral",
+        "displayName": "Night Surface",
+        "canonical": "#161c50",
+        "tonalRamp": [
+          "#06091d",
+          "#1c2241",
+          "#353f68",
+          "#515d93",
+          "#717fb7",
+          "#96a3d3",
+          "#bcc7f0",
+          "#e9eeff"
+        ]
+      },
+      "night-surface-2": {
+        "role": "neutral",
+        "displayName": "Night Surface 2",
+        "canonical": "#1f2661",
+        "tonalRamp": [
+          "#06081f",
+          "#1b2243",
+          "#353e6c",
+          "#505c97",
+          "#707ebc",
+          "#95a2d8",
+          "#bbc7f3",
+          "#e9eeff"
+        ]
+      },
+      "night-ink": {
+        "role": "neutral",
+        "displayName": "Night Ink",
+        "canonical": "#f1eee8",
+        "tonalRamp": [
+          "#0c0b09",
+          "#262522",
+          "#44423e",
+          "#63615c",
+          "#84827d",
+          "#a7a5a0",
+          "#cbc9c5",
+          "#f0eeeb"
+        ]
+      },
+      "night-ink-muted": {
+        "role": "neutral",
+        "displayName": "Night Ink Muted",
+        "canonical": "#bcc2e8",
+        "tonalRamp": [
+          "#090a15",
+          "#212335",
+          "#3d4058",
+          "#5a5f7e",
+          "#7b80a0",
+          "#9fa3bf",
+          "#c4c8df",
+          "#ebedfe"
+        ]
+      },
+      "night-line": {
+        "role": "neutral",
+        "displayName": "Night Line",
+        "canonical": "#a6acdc",
+        "tonalRamp": [
+          "#080918",
+          "#212339",
+          "#3c3f5e",
+          "#595d85",
+          "#7a7fa9",
+          "#9da2c7",
+          "#c3c7e5",
+          "#ebedff"
+        ]
+      },
+      "innocents-ground": {
+        "role": "secondary",
+        "displayName": "Flooded Rose",
+        "canonical": "#f3a98f",
+        "tonalRamp": [
+          "#190401",
+          "#3c1a0d",
+          "#623323",
+          "#8b4f39",
+          "#af705a",
+          "#cd9683",
+          "#ebbdad",
+          "#fee9e2"
+        ]
+      },
+      "innocents-surface": {
+        "role": "neutral",
+        "displayName": "Innocents Surface",
+        "canonical": "#f6bba6",
+        "tonalRamp": [
+          "#170602",
+          "#381d13",
+          "#5c372a",
+          "#835443",
+          "#a67563",
+          "#c59a8a",
+          "#e4c0b3",
+          "#ffe9e2"
+        ]
+      },
+      "innocents-surface-2": {
+        "role": "neutral",
+        "displayName": "Innocents Surface 2",
+        "canonical": "#f9cdbc",
+        "tonalRamp": [
+          "#140804",
+          "#332018",
+          "#563b30",
+          "#7b584a",
+          "#9d796a",
+          "#bd9d91",
+          "#ddc3b8",
+          "#feeae2"
+        ]
+      },
+      "innocents-ink": {
+        "role": "neutral",
+        "displayName": "Innocents Ink",
+        "canonical": "#052a2d",
+        "tonalRamp": [
+          "#030d0f",
+          "#16292a",
+          "#2e4749",
+          "#48686b",
+          "#68898c",
+          "#8fabae",
+          "#b7ced0",
+          "#e1f2f4"
+        ]
+      },
+      "innocents-ink-muted": {
+        "role": "neutral",
+        "displayName": "Innocents Ink Muted",
+        "canonical": "#1f4648",
+        "tonalRamp": [
+          "#020e0e",
+          "#14292a",
+          "#2c4849",
+          "#45686a",
+          "#668a8c",
+          "#8dacad",
+          "#b6cfd0",
+          "#e0f3f4"
+        ]
+      },
+      "innocents-accent": {
+        "role": "primary",
+        "displayName": "Innocents Accent",
+        "canonical": "#00474c",
+        "tonalRamp": [
+          "#000e10",
+          "#092a2d",
+          "#1f494d",
+          "#366b6f",
+          "#588d91",
+          "#82aeb2",
+          "#aed1d4",
+          "#daf5f7"
+        ]
+      },
+      "innocents-on-accent": {
+        "role": "primary",
+        "displayName": "Innocents On Accent",
+        "canonical": "#f6efe3",
+        "tonalRamp": [
+          "#0d0b08",
+          "#28251f",
+          "#46413a",
+          "#666057",
+          "#878278",
+          "#a9a49c",
+          "#cdc9c1",
+          "#f1eee9"
+        ]
+      },
+      "innocents-line": {
+        "role": "neutral",
+        "displayName": "Innocents Line",
+        "canonical": "#025359",
+        "tonalRamp": [
+          "#000e10",
+          "#042b2e",
+          "#194a4e",
+          "#2f6c71",
+          "#528e93",
+          "#7eafb4",
+          "#abd2d5",
+          "#d8f5f8"
+        ]
+      },
+      "innocents-danger": {
+        "role": "tertiary",
+        "displayName": "Innocents Danger",
+        "canonical": "#a8230f",
+        "tonalRamp": [
+          "#1e0000",
+          "#4b0600",
+          "#791a0c",
+          "#a8311f",
+          "#d05642",
+          "#ec8471",
+          "#ffb4a5",
+          "#fee9e5"
+        ]
+      },
+      "innocents-danger-ink": {
+        "role": "tertiary",
+        "displayName": "Innocents Danger Ink",
+        "canonical": "#8a1a08",
+        "tonalRamp": [
+          "#1e0100",
+          "#480c04",
+          "#732316",
+          "#a13b2b",
+          "#c75e4c",
+          "#e48978",
+          "#ffb3a4",
+          "#fee9e5"
+        ]
+      },
+      "innocents-notice": {
+        "role": "tertiary",
+        "displayName": "Innocents Notice",
+        "canonical": "#052a2d",
+        "tonalRamp": [
+          "#030d0f",
+          "#16292a",
+          "#2e4749",
+          "#48686b",
+          "#68898c",
+          "#8fabae",
+          "#b7ced0",
+          "#e1f2f4"
+        ]
+      },
+      "innocents-on-notice": {
+        "role": "tertiary",
+        "displayName": "Innocents On Notice",
+        "canonical": "#f6efe3",
+        "tonalRamp": [
+          "#0d0b08",
+          "#28251f",
+          "#46413a",
+          "#666057",
+          "#878278",
+          "#a9a49c",
+          "#cdc9c1",
+          "#f1eee9"
+        ]
+      },
+      "innocents-jade": {
+        "role": "tertiary",
+        "displayName": "Innocents Jade",
+        "canonical": "#0a4d33",
+        "tonalRamp": [
+          "#000f07",
+          "#0b2c1d",
+          "#214c38",
+          "#386e54",
+          "#5a9075",
+          "#84b199",
+          "#afd3bf",
+          "#dbf6e7"
+        ]
+      },
+      "innocents-ghost": {
+        "role": "tertiary",
+        "displayName": "Innocents Ghost",
+        "canonical": "#2b2f6b",
+        "tonalRamp": [
+          "#07081e",
+          "#1d2143",
+          "#373d6b",
+          "#535b97",
+          "#737dbb",
+          "#98a1d7",
+          "#bec6f3",
+          "#eaeefe"
+        ]
+      },
+      "traitors-ground": {
+        "role": "secondary",
+        "displayName": "Flooded Vermilion",
+        "canonical": "#8f1d10",
+        "tonalRamp": [
+          "#1f0000",
+          "#480b05",
+          "#732217",
+          "#a13a2c",
+          "#c85d4d",
+          "#e48878",
+          "#ffb3a6",
+          "#ffe9e5"
+        ]
+      },
+      "traitors-surface": {
+        "role": "neutral",
+        "displayName": "Traitors Surface",
+        "canonical": "#a02517",
+        "tonalRamp": [
+          "#1f0000",
+          "#4a0702",
+          "#761e14",
+          "#a53628",
+          "#cc5a49",
+          "#e88675",
+          "#ffb3a6",
+          "#fee9e5"
+        ]
+      },
+      "traitors-surface-2": {
+        "role": "neutral",
+        "displayName": "Traitors Surface 2",
+        "canonical": "#ad2e1f",
+        "tonalRamp": [
+          "#1f0000",
+          "#4b0501",
+          "#771c11",
+          "#a63425",
+          "#ce5847",
+          "#ea8574",
+          "#feb4a6",
+          "#fee9e5"
+        ]
+      },
+      "traitors-ink": {
+        "role": "neutral",
+        "displayName": "Traitors Ink",
+        "canonical": "#fff3ea",
+        "tonalRamp": [
+          "#0e0a08",
+          "#292420",
+          "#48403b",
+          "#695f58",
+          "#8a8079",
+          "#aca39d",
+          "#cfc8c2",
+          "#f3ede9"
+        ]
+      },
+      "traitors-ink-muted": {
+        "role": "neutral",
+        "displayName": "Traitors Ink Muted",
+        "canonical": "#f8d4c8",
+        "tonalRamp": [
+          "#120806",
+          "#31211b",
+          "#523c35",
+          "#765a50",
+          "#987b71",
+          "#b99e96",
+          "#dac4bd",
+          "#fbeae5"
+        ]
+      },
+      "traitors-accent": {
+        "role": "primary",
+        "displayName": "Traitors Accent",
+        "canonical": "#f6efe3",
+        "tonalRamp": [
+          "#0d0b08",
+          "#28251f",
+          "#46413a",
+          "#666057",
+          "#878278",
+          "#a9a49c",
+          "#cdc9c1",
+          "#f1eee9"
+        ]
+      },
+      "traitors-on-accent": {
+        "role": "primary",
+        "displayName": "Traitors On Accent",
+        "canonical": "#5e1209",
+        "tonalRamp": [
+          "#1c0201",
+          "#401610",
+          "#672e25",
+          "#92493d",
+          "#b76a5d",
+          "#d59185",
+          "#f2baaf",
+          "#fee9e5"
+        ]
+      },
+      "traitors-line": {
+        "role": "neutral",
+        "displayName": "Traitors Line",
+        "canonical": "#f4c8bb",
+        "tonalRamp": [
+          "#140805",
+          "#331f1a",
+          "#553a32",
+          "#7a584d",
+          "#9d786e",
+          "#bd9d93",
+          "#ddc2ba",
+          "#fee9e3"
+        ]
+      },
+      "traitors-danger": {
+        "role": "tertiary",
+        "displayName": "Traitors Danger",
+        "canonical": "#5e1209",
+        "tonalRamp": [
+          "#1c0201",
+          "#401610",
+          "#672e25",
+          "#92493d",
+          "#b76a5d",
+          "#d59185",
+          "#f2baaf",
+          "#fee9e5"
+        ]
+      },
+      "traitors-jade": {
+        "role": "tertiary",
+        "displayName": "Traitors Jade",
+        "canonical": "#d6f2e2",
+        "tonalRamp": [
+          "#060d09",
+          "#1c2821",
+          "#35473d",
+          "#51675b",
+          "#71897c",
+          "#97ab9f",
+          "#bdcec4",
+          "#e6f2eb"
+        ]
+      },
+      "traitors-ghost": {
+        "role": "tertiary",
+        "displayName": "Traitors Ghost",
+        "canonical": "#e8e9ff",
+        "tonalRamp": [
+          "#0a0a11",
+          "#24242e",
+          "#40414e",
+          "#5f5f71",
+          "#808193",
+          "#a3a3b3",
+          "#c7c8d5",
+          "#ededf8"
+        ]
+      },
+      "act-day": {
+        "role": "secondary",
+        "displayName": "Act Day",
+        "canonical": "#0f6a6f",
+        "tonalRamp": [
+          "#000e0f",
+          "#022b2e",
+          "#0d4b4f",
+          "#236d72",
+          "#488f94",
+          "#78b1b4",
+          "#a6d3d6",
+          "#d4f6f8"
+        ]
+      },
+      "act-circle": {
+        "role": "secondary",
+        "displayName": "Act Circle",
+        "canonical": "#7a1a2e",
+        "tonalRamp": [
+          "#1e0004",
+          "#441019",
+          "#6d2731",
+          "#99404c",
+          "#bf626c",
+          "#dc8b92",
+          "#f8b5b9",
+          "#ffe8e9"
+        ]
+      },
+      "act-night": {
+        "role": "secondary",
+        "displayName": "Act Night",
+        "canonical": "#2a3185",
+        "tonalRamp": [
+          "#050625",
+          "#191f4d",
+          "#313b7a",
+          "#4b59a9",
+          "#6a7bce",
+          "#90a0e8",
+          "#b8c6ff",
+          "#e9eeff"
+        ]
+      },
+      "act-innocents": {
+        "role": "secondary",
+        "displayName": "Act Innocents",
+        "canonical": "#8f5a48",
+        "tonalRamp": [
+          "#170602",
+          "#381d13",
+          "#5c372a",
+          "#835343",
+          "#a77463",
+          "#c6998a",
+          "#e5c0b3",
+          "#fee9e3"
+        ]
+      },
+      "act-traitors": {
+        "role": "secondary",
+        "displayName": "Act Traitors",
+        "canonical": "#8f1d10",
+        "tonalRamp": [
+          "#1f0000",
+          "#480b05",
+          "#732217",
+          "#a13a2c",
+          "#c85d4d",
+          "#e48878",
+          "#ffb3a6",
+          "#ffe9e5"
+        ]
+      },
+      "on-tone": {
+        "role": "neutral",
+        "displayName": "On Tone",
+        "canonical": "#f6efe3",
+        "tonalRamp": [
+          "#0d0b08",
+          "#28251f",
+          "#46413a",
+          "#666057",
+          "#878278",
+          "#a9a49c",
+          "#cdc9c1",
+          "#f1eee9"
+        ]
+      },
+      "tone-1": {
+        "role": "neutral",
+        "displayName": "Tone 1",
+        "canonical": "#0a6a70",
+        "tonalRamp": [
+          "#000e10",
+          "#012b2e",
+          "#0a4b50",
+          "#206d73",
+          "#478f95",
+          "#77b1b5",
+          "#a5d3d6",
+          "#d4f6f9"
+        ]
+      },
+      "tone-2": {
+        "role": "neutral",
+        "displayName": "Tone 2",
+        "canonical": "#6d1a2c",
+        "tonalRamp": [
+          "#1c0206",
+          "#41131b",
+          "#692b35",
+          "#944450",
+          "#b96670",
+          "#d68e95",
+          "#f3b7bc",
+          "#ffe8ea"
+        ]
+      },
+      "tone-3": {
+        "role": "neutral",
+        "displayName": "Tone 3",
+        "canonical": "#2a3185",
+        "tonalRamp": [
+          "#050625",
+          "#191f4d",
+          "#313b7a",
+          "#4b59a9",
+          "#6a7bce",
+          "#90a0e8",
+          "#b8c6ff",
+          "#e9eeff"
+        ]
+      },
+      "tone-4": {
+        "role": "neutral",
+        "displayName": "Tone 4",
+        "canonical": "#8a4a3a",
+        "tonalRamp": [
+          "#190402",
+          "#3c1a12",
+          "#613328",
+          "#8a4f40",
+          "#ae7060",
+          "#cd9688",
+          "#ebbdb1",
+          "#ffe9e3"
+        ]
+      },
+      "tone-5": {
+        "role": "neutral",
+        "displayName": "Tone 5",
+        "canonical": "#3f6b70",
+        "tonalRamp": [
+          "#010e10",
+          "#12292c",
+          "#28484c",
+          "#41696d",
+          "#628b8f",
+          "#8aacb0",
+          "#b3cfd2",
+          "#def3f6"
+        ]
+      },
+      "tone-6": {
+        "role": "neutral",
+        "displayName": "Tone 6",
+        "canonical": "#5a2540",
+        "tonalRamp": [
+          "#17040d",
+          "#381a28",
+          "#5c3346",
+          "#834e67",
+          "#a76f88",
+          "#c695aa",
+          "#e5bccd",
+          "#ffe7f1"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "sign": {
+        "displayName": "Sign",
+        "purpose": "TV act headlines and the tower sign, uppercase."
+      },
+      "reveal": {
+        "displayName": "Reveal",
+        "purpose": "The role word behind the lift doors."
+      },
+      "display": {
+        "displayName": "Display",
+        "purpose": "The single heading on a guest screen."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Sheet titles and confirmations."
+      },
+      "card-title": {
+        "displayName": "Card Title",
+        "purpose": "Section titles inside cards, in accent."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Room codes on phones, in accent."
+      },
+      "tv-code": {
+        "displayName": "TV Code",
+        "purpose": "The room code on the big screen."
+      },
+      "tv-sub": {
+        "displayName": "TV Sub",
+        "purpose": "Supporting lines on the big screen."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All reading text."
+      },
+      "button": {
+        "displayName": "Button",
+        "purpose": "Primary and danger button labels."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, rail items and small buttons."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "house",
+        "value": "1.4s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "The colour change between acts, on registered colour properties at the root."
+      },
+      {
+        "name": "door",
+        "value": "0.45s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Lift doors parting on hold-to-reveal."
+      },
+      {
+        "name": "rise",
+        "value": "0.42s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Bottom sheets entering."
+      },
+      {
+        "name": "settle",
+        "value": "0.6s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Content appearing in place."
+      },
+      {
+        "name": "arrive",
+        "value": "0.9s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "TV moments arriving."
+      },
+      {
+        "name": "flip-in",
+        "value": "0.9s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Photo-wall portraits flipping in on the TV."
+      },
+      {
+        "name": "draw",
+        "value": "0.9s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "A vote drawn across the ring."
+      },
+      {
+        "name": "call",
+        "value": "1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite",
+        "purpose": "The Circle call pulse on phones."
+      },
+      {
+        "name": "float-up",
+        "value": "4.2s ease-out",
+        "purpose": "Ghost reactions rising up the TV."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "short",
+        "value": "max-height: 700px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one action on a guest screen, full width at the thumb.",
+      "html": "<button class=\"ds-btn-primary\">Join the game</button>",
+      "css": ".ds-btn-primary{--s:7px;clip-path:polygon(calc(var(--s)*2) 0,calc(100% - var(--s)*2) 0,calc(100% - var(--s)*2) var(--s),calc(100% - var(--s)) var(--s),calc(100% - var(--s)) calc(var(--s)*2),100% calc(var(--s)*2),100% calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)),calc(100% - var(--s)*2) calc(100% - var(--s)),calc(100% - var(--s)*2) 100%,calc(var(--s)*2) 100%,calc(var(--s)*2) calc(100% - var(--s)),var(--s) calc(100% - var(--s)),var(--s) calc(100% - var(--s)*2),0 calc(100% - var(--s)*2),0 calc(var(--s)*2),var(--s) calc(var(--s)*2),var(--s) var(--s),calc(var(--s)*2) var(--s));display:inline-flex;align-items:center;justify-content:center;min-height:56px;width:100%;padding:0 24px;border:0;font:600 18px var(--font-jost),system-ui,sans-serif;cursor:pointer;transition:filter .15s,transform .15s;background:var(--accent);color:var(--on-accent);}.ds-btn-primary:hover{filter:brightness(1.05);}.ds-btn-primary:active{transform:scale(.98);}.ds-btn-primary:focus-visible{outline:2px solid var(--accent);outline-offset:-6px;}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A stepped hairline at 70% strength for the other choices.",
+      "html": "<button class=\"ds-btn-secondary\">Not now</button>",
+      "css": ".ds-btn-secondary{--s:7px;clip-path:polygon(calc(var(--s)*2) 0,calc(100% - var(--s)*2) 0,calc(100% - var(--s)*2) var(--s),calc(100% - var(--s)) var(--s),calc(100% - var(--s)) calc(var(--s)*2),100% calc(var(--s)*2),100% calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)),calc(100% - var(--s)*2) calc(100% - var(--s)),calc(100% - var(--s)*2) 100%,calc(var(--s)*2) 100%,calc(var(--s)*2) calc(100% - var(--s)),var(--s) calc(100% - var(--s)),var(--s) calc(100% - var(--s)*2),0 calc(100% - var(--s)*2),0 calc(var(--s)*2),var(--s) calc(var(--s)*2),var(--s) var(--s),calc(var(--s)*2) var(--s));position:relative;isolation:isolate;background:color-mix(in srgb,var(--line) 70%,var(--ground));display:inline-flex;align-items:center;justify-content:center;min-height:56px;width:100%;padding:0 24px;border:0;font:400 18px var(--font-jost),system-ui,sans-serif;cursor:pointer;transition:filter .15s,transform .15s;color:var(--ink);}.ds-btn-secondary::before{content:\"\";position:absolute;inset:1px;z-index:-1;background:var(--fill,var(--surface));clip-path:polygon(calc(var(--s)*2) 0,calc(100% - var(--s)*2) 0,calc(100% - var(--s)*2) var(--s),calc(100% - var(--s)) var(--s),calc(100% - var(--s)) calc(var(--s)*2),100% calc(var(--s)*2),100% calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)),calc(100% - var(--s)*2) calc(100% - var(--s)),calc(100% - var(--s)*2) 100%,calc(var(--s)*2) 100%,calc(var(--s)*2) calc(100% - var(--s)),var(--s) calc(100% - var(--s)),var(--s) calc(100% - var(--s)*2),0 calc(100% - var(--s)*2),0 calc(var(--s)*2),var(--s) calc(var(--s)*2),var(--s) var(--s),calc(var(--s)*2) var(--s));transition:background-color .15s ease;}.ds-btn-secondary:hover{--fill:var(--surface-2);}.ds-btn-secondary:active{transform:scale(.98);}.ds-btn-secondary:focus-visible{outline:2px solid var(--accent);outline-offset:-6px;}"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Vermilion, only for an irreversible or fatal choice.",
+      "html": "<button class=\"ds-btn-danger\">Banish them</button>",
+      "css": ".ds-btn-danger{--s:7px;clip-path:polygon(calc(var(--s)*2) 0,calc(100% - var(--s)*2) 0,calc(100% - var(--s)*2) var(--s),calc(100% - var(--s)) var(--s),calc(100% - var(--s)) calc(var(--s)*2),100% calc(var(--s)*2),100% calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)),calc(100% - var(--s)*2) calc(100% - var(--s)),calc(100% - var(--s)*2) 100%,calc(var(--s)*2) 100%,calc(var(--s)*2) calc(100% - var(--s)),var(--s) calc(100% - var(--s)),var(--s) calc(100% - var(--s)*2),0 calc(100% - var(--s)*2),0 calc(var(--s)*2),var(--s) calc(var(--s)*2),var(--s) var(--s),calc(var(--s)*2) var(--s));display:inline-flex;align-items:center;justify-content:center;min-height:56px;width:100%;padding:0 24px;border:0;font:600 18px var(--font-jost),system-ui,sans-serif;cursor:pointer;transition:filter .15s,transform .15s;background:var(--danger);color:var(--on-danger);}.ds-btn-danger:hover{filter:brightness(1.1);}.ds-btn-danger:active{transform:scale(.98);}.ds-btn-danger:focus-visible{outline:2px solid var(--accent);outline-offset:-6px;}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "text-field",
+      "description": "Plain rectangle on ground with a label above.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Your name</span><input class=\"ds-field-input\" placeholder=\"Type here\"></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:6px;}.ds-field-label{font:500 16px var(--font-jost),system-ui,sans-serif;color:var(--ink-muted);}.ds-field-input{min-height:48px;padding:0 16px;background:var(--ground);border:1px solid color-mix(in srgb,var(--line) 40%,transparent);color:var(--ink);font:400 18px var(--font-jost),system-ui,sans-serif;}.ds-field-input:focus{border-color:var(--accent);outline:none;}"
+    },
+    {
+      "name": "Toggle",
+      "kind": "custom",
+      "refersTo": "toggle-on",
+      "description": "A stepped switch with a rectangular thumb.",
+      "html": "<button class=\"ds-toggle\" role=\"switch\" aria-checked=\"true\" aria-label=\"Sound\"><span class=\"ds-toggle-thumb\"></span></button>",
+      "css": ".ds-toggle{--s:3px;clip-path:polygon(calc(var(--s)*2) 0,calc(100% - var(--s)*2) 0,calc(100% - var(--s)*2) var(--s),calc(100% - var(--s)) var(--s),calc(100% - var(--s)) calc(var(--s)*2),100% calc(var(--s)*2),100% calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)),calc(100% - var(--s)*2) calc(100% - var(--s)),calc(100% - var(--s)*2) 100%,calc(var(--s)*2) 100%,calc(var(--s)*2) calc(100% - var(--s)),var(--s) calc(100% - var(--s)),var(--s) calc(100% - var(--s)*2),0 calc(100% - var(--s)*2),0 calc(var(--s)*2),var(--s) calc(var(--s)*2),var(--s) var(--s),calc(var(--s)*2) var(--s));position:relative;width:56px;height:32px;border:0;background:var(--accent);cursor:pointer;}.ds-toggle-thumb{position:absolute;top:4px;left:32px;width:20px;height:24px;background:var(--on-accent);}.ds-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:-6px;}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Surface in a 32% stepped hairline, with a Federo title in accent.",
+      "html": "<section class=\"ds-card\"><p class=\"ds-card-title\">Big-screen message</p><p class=\"ds-card-body\">Nothing showing.</p></section>",
+      "css": ".ds-card{--s:7px;clip-path:polygon(calc(var(--s)*2) 0,calc(100% - var(--s)*2) 0,calc(100% - var(--s)*2) var(--s),calc(100% - var(--s)) var(--s),calc(100% - var(--s)) calc(var(--s)*2),100% calc(var(--s)*2),100% calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)),calc(100% - var(--s)*2) calc(100% - var(--s)),calc(100% - var(--s)*2) 100%,calc(var(--s)*2) 100%,calc(var(--s)*2) calc(100% - var(--s)),var(--s) calc(100% - var(--s)),var(--s) calc(100% - var(--s)*2),0 calc(100% - var(--s)*2),0 calc(var(--s)*2),var(--s) calc(var(--s)*2),var(--s) var(--s),calc(var(--s)*2) var(--s));position:relative;isolation:isolate;background:color-mix(in srgb,var(--line) 32%,var(--ground));padding:20px;}.ds-card::before{content:\"\";position:absolute;inset:1px;z-index:-1;background:var(--fill,var(--surface));clip-path:polygon(calc(var(--s)*2) 0,calc(100% - var(--s)*2) 0,calc(100% - var(--s)*2) var(--s),calc(100% - var(--s)) var(--s),calc(100% - var(--s)) calc(var(--s)*2),100% calc(var(--s)*2),100% calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)),calc(100% - var(--s)*2) calc(100% - var(--s)),calc(100% - var(--s)*2) 100%,calc(var(--s)*2) 100%,calc(var(--s)*2) calc(100% - var(--s)),var(--s) calc(100% - var(--s)),var(--s) calc(100% - var(--s)*2),0 calc(100% - var(--s)*2),0 calc(var(--s)*2),var(--s) calc(var(--s)*2),var(--s) var(--s),calc(var(--s)*2) var(--s));transition:background-color .15s ease;}.ds-card-title{margin:0;font:400 1.25rem var(--font-federo);color:var(--accent);}.ds-card-body{margin:8px 0 0;font:400 18px/1.45 var(--font-jost),system-ui,sans-serif;color:var(--ink-muted);}"
+    },
+    {
+      "name": "Host Rail",
+      "kind": "nav",
+      "refersTo": "rail-item-active",
+      "description": "Desktop navigation that wears the current act's band colour.",
+      "html": "<nav class=\"ds-rail\"><a class=\"ds-rail-item is-on\" href=\"#game\">Game</a><a class=\"ds-rail-item\" href=\"#players\">Players</a><a class=\"ds-rail-item\" href=\"#log\">Log</a></nav>",
+      "css": ".ds-rail{display:flex;flex-direction:column;gap:4px;width:13rem;padding:12px;background:var(--act-night);transition:background-color 1s;}.ds-rail-item{display:flex;align-items:center;min-height:48px;padding:0 16px;font:500 16px var(--font-jost),system-ui,sans-serif;color:var(--ink-muted);text-decoration:none;}.ds-rail-item:hover{color:var(--ink);}.ds-rail-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}.ds-rail-item.is-on{background:var(--accent);color:var(--on-accent);}"
+    },
+    {
+      "name": "Portrait Plate",
+      "kind": "custom",
+      "description": "A tall stepped plate with a selection ring; initials on a tone fill when there is no photo.",
+      "html": "<button class=\"ds-plate\" aria-pressed=\"true\"><span class=\"ds-plate-inner\">AK</span></button>",
+      "css": ".ds-plate{--s:7px;clip-path:polygon(calc(var(--s)*2) 0,calc(100% - var(--s)*2) 0,calc(100% - var(--s)*2) var(--s),calc(100% - var(--s)) var(--s),calc(100% - var(--s)) calc(var(--s)*2),100% calc(var(--s)*2),100% calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)),calc(100% - var(--s)*2) calc(100% - var(--s)),calc(100% - var(--s)*2) 100%,calc(var(--s)*2) 100%,calc(var(--s)*2) calc(100% - var(--s)),var(--s) calc(100% - var(--s)),var(--s) calc(100% - var(--s)*2),0 calc(100% - var(--s)*2),0 calc(var(--s)*2),var(--s) calc(var(--s)*2),var(--s) var(--s),calc(var(--s)*2) var(--s));width:120px;aspect-ratio:5/6;padding:3px;border:0;background:var(--accent);cursor:pointer;transition:transform .15s;}.ds-plate:active{transform:scale(.95);}.ds-plate:focus-visible{outline:2px solid var(--ink);outline-offset:-6px;}.ds-plate-inner{--s:7px;clip-path:polygon(calc(var(--s)*2) 0,calc(100% - var(--s)*2) 0,calc(100% - var(--s)*2) var(--s),calc(100% - var(--s)) var(--s),calc(100% - var(--s)) calc(var(--s)*2),100% calc(var(--s)*2),100% calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)),calc(100% - var(--s)*2) calc(100% - var(--s)),calc(100% - var(--s)*2) 100%,calc(var(--s)*2) 100%,calc(var(--s)*2) calc(100% - var(--s)),var(--s) calc(100% - var(--s)),var(--s) calc(100% - var(--s)*2),0 calc(100% - var(--s)*2),0 calc(var(--s)*2),var(--s) calc(var(--s)*2),var(--s) var(--s),calc(var(--s)*2) var(--s));display:grid;place-items:center;width:100%;height:100%;background:var(--tone-2);color:var(--on-tone);font:400 2.4rem var(--font-federo);}"
+    },
+    {
+      "name": "Tower Sign",
+      "kind": "custom",
+      "description": "The name on a Deco fin, one letter a storey, bleeding off the left edge.",
+      "html": "<div class=\"ds-tower\" aria-hidden=\"true\"><span>T</span><span>R</span><span>A</span><span>I</span><span>T</span><span>O</span><span>R</span><span>S</span></div>",
+      "css": ".ds-tower{--cell:44px;--set:calc(var(--cell)*.2);display:flex;flex-direction:column;justify-content:flex-end;width:calc(var(--cell)*1.24);padding-top:calc(var(--set)*3.4);padding-bottom:calc(var(--cell)*.12);background:var(--accent);color:var(--on-accent);clip-path:polygon(0 0,38% 0,38% var(--set),62% var(--set),62% calc(var(--set)*2),82% calc(var(--set)*2),82% calc(var(--set)*3),100% calc(var(--set)*3),100% 100%,0 100%);}.ds-tower span{display:block;height:var(--cell);font:400 calc(var(--cell)*.98)/1 var(--font-limelight),serif;text-align:center;}"
+    },
+    {
+      "name": "Lift Doors",
+      "kind": "custom",
+      "description": "Hold-to-reveal: two doors part while pressed, over a secret that exists only while held.",
+      "html": "<button class=\"ds-doors\"><span class=\"ds-doors-secret\">Innocent</span><span class=\"ds-door ds-door-l\"></span><span class=\"ds-door ds-door-r\"></span><span class=\"ds-doors-prompt\"><svg viewBox=\"0 0 24 24\" width=\"32\" height=\"32\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"square\" aria-hidden=\"true\"><path d=\"M9 11V5.5a1.5 1.5 0 013 0V11m0-1.5a1.5 1.5 0 013 0V11m0-.5a1.5 1.5 0 013 0V15c0 3.3-2.2 6-5.5 6-2.6 0-4-1.2-5.2-3L5 14.2c-.7-1.2 1-2.5 2-1.4L9 15\"/></svg><span>Hold to see your role</span></span></button>",
+      "css": ".ds-doors{--s:7px;clip-path:polygon(calc(var(--s)*2) 0,calc(100% - var(--s)*2) 0,calc(100% - var(--s)*2) var(--s),calc(100% - var(--s)) var(--s),calc(100% - var(--s)) calc(var(--s)*2),100% calc(var(--s)*2),100% calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)),calc(100% - var(--s)*2) calc(100% - var(--s)),calc(100% - var(--s)*2) 100%,calc(var(--s)*2) 100%,calc(var(--s)*2) calc(100% - var(--s)),var(--s) calc(100% - var(--s)),var(--s) calc(100% - var(--s)*2),0 calc(100% - var(--s)*2),0 calc(var(--s)*2),var(--s) calc(var(--s)*2),var(--s) var(--s),calc(var(--s)*2) var(--s));position:relative;isolation:isolate;background:color-mix(in srgb,var(--line) 45%,var(--ground));--s:6px;display:grid;place-items:center;width:100%;min-height:320px;overflow:hidden;border:0;cursor:pointer;touch-action:none;user-select:none;color:var(--ink);}.ds-doors::before{content:\"\";position:absolute;inset:1px;z-index:-1;background:var(--fill,var(--ground));clip-path:polygon(calc(var(--s)*2) 0,calc(100% - var(--s)*2) 0,calc(100% - var(--s)*2) var(--s),calc(100% - var(--s)) var(--s),calc(100% - var(--s)) calc(var(--s)*2),100% calc(var(--s)*2),100% calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)*2),calc(100% - var(--s)) calc(100% - var(--s)),calc(100% - var(--s)*2) calc(100% - var(--s)),calc(100% - var(--s)*2) 100%,calc(var(--s)*2) 100%,calc(var(--s)*2) calc(100% - var(--s)),var(--s) calc(100% - var(--s)),var(--s) calc(100% - var(--s)*2),0 calc(100% - var(--s)*2),0 calc(var(--s)*2),var(--s) calc(var(--s)*2),var(--s) var(--s),calc(var(--s)*2) var(--s));transition:background-color .15s ease;}.ds-doors:focus-visible{outline:2px solid var(--accent);outline-offset:-6px;}.ds-doors-secret{font:400 3.4rem/1 var(--font-federo);visibility:hidden;}.ds-door{position:absolute;top:0;bottom:0;width:50%;background:var(--surface-2);transition:transform .45s cubic-bezier(0.16, 1, 0.3, 1);}.ds-door-l{left:0;border-right:1px solid color-mix(in srgb,var(--line) 40%,transparent);}.ds-door-r{right:0;border-left:1px solid color-mix(in srgb,var(--line) 40%,transparent);}.ds-doors-prompt{position:absolute;display:flex;flex-direction:column;align-items:center;gap:4px;font:400 18px var(--font-jost),system-ui,sans-serif;}.ds-doors-prompt svg{color:var(--accent);}.ds-doors:active .ds-doors-secret{visibility:visible;}.ds-doors:active .ds-doors-prompt{display:none;}.ds-doors:active .ds-door-l{transform:translateX(-101%);}.ds-doors:active .ds-door-r{transform:translateX(101%);}@media (prefers-reduced-motion:reduce){.ds-door{transition:none;}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The House Lights",
+    "overview": "A private night at a Bombay Deco palace. A rose tower sign you are let past, your portrait on the wall, and light that changes for the whole room at once. When night falls, every phone and the TV fade to midnight indigo together, and the colour alone tells a dozen people in a dim villa where the game has gone. Colour is the one large gesture; everything else stays out of its way.\n\nThe system runs in two registers from one set of tokens. Player phones and the big screen are Experience: stepped corners, triple speed lines, tall sign lettering, vast empty ground and only the current moment at full strength. Host and co-host panels are Operate: the world lends its type, palette and density, while controls stay plain rectangles and the panel keeps one peacock ground. Guests get one job per screen and one primary action at the thumb. The TV is theatre, readable across a room. The host reads a precise panel.\n\nThe system rejects generic luxury, the black and gold that could be any club, watch or wedding template. It also rejects round avatars in dark cards. Exclusivity comes from being on the list, never from being hard to use.",
+    "keyCharacteristics": [
+      "Five acts of colour, set once at the root of the page and faded over 1.4 seconds.",
+      "One corner: two set-backs, cut by clipping rather than radius.",
+      "Three typefaces with separate jobs: Limelight signs, Federo titles, Jost for reading.",
+      "Host-loaded portraits are the only imagery, shown as tall stepped plates.",
+      "No shadows at all; depth comes from tone and hairlines.",
+      "Everything moves on one exponential ease-out, and all of it stops under reduced motion."
+    ],
+    "rules": [
+      {
+        "name": "The House Lights Rule",
+        "body": "The act is set once, on the root element, from public game state. No component chooses its own act colour, so every guest screen and the TV match at any moment. Only the root moves, one colour change per act, over 1.4 seconds.",
+        "section": "colors"
+      },
+      {
+        "name": "The Neutral Night Rule",
+        "body": "Colour never reveals a role. At night every phone is the same indigo. A Traitor's screen marks fellow Traitors with a small dot, never the word, and the role word appears only while the lift doors are held open.",
+        "section": "colors"
+      },
+      {
+        "name": "The No Gold Rule",
+        "body": "No gold or amber in the interface palette, ever; rose sandstone does the work gold does elsewhere. Player photos are the guests' own and are exempt.",
+        "section": "colors"
+      },
+      {
+        "name": "The Vermilion Rule",
+        "body": "Vermilion means danger or Traitors and nothing else. It is never a decorative accent.",
+        "section": "colors"
+      },
+      {
+        "name": "The Three Voices Rule",
+        "body": "Limelight signs, Federo announces, Jost explains. Limelight appears only on the tower and on TV act headlines, never on a phone screen's content or an operating panel. Instructions are never set in Federo.",
+        "section": "typography"
+      },
+      {
+        "name": "The 18 Px Rule",
+        "body": "Reading text on phones is 18 px. The permitted 16 px exceptions are bingo squares, dense ghost-game name labels, notes under portraits, the top bar's room line, small buttons, and control labels and hints. Nothing goes smaller.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Job Rule",
+        "body": "A guest screen has one primary action, full width, in thumb reach. Empty ground is part of the design; do not fill it.",
+        "section": "layout"
+      },
+      {
+        "name": "The No Shadow Rule",
+        "body": "No box, text or drop shadows anywhere. If something needs to stand forward, change its tone or its hairline strength.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use the role names (`--ground`, `--surface`, `--accent`, `--ink`) so every component follows the act without knowing it.",
+      "Do set the act only through the house lights, on guest screens and the TV, derived from public state.",
+      "Do keep host and co-host panels on the peacock ground, showing the act only in the band and rail.",
+      "Do put new operator surfaces inside `data-surface=\"operate\"` so their corners and speed lines drop away on their own.",
+      "Do build a stepped hairline from the frame and set its strength per use: 32% for cards, 70% for controls, 100% on focus.",
+      "Do keep one primary action per guest screen, 56 px tall and within thumb reach.",
+      "Do scale TV type as `min(Nvw, Nrem)` and keep stages inside the fit box.",
+      "Do use only host-loaded portraits as imagery.",
+      "Do keep text contrast at 4.5:1 or better on every act, and pair any colour signal with words or a label.",
+      "Do render a secret only while it is held."
+    ],
+    "donts": [
+      "Don't use black and gold, or any palette that could be a club, watch or wedding template.",
+      "Don't use round avatars in dark cards; a portrait is a stepped plate, tall where there is room.",
+      "Don't open a guest screen with a centred logo over a form; the tower sign comes in from the edge.",
+      "Don't add shadows or corner radius to any frame, button, card or portrait.",
+      "Don't let colour or a word on a phone at night reveal a role to someone glancing over a shoulder; a pick count is allowed, names are not.",
+      "Don't use vermilion as decoration.",
+      "Don't set Limelight on phone content or operating panels.",
+      "Don't set text below 16 px on a phone or panel.",
+      "Don't use a logo, image or music from the show.",
+      "Don't make the interface chrome depend on Diwali, Halloween or any one festival or date."
+    ]
+  }
+}

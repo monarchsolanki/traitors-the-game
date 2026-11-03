@@ -8,6 +8,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Countdown } from "@/components/ui/Countdown";
 import { Card, Notice, Segmented, Toggle } from "@/components/ui/Field";
+import { Icon } from "@/components/ui/Icon";
 import { PlayerGrid } from "@/components/ui/PlayerGrid";
 import { Sheet } from "@/components/ui/Sheet";
 import { GhostGames } from "./GhostGames";
@@ -28,11 +29,17 @@ function useSend(game: GameHandle) {
   return { busy, error, send, setError };
 }
 
+/** One thing on an empty ground, for the screens where the phone has nothing to ask. */
+function Still({ children }: { children: React.ReactNode }) {
+  return <div className="flex flex-1 flex-col items-center justify-center gap-6 pb-16 text-center">{children}</div>;
+}
+
 function Heading({ title, help }: { title: string; help?: string }) {
   return (
     <div className="text-center">
-      <h2 className="font-display text-4xl font-semibold text-gold">{title}</h2>
-      {help ? <p className="mt-1 text-base text-ink-muted">{help}</p> : null}
+      <h2 className="font-display text-[2.6rem] leading-[1.05] text-balance">{title}</h2>
+      <div className="speed-lines mx-auto my-3 w-16" aria-hidden />
+      {help ? <p className="mx-auto max-w-[34ch] text-lg leading-snug text-ink-muted">{help}</p> : null}
     </div>
   );
 }
@@ -41,15 +48,16 @@ export function LobbyWait({ game }: { game: GameHandle }) {
   const view = game.view!;
   const me = playerById(view, view.me!.playerId)!;
   return (
-    <Card className="flex flex-col items-center gap-4 text-center">
-      <Avatar name={me.displayName} url={game.photoFor(me.photoPath)} size={112} />
-      <h2 className="font-display text-3xl font-semibold text-gold">You&apos;re in, {me.displayName}</h2>
-      <p className="text-ink-muted">
+    <Still>
+      <Avatar name={me.displayName} url={game.photoFor(me.photoPath)} size={176} tall />
+      <h2 className="font-display text-[2.6rem] leading-[1.05] text-balance">You&apos;re in, {me.displayName}</h2>
+      <div className="speed-lines -my-3 w-16" aria-hidden />
+      <p className="text-lg leading-snug text-ink-muted">
         {me.seatConfirmed ? "The host has confirmed your seat." : "Waiting for the host to confirm your seat."} Keep this page open;
         the game starts when the host deals the roles.
       </p>
-      <p className="text-sm text-ink-muted">Not you? Ask the host to reset your seat.</p>
-    </Card>
+      <p className="text-lg text-ink-muted">Not you? Ask the host to reset your seat.</p>
+    </Still>
   );
 }
 
@@ -121,21 +129,21 @@ export function MissionScreen({ game }: { game: GameHandle }) {
 /** Owner, 30 October: before each Circle, players split into small groups and talk in private. */
 export function PrivateTalksScreen({ game }: { game: GameHandle }) {
   return (
-    <div className="flex flex-col items-center gap-4 text-center">
+    <Still>
       <Heading title="Private talks" help="Find someone and talk in private. Make allies, test suspicions, plant doubts." />
-      <Countdown deadline={game.view!.deadline} pausedRemainingMs={game.view!.pausedRemainingMs} now={game.now} className="text-5xl" />
+      <Countdown deadline={game.view!.deadline} pausedRemainingMs={game.view!.pausedRemainingMs} now={game.now} className="text-[5rem]" />
       <Notice>When the timer ends or the host calls time, your phone alerts and everyone comes back for the Circle of Shaq.</Notice>
-    </div>
+    </Still>
   );
 }
 
 export function DebateScreen({ game }: { game: GameHandle }) {
   const view = game.view!;
   return (
-    <div className="flex flex-col items-center gap-5 text-center">
+    <Still>
       <Heading title="Talk it out" help="Who do you trust? Voting opens soon." />
-      <Countdown deadline={view.deadline} pausedRemainingMs={view.pausedRemainingMs} now={game.now} className="text-6xl" />
-    </div>
+      <Countdown deadline={view.deadline} pausedRemainingMs={view.pausedRemainingMs} now={game.now} className="text-[5rem]" />
+    </Still>
   );
 }
 
@@ -155,13 +163,13 @@ function VoteGrid({ game, ghost }: { game: GameHandle; ghost: boolean }) {
       <Sheet open={!!t} onClose={() => setTarget(null)}>
         {t ? (
           <div className="flex flex-col items-center gap-4">
-            <Avatar name={t.displayName} url={game.photoFor(t.photoPath)} size={112} />
-            <h2 className="text-center font-display text-3xl font-semibold text-gold">Banish {t.displayName}?</h2>
+            <Avatar name={t.displayName} url={game.photoFor(t.photoPath)} size={132} tall />
+            <h2 className="text-center font-display text-3xl leading-tight">Banish {t.displayName}?</h2>
             <p className="-mt-2 text-center text-ink-muted">
               {ghost ? "This uses your one ghost vote for the whole game." : "Your vote is final once you send it."}
             </p>
             {vote.canUseDagger ? (
-              <div className="w-full rounded-2xl bg-surface-2 px-4">
+              <div className="step w-full bg-surface-2 px-4">
                 <Toggle
                   label={`Use your dagger (counts ×${view.settings.daggerWeight})`}
                   hint="One use only. Everyone sees it when the votes are revealed."
@@ -197,19 +205,20 @@ function Ballots({ game, round }: { game: GameHandle; round: RoundView }) {
     return <Notice>{round.status === "revealing" ? "The host is about to reveal the votes." : "No ballots were cast."}</Notice>;
   }
   return (
-    <ul className="flex flex-col gap-2">
-      {round.ballots.map((b) => {
+    <ul className="flex flex-col divide-y divide-line/25">
+      {round.ballots.map((b, i) => {
         const voter = playerById(view, b.voterId);
         return (
-          <li key={b.voterId} className="flex items-center gap-3 rounded-2xl bg-surface px-3 py-2">
-            <Avatar name={voter?.displayName ?? "?"} url={game.photoFor(voter?.photoPath ?? null)} size={40} ghost={b.ghost} />
-            <span className="flex-1 truncate">
-              {voter?.displayName}
-              <span className="text-ink-muted"> → </span>
-              <span className="font-semibold text-gold">{b.choice ? (b.choice === "end" ? "End" : "Banish") : name(b.targetId)}</span>
+          <li key={b.voterId} className={`flex items-center gap-3 py-2 ${i === round.ballots.length - 1 ? "animate-settle" : ""}`}>
+            <Avatar name={voter?.displayName ?? "?"} url={game.photoFor(voter?.photoPath ?? null)} size={44} ghost={b.ghost} />
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              <span className="truncate">{voter?.displayName}</span>
+              <Icon name="arrow" className="size-4 shrink-0 text-ink-muted" />
+              <span className="sr-only">voted for</span>
+              <span className="truncate font-semibold text-accent">{b.choice ? (b.choice === "end" ? "End" : "Banish") : name(b.targetId)}</span>
             </span>
-            {b.usedDagger ? <span className="rounded-full bg-kumkum px-2 py-0.5 text-sm font-semibold">×{b.weight}</span> : null}
-            {b.ghost ? <span className="rounded-full bg-ghost/25 px-2 py-0.5 text-sm text-ghost">ghost</span> : null}
+            {b.usedDagger ? <span className="step bg-danger px-2 py-0.5 text-lg font-semibold text-on-danger [--s:2px]">×{b.weight}</span> : null}
+            {b.ghost ? <span className="text-lg text-ghost">ghost</span> : null}
           </li>
         );
       })}
@@ -226,8 +235,8 @@ function RoundOutcome({ game, round }: { game: GameHandle; round: RoundView }) {
     const p = playerById(view, r.playerId);
     return (
       <Card className="flex flex-col items-center gap-3 text-center">
-        <Avatar name={p?.displayName ?? ""} url={game.photoFor(p?.photoPath ?? null)} size={96} ghost />
-        <p className="font-display text-3xl text-gold">{p?.displayName} is banished</p>
+        <Avatar name={p?.displayName ?? ""} url={game.photoFor(p?.photoPath ?? null)} size={112} tall ghost />
+        <p className="font-display text-3xl leading-tight">{p?.displayName} is banished</p>
         {r.via === "spin" ? <p className="text-ink-muted">Chosen by the spin.</p> : null}
         {p?.role ? <p className="text-ink">{p.role === "traitor" ? "They were a Traitor." : "They were Innocent."}</p> : null}
       </Card>
@@ -258,12 +267,12 @@ export function VoteScreen({ game }: { game: GameHandle }) {
   if (vote?.submitted) {
     const t = playerById(view, vote.myBallot?.targetId);
     return (
-      <div className="flex flex-col items-center gap-4 text-center">
+      <Still>
         <Heading title="Your vote is in" help={`You voted for ${t?.displayName ?? "…"}${vote.myBallot?.usedDagger ? " with your dagger" : ""}.`} />
-        <p className="text-ink-muted">
+        <p className="font-display text-3xl text-accent">
           {round.submittedCount} of {round.eligibleCount} votes in
         </p>
-      </div>
+      </Still>
     );
   }
   if (!vote?.canVote) {
@@ -312,8 +321,8 @@ function ChatSheet({ game, open, onClose }: { game: GameHandle; open: boolean; o
           {chat.map((c) => {
             const mine = c.authorId === view.me!.playerId;
             return (
-              <li key={c.id} className={`max-w-[85%] rounded-2xl px-3 py-2 ${mine ? "self-end bg-kumkum/30" : "self-start bg-surface-2"}`}>
-                <span className="block text-xs text-ink-muted">{mine ? "You" : playerById(view, c.authorId)?.displayName}</span>
+              <li key={c.id} className={`step max-w-[85%] px-3 py-2 [--s:3px] ${mine ? "self-end bg-danger text-on-danger" : "self-start bg-surface-2"}`}>
+                <span className={`block text-lg ${mine ? "" : "text-ink-muted"}`}>{mine ? "You" : playerById(view, c.authorId)?.displayName}</span>
                 {c.text}
               </li>
             );
@@ -332,7 +341,7 @@ function ChatSheet({ game, open, onClose }: { game: GameHandle; open: boolean; o
             onChange={(e) => setText(e.target.value)}
             maxLength={500}
             placeholder="Message your fellow Traitors"
-            className="min-h-12 flex-1 rounded-xl border border-gold/25 bg-night px-4 text-base text-ink focus:border-gold focus:outline-none"
+            className="min-h-12 min-w-0 flex-1 border border-line/40 bg-ground px-4 text-lg text-ink placeholder:text-ink-muted/90 focus:border-accent focus:outline-none"
           />
           <Button size="md" type="submit" busy={busy}>
             Send
@@ -362,7 +371,7 @@ export function NightScreen({ game }: { game: GameHandle }) {
       <div className="flex flex-col gap-5">
         <Heading title="Night falls" />
         <Card className="flex flex-col items-center gap-4 text-center">
-          <p className="font-display text-3xl text-kumkum">{blackmail ? "Join the Traitors or die" : "The Traitors want you"}</p>
+          <p className="font-display text-3xl leading-tight">{blackmail ? "Join the Traitors or die" : "The Traitors want you"}</p>
           <p className="text-ink">
             {!blackmail
               ? "Join them and become a Traitor, or refuse. Nobody else sees your answer."
@@ -422,16 +431,19 @@ export function NightScreen({ game }: { game: GameHandle }) {
         />
         <PlayerGrid
           players={gridPlayers(game, pool, (p) => ({
-            badge: tv.fellowTraitorIds.includes(p.id) ? <span className="block size-3 rounded-full bg-kumkum ring-2 ring-night" aria-label="fellow" /> : undefined,
+            badge: tv.fellowTraitorIds.includes(p.id) ? <span className="block size-3 rounded-full bg-danger ring-2 ring-ground" aria-label="fellow" /> : undefined,
           }))}
           selectedId={recruiting ? null : night.myPickId}
           onSelect={setConfirmId}
         />
-        {statuses.length > 1 ? (
-          <p className="text-center text-sm text-ink-muted">
-            {statuses.filter(Boolean).length} of {statuses.length} picks in
-          </p>
-        ) : null}
+        <p className="flex items-center justify-center gap-3 text-lg text-ink-muted">
+          {statuses.length > 1 ? (
+            <span>
+              {statuses.filter(Boolean).length} of {statuses.length} picks in
+            </span>
+          ) : null}
+          <Countdown deadline={view.deadline} pausedRemainingMs={view.pausedRemainingMs} now={game.now} quiet className="text-xl" />
+        </p>
         <div className="flex gap-2">
           {view.settings.traitorChat ? (
             <Button variant="secondary" size="md" className="flex-1" onClick={() => setChatOpen(true)}>
@@ -449,8 +461,8 @@ export function NightScreen({ game }: { game: GameHandle }) {
         <Sheet open={!!confirm} onClose={() => setConfirmId(null)}>
           {confirm ? (
             <div className="flex flex-col items-center gap-4">
-              <Avatar name={confirm.displayName} url={game.photoFor(confirm.photoPath)} size={112} />
-              <h2 className="text-center font-display text-3xl font-semibold text-kumkum">
+              <Avatar name={confirm.displayName} url={game.photoFor(confirm.photoPath)} size={132} tall />
+              <h2 className="text-center font-display text-3xl leading-tight">
                 {recruiting ? `${night.blackmail ? "Blackmail" : "Recruit"} ${confirm.displayName}?` : `Pick ${confirm.displayName}?`}
               </h2>
               <p className="-mt-2 text-center text-ink-muted">
@@ -489,15 +501,15 @@ export function NightScreen({ game }: { game: GameHandle }) {
           onSelect={(id) => void send({ type: "suspectAnswer", targetId: id })}
         />
         <ErrorLine message={error} />
-        <p className="text-center text-sm text-ink-muted">Who do you suspect? Answers stay secret until the final reveal.</p>
+        <p className="text-center text-lg text-ink-muted">Who do you suspect? Answers stay secret until the final reveal.</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center gap-5 text-center">
+    <Still>
       <Heading title="Night falls" help="Close your eyes. The Traitors are choosing." />
-    </div>
+    </Still>
   );
 }
 
@@ -506,23 +518,23 @@ export function BreakfastScreen({ game }: { game: GameHandle }) {
   const night = view.night;
   if (!night?.revealed) {
     return (
-      <div className="flex flex-col items-center gap-3 text-center">
+      <Still>
         <Heading title="Breakfast" help="Everyone to the table. The host will reveal what happened in the night." />
-      </div>
+      </Still>
     );
   }
   const victim = playerById(view, night.victimId);
   return (
-    <div className="flex flex-col items-center gap-4 text-center">
+    <Still>
       {victim ? (
         <>
-          <Avatar name={victim.displayName} url={game.photoFor(victim.photoPath)} size={128} ghost />
+          <Avatar name={victim.displayName} url={game.photoFor(victim.photoPath)} size={176} tall ghost />
           <Heading title={`${victim.displayName} was murdered`} help="They are now a ghost." />
         </>
       ) : (
         <Heading title="Nobody died last night" />
       )}
-    </div>
+    </Still>
   );
 }
 
@@ -581,30 +593,26 @@ export function FinaleScreen({ game }: { game: GameHandle }) {
   return (
     <div className="flex flex-col gap-5">
       <div className="text-center">
-        <p className="text-sm tracking-[0.3em] text-ink-muted uppercase">The final reveal</p>
-        <h2 className={`font-display text-5xl font-semibold ${f.winner === "traitors" ? "text-kumkum" : "text-gold"}`}>
+        <h2 className="font-display text-[3.2rem] leading-none text-balance">
           {f.winner === "traitors" ? "The Traitors win" : "The Innocents win"}
         </h2>
-        {view.me ? <p className="mt-2 text-xl">{iWon ? "You win!" : "Better luck next time."}</p> : null}
+        <div className="speed-lines mx-auto my-3 w-16" aria-hidden />
+        {view.me ? <p className="font-display text-2xl">{iWon ? "You win!" : "Better luck next time."}</p> : null}
       </div>
-      <Card>
-        <ul className="grid grid-cols-2 gap-3">
-          {view.players.map((p) => (
-            <li key={p.id} className="flex items-center gap-2">
-              <Avatar name={p.displayName} url={game.photoFor(p.photoPath)} size={40} ghost={p.status !== "alive"} />
-              <span className="min-w-0">
-                <span className="block truncate">{p.displayName}</span>
-                <span className={`text-sm ${p.role === "traitor" ? "text-kumkum" : "text-ink-muted"}`}>
-                  {p.role === "traitor" ? "Traitor" : "Innocent"}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </Card>
+      <ul className="grid grid-cols-3 gap-x-3 gap-y-4">
+        {view.players.map((p) => (
+          <li key={p.id} className="text-center">
+            <Avatar name={p.displayName} url={game.photoFor(p.photoPath)} size="fill" tall ghost={p.status !== "alive"} />
+            <span className="mt-1.5 block truncate leading-tight">{p.displayName}</span>
+            <span className={`text-lg ${p.role === "traitor" ? "font-semibold text-danger-ink" : "text-ink-muted"}`}>
+              {p.role === "traitor" ? "Traitor" : "Innocent"}
+            </span>
+          </li>
+        ))}
+      </ul>
       {f.ghostScores.some((g) => g.total > 0) ? (
         <Card>
-          <p className="mb-2 font-semibold text-gold">Best Ghost</p>
+          <p className="mb-2 font-display text-xl text-accent">Best Ghost</p>
           <ol className="flex flex-col gap-1">
             {f.ghostScores.filter((g) => g.total > 0).slice(0, 5).map((g, i) => (
               <li key={g.playerId} className="flex justify-between gap-2">
@@ -612,7 +620,7 @@ export function FinaleScreen({ game }: { game: GameHandle }) {
                   {i + 1}. {playerById(view, g.playerId)?.displayName}
                   {g.playerId === view.me?.playerId ? " (you)" : ""}
                 </span>
-                <span className="font-mono text-gold">{g.total}</span>
+                <span className="font-semibold text-accent tabular-nums">{g.total}</span>
               </li>
             ))}
           </ol>
@@ -620,7 +628,7 @@ export function FinaleScreen({ game }: { game: GameHandle }) {
       ) : null}
       {suspects.length ? (
         <Card>
-          <p className="mb-2 font-semibold text-gold">Most suspected at night</p>
+          <p className="mb-2 font-display text-xl text-accent">Most suspected at night</p>
           <ol className="flex flex-col gap-1">
             {suspects.map(([id, n]) => (
               <li key={id}>
@@ -647,8 +655,12 @@ export function GhostScreen({ game }: { game: GameHandle }) {
   return (
     <div className="flex flex-col gap-5">
       <div className="text-center">
-        <p className="font-display text-4xl font-semibold text-ghost">You&apos;re a ghost</p>
-        <p className="mt-1 text-ink-muted">
+        <p className="flex items-center justify-center gap-2 font-display text-[2.6rem] leading-none text-ghost">
+          <Icon name="ghost" className="size-9" />
+          You&apos;re a ghost
+        </p>
+        <div className="speed-lines mx-auto my-3 w-16" aria-hidden />
+        <p className="text-lg leading-snug text-ink-muted">
           You&apos;re still in the room: join the private talks and the Circle, and make your case.
           {view.settings.ghostVote && !me.ghostVote.used ? " You still have your one ghost vote." : ""}
         </p>
@@ -672,8 +684,8 @@ export function GhostScreen({ game }: { game: GameHandle }) {
         <GhostGames game={game} />
       ) : (
         <Card>
-          <p className="mb-2 font-semibold text-gold">What&apos;s happening</p>
-          <ul className="flex flex-col gap-2 text-base">
+          <p className="mb-2 font-display text-xl text-accent">What&apos;s happening</p>
+          <ul className="flex flex-col gap-2 text-lg">
             {feed.map((e) => (
               <li key={e.id} className="text-ink">
                 {e.text}
@@ -698,9 +710,9 @@ export function entranceLeft(game: GameHandle): number {
 
 export function EntranceHold({ game }: { game: GameHandle }) {
   return (
-    <div className="flex flex-col items-center gap-4 text-center">
+    <Still>
       <Heading title="Breakfast is served" help="Watch the big screen: everyone is walking in, one by one." />
-      <p className="font-mono text-3xl text-gold">{Math.ceil(entranceLeft(game) / 1000)}</p>
-    </div>
+      <p className="font-display text-[5rem] leading-none text-accent">{Math.ceil(entranceLeft(game) / 1000)}</p>
+    </Still>
   );
 }

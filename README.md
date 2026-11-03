@@ -1,6 +1,6 @@
 # Traitors: The Game
 
-A phone-first web app that runs an in-person game of The Traitors at a Diwali x Halloween villa party.
+A phone-first web app that runs an in-person game of The Traitors for one room of invited guests.
 
 Players use their phones to see their secret role, vote at the Circle of Shaq, and use shields and daggers. Traitors pick their murder victim and chat privately. The host runs every phase from a control screen. A big screen shows reveals to the room.
 

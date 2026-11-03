@@ -24,9 +24,13 @@ export function Sheet({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true">
       <button type="button" aria-label="Close" className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <div className="relative max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-t-3xl border-t border-gold/25 bg-surface px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:rounded-3xl sm:border">
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink-muted/40 sm:hidden" aria-hidden />
-        {title ? <h2 className="mb-4 text-center font-display text-3xl font-semibold text-gold">{title}</h2> : null}
+      <div className="relative max-h-[90dvh] w-full max-w-md animate-rise overflow-y-auto border-t border-line/50 bg-surface px-5 pt-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:border">
+        {title ? (
+          <>
+            <h2 className="text-center font-display text-3xl leading-tight text-accent">{title}</h2>
+            <div className="speed-lines mx-auto mt-3 mb-5 w-16" aria-hidden />
+          </>
+        ) : null}
         {children}
       </div>
     </div>

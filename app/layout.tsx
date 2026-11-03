@@ -1,35 +1,34 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Geist, Geist_Mono } from "next/font/google";
+import { Federo, Jost, Limelight } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const jost = Jost({
+  variable: "--font-jost",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const federo = Federo({
+  variable: "--font-federo",
   subsets: ["latin"],
+  weight: "400",
 });
 
-const cormorant = Cormorant_Garamond({
-  variable: "--font-cormorant",
+const limelight = Limelight({
+  variable: "--font-limelight",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  style: ["normal", "italic"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
   title: "Traitors: The Game",
-  description:
-    "A phone-first web app for an in-person game of The Traitors at a Diwali party.",
+  description: "A private, phone-first game of The Traitors for one room of invited guests.",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#140a0f",
+  themeColor: "#00474c",
 };
 
 export default function RootLayout({
@@ -40,7 +39,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${cormorant.variable} h-full antialiased`}
+      className={`${jost.variable} ${federo.variable} ${limelight.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

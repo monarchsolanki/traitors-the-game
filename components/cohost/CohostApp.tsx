@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, Notice, Segmented } from "@/components/ui/Field";
 import { PlayerGrid } from "@/components/ui/PlayerGrid";
 import { TopBar } from "@/components/ui/TopBar";
+import { actOf } from "@/lib/client/useHouseLights";
 import { ErrorLine, gridPlayers, playerById } from "@/components/player/shared";
 import { useHostSend } from "@/components/host/GameControls";
 import { MissionPicker, ScreenMessageCard } from "@/components/host/MissionCatalogue";
@@ -29,7 +30,7 @@ function MissionPanel({ game }: { game: GameHandle }) {
   return (
     <div className="flex flex-col gap-4">
       <Card>
-        <p className="font-display text-2xl text-gold">{mission?.name}</p>
+        <p className="font-display text-2xl text-accent">{mission?.name}</p>
         <p className="text-ink-muted">{mission?.kind === "ghost" ? "Ghost challenge" : mission?.kind === "team" ? "Team game" : "Individual game"}</p>
         {mission?.howItWorks ? <p className="mt-2 text-ink-muted">{mission.howItWorks}</p> : null}
         {mission?.winRule ? <p className="mt-2">To win: {mission.winRule}</p> : null}
@@ -39,7 +40,7 @@ function MissionPanel({ game }: { game: GameHandle }) {
         <Notice>A ghost challenge: the host hands out its reward.</Notice>
       ) : reward ? (
         <Card className="flex flex-col gap-3">
-          <p className="font-semibold text-gold">Winners are voting for the {reward.itemType}</p>
+          <p className="font-display text-xl text-accent">Winners are voting for the {reward.itemType}</p>
           <p className="text-ink-muted">
             {reward.votedIds.length} of {reward.voterIds.length} voted. Waiting on:{" "}
             {reward.voterIds
@@ -53,7 +54,7 @@ function MissionPanel({ game }: { game: GameHandle }) {
         </Card>
       ) : (
         <Card className="flex flex-col gap-4">
-          <p className="font-semibold text-gold">Reward the winners (private)</p>
+          <p className="font-display text-xl text-accent">Reward the winners (private)</p>
           <Segmented
             label="Ability"
             value={itemType}
@@ -122,7 +123,7 @@ function RevealPanel({ game }: { game: GameHandle }) {
   const left = (round.ballotCount ?? 0) - round.revealedCount;
   return (
     <Card className="flex flex-col gap-3">
-      <p className="font-semibold text-gold">The reveal</p>
+      <p className="font-display text-xl text-accent">The reveal</p>
       <p className="text-ink-muted">
         {round.revealedCount} of {round.ballotCount ?? 0} votes shown on the big screen.
       </p>
@@ -143,9 +144,9 @@ export function CohostApp({ code }: { code: string }) {
   if (!view?.cohost) {
     return (
       <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
-        <p className="font-display text-4xl text-gold">Co-host</p>
+        <p className="font-display text-[2.6rem] leading-none">Co-host</p>
         <p className="text-ink-muted">{game.notFound ? `No game called ${upper}.` : game.error ?? "Opening the co-host controls…"}</p>
-        <Link href={`/play/${upper}`} className="text-gold underline">
+        <Link href={`/play/${upper}`} className="min-h-12 py-3 text-accent underline underline-offset-4">
           Back to my player screen
         </Link>
       </main>
@@ -158,8 +159,9 @@ export function CohostApp({ code }: { code: string }) {
   else if (choicePoint) body = <StartMission game={game} />;
   else if (revealing) body = <RevealPanel game={game} />;
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div data-surface="operate" className="flex min-h-dvh flex-col">
       <TopBar
+        band={`var(--act-${actOf(view)})`}
         title={`Co-host · ${view.finalePending ? "Hold on" : PHASE_TITLE[view.phase]}`}
         subtitle={`Room ${view.code}${view.startingPlayerCount && view.phase !== "FINALE" ? ` · Day ${view.day}` : ""}`}
         deadline={view.deadline}
@@ -175,7 +177,7 @@ export function CohostApp({ code }: { code: string }) {
             <ScreenMessageCard game={game} send={(a) => send(a)} busy={busy} error={error} />
           </Card>
         ) : null}
-        <Link href={`/play/${view.code}`} className="text-center text-gold underline underline-offset-4">
+        <Link href={`/play/${view.code}`} className="min-h-12 py-3 text-center text-accent underline underline-offset-4">
           Back to my player screen
         </Link>
       </main>

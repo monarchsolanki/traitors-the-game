@@ -53,11 +53,11 @@ export function PresetsCard({ game }: { game: GameHandle }) {
   };
   return (
     <Card className="flex flex-col gap-3">
-      <p className="font-semibold text-gold">Presets</p>
+      <p className="font-display text-xl text-accent">Presets</p>
       <p className="text-sm text-ink-muted">
         A preset keeps these settings, the players with their photos, and the mission list, so the next game starts ready.
       </p>
-      <TextField label="Save this game as" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="Diwali night" />
+      <TextField label="Save this game as" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="Saturday night" />
       <Button
         size="md"
         variant="secondary"
@@ -74,12 +74,12 @@ export function PresetsCard({ game }: { game: GameHandle }) {
       >
         Save preset
       </Button>
-      {note ? <p className="text-sm text-leaf">{note}</p> : null}
+      {note ? <p className="text-sm text-jade">{note}</p> : null}
       <ErrorLine message={error} />
       {presets?.length ? (
         <ul className="flex flex-col gap-2">
           {presets.map((p) => (
-            <li key={p.id} className="flex flex-col gap-2 rounded-2xl bg-surface-2 p-3">
+            <li key={p.id} className="step flex flex-col gap-2 bg-surface-2 p-3">
               <span>
                 <span className="text-ink">{p.name}</span>
                 <span className="block text-sm text-ink-muted">

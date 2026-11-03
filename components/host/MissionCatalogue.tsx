@@ -46,7 +46,7 @@ export function TextArea({
         rows={rows}
         maxLength={maxLength}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl bg-surface-2 px-4 py-3 text-base text-ink ring-1 ring-gold/20 outline-none focus:ring-2 focus:ring-gold"
+        className="w-full border border-line/40 bg-ground px-4 py-3 text-base text-ink focus:border-accent focus:outline-none"
       />
       {hint ? <span className="text-xs text-ink-muted">{hint}</span> : null}
     </label>
@@ -106,13 +106,13 @@ export function MissionPicker({
           {groups.map((g) =>
             g.items.length ? (
               <div key={g.title} className="flex flex-col gap-2">
-                <p className="text-sm tracking-widest text-ink-muted uppercase">{g.title}</p>
+                <p className="font-display text-lg text-ink-muted">{g.title}</p>
                 {g.items.map((t) => (
                   <div key={t.id} className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => pick(t, "start")}
-                      className="flex min-w-0 flex-1 flex-col rounded-2xl bg-surface-2 px-4 py-3 text-left ring-1 ring-gold/15 active:scale-[0.99]"
+                      className="step flex min-w-0 flex-1 flex-col bg-surface-2 px-4 py-3 text-left active:scale-[0.99]"
                     >
                       <span className="truncate text-base text-ink">{t.name}</span>
                       <span className="text-sm text-ink-muted">
@@ -264,8 +264,8 @@ export function ScreenMessageCard({ game, send, busy, error }: { game: GameHandl
   const [text, setText] = useState("");
   return (
     <div className="flex flex-col gap-3">
-      <p className="font-semibold text-gold">Big-screen message</p>
-      {current ? <p className="rounded-xl bg-surface-2 px-4 py-3 text-ink">“{current.text}”</p> : <p className="text-sm text-ink-muted">Nothing showing.</p>}
+      <p className="font-display text-xl text-accent">Big-screen message</p>
+      {current ? <p className="bg-surface-2 px-4 py-3 text-ink">“{current.text}”</p> : <p className="text-sm text-ink-muted">Nothing showing.</p>}
       <TextField label="New message" value={text} onChange={(e) => setText(e.target.value)} maxLength={140} placeholder="Dinner in 10 minutes" />
       <ErrorLine message={error} />
       <div className="flex gap-2">

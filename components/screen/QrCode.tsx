@@ -8,14 +8,14 @@ export function QrCode({ value, className = "" }: { value: string; className?: s
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     let live = true;
-    QRCode.toDataURL(value, { margin: 1, width: 640, errorCorrectionLevel: "M", color: { dark: "#140a0f", light: "#fbf3e4" } })
+    QRCode.toDataURL(value, { margin: 4, width: 640, errorCorrectionLevel: "M", color: { dark: "#052a2d", light: "#f6efe3" } })
       .then((url) => live && setSrc(url))
       .catch(() => live && setSrc(null));
     return () => {
       live = false;
     };
   }, [value]);
-  if (!src) return <div className={`animate-pulse rounded-3xl bg-surface-2 ${className}`} />;
+  if (!src) return <div className={`animate-pulse bg-surface-2 ${className}`} />;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={`QR code for ${value}`} className={`rounded-3xl ${className}`} />;
+  return <img src={src} alt={`QR code for ${value}`} className={`step [--s:8px] ${className}`} />;
 }

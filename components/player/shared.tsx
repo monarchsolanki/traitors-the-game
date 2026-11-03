@@ -25,7 +25,7 @@ export function playerById(view: GameView, id: string | null | undefined): Playe
 export function ErrorLine({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <p role="alert" className="rounded-xl bg-kumkum/15 px-4 py-3 text-base text-ink ring-1 ring-kumkum/40">
+    <p role="alert" className="step frame px-4 py-3 text-lg text-ink [--frame-fill:var(--surface-2)] [--frame-strength:80%] [--line:var(--danger-ink)]">
       {message}
     </p>
   );

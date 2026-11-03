@@ -63,9 +63,12 @@ export function CircleCall({ game }: { game: GameHandle }) {
 
   if (!callId || dismissed === callId || view.phase === "FINALE") return null;
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-night/95 px-8 text-center" role="alertdialog" aria-live="assertive">
-      <div className="size-28 animate-ping rounded-full bg-gold/30" aria-hidden />
-      <p className="font-display text-5xl font-semibold text-gold">Private talks are over</p>
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-ground px-8 text-center" role="alertdialog" aria-live="assertive">
+      <div className="relative size-24" aria-hidden>
+        <div className="step absolute inset-0 animate-call bg-accent [--s:9px]" />
+        <div className="step absolute inset-5 bg-accent [--s:5px]" />
+      </div>
+      <p className="font-display text-[3rem] leading-[1.05] text-accent">Private talks are over</p>
       <p className="text-xl text-ink">Come to the Circle of Shaq now.</p>
       <Button className="w-full max-w-xs" onClick={() => setDismissed(callId)}>
         I&apos;m coming

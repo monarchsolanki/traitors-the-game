@@ -11,28 +11,30 @@ export function JoinForm() {
   const clean = code.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 8);
   return (
     <form
-      className="flex w-full flex-col items-center gap-3"
+      className="flex w-full flex-col gap-3"
       onSubmit={(e) => {
         e.preventDefault();
         if (clean.length >= 4) router.push(`/play/${clean}`);
       }}
     >
-      <label className="flex w-full flex-col items-center gap-2">
-        <span className="text-base text-ink-muted">Room code</span>
-        <input
-          value={clean}
-          onChange={(e) => setCode(e.target.value)}
-          autoCapitalize="characters"
-          autoComplete="off"
-          spellCheck={false}
-          placeholder="ABCDE"
-          className="h-16 w-full rounded-2xl border border-gold/30 bg-surface text-center font-mono text-3xl tracking-[0.3em] text-gold placeholder:text-gold/25 focus:border-gold focus:outline-none"
-        />
+      <label className="flex w-full flex-col gap-2">
+        <span className="text-lg text-ink-muted">Room code</span>
+        <span className="step frame block [--frame-strength:70%] focus-within:[--frame-strength:100%] focus-within:[--line:var(--accent)]">
+          <input
+            value={clean}
+            onChange={(e) => setCode(e.target.value)}
+            autoCapitalize="characters"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="ABCDE"
+            className="h-16 w-full bg-transparent text-center font-display text-3xl tracking-[0.18em] text-accent placeholder:text-ink-muted/90 focus:outline-none"
+          />
+        </span>
       </label>
       <Button type="submit" disabled={clean.length < 4}>
         Join the game
       </Button>
-      <Link href="/host" className="mt-1 py-2 text-sm text-ink-muted underline-offset-4 hover:underline">
+      <Link href="/host" className="min-h-12 py-3 text-center text-lg leading-6 text-ink-muted underline-offset-4 hover:underline">
         I&apos;m the host
       </Link>
     </form>

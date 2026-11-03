@@ -14,7 +14,7 @@ export function presence(seat: SeatInfo | undefined, now: number): Presence {
 
 export function SeatDot({ state }: { state: Presence }) {
   if (state === "none") return null;
-  const cls = state === "online" ? "bg-leaf" : state === "bot" ? "bg-ghost" : "bg-kumkum";
+  const cls = state === "online" ? "bg-jade" : state === "bot" ? "bg-ghost" : "bg-danger";
   const label = state === "online" ? "Phone connected" : state === "bot" ? "Bot" : "Phone not connected";
   return <span className={`inline-block size-2.5 shrink-0 rounded-full ${cls}`} title={label} aria-label={label} />;
 }

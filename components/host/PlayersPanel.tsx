@@ -7,6 +7,7 @@ import type { PlayerView } from "@/lib/game/view";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card, TextField } from "@/components/ui/Field";
+import { Icon } from "@/components/ui/Icon";
 import { Sheet } from "@/components/ui/Sheet";
 import { ErrorLine } from "@/components/player/shared";
 import { useHostSend } from "./GameControls";
@@ -43,11 +44,11 @@ async function resizePhoto(file: File, max = 720): Promise<Blob> {
 
 function seatLabel(game: GameHandle, p: PlayerView): { text: string; tone: string } {
   const seat = game.seats.find((s) => s.playerId === p.id);
-  if (seat?.locked) return { text: "Locked (wrong PINs)", tone: "text-kumkum" };
+  if (seat?.locked) return { text: "Locked (wrong PINs)", tone: "text-danger-ink" };
   if (seat?.isBot) return { text: "Bot", tone: "text-ghost" };
   if (!p.seatClaimed) return { text: "Seat open", tone: "text-ink-muted" };
-  if (!p.seatConfirmed) return { text: "Claimed, not confirmed", tone: "text-marigold" };
-  return { text: "Seated", tone: "text-leaf" };
+  if (!p.seatConfirmed) return { text: "Claimed, not confirmed", tone: "text-notice" };
+  return { text: "Seated", tone: "text-jade" };
 }
 
 function EditPlayer({ game, player, onClose }: { game: GameHandle; player: PlayerView; onClose: () => void }) {
@@ -146,8 +147,8 @@ function EditPlayer({ game, player, onClose }: { game: GameHandle; player: Playe
         ) : null}
       </div>
       {!view.closed ? (
-        <div className="flex flex-col gap-2 rounded-2xl bg-surface-2 p-4">
-          <p className="font-semibold text-gold">{view.host!.cohostId === player.id ? `${player.displayName} is the co-host` : "Co-host"}</p>
+        <div className="step flex flex-col gap-2 bg-surface-2 p-4">
+          <p className="font-display text-xl text-accent">{view.host!.cohostId === player.id ? `${player.displayName} is the co-host` : "Co-host"}</p>
           <p className="text-sm text-ink-muted">
             The co-host runs missions, rewards and the big-screen message from their own phone. They never see roles, picks or who holds what.
           </p>
@@ -183,7 +184,7 @@ export function PlayersPanel({ game }: { game: GameHandle }) {
         <span className="flex items-center gap-1.5"><SeatDot state="bot" /> bot</span>
       </p>
       <Card className="p-2">
-        <ul className="flex flex-col divide-y divide-gold/10">
+        <ul className="flex flex-col divide-y divide-line/10">
           {view.players.map((p) => {
             const seat = seatLabel(game, p);
             return (
@@ -193,7 +194,7 @@ export function PlayersPanel({ game }: { game: GameHandle }) {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2 text-lg">
                       <span className="truncate">{p.displayName}</span>
-                      {view.host?.cohostId === p.id ? <span className="rounded-full bg-gold/15 px-2 text-xs text-gold">co-host</span> : null}
+                      {view.host?.cohostId === p.id ? <span className="text-xs text-accent">co-host</span> : null}
                       <SeatDot state={presence(game.seats.find((x) => x.playerId === p.id), game.now())} />
                     </span>
                     <span className={`text-sm ${seat.tone}`}>
@@ -201,9 +202,7 @@ export function PlayersPanel({ game }: { game: GameHandle }) {
                       {seat.text}
                     </span>
                   </span>
-                  <span className="text-ink-muted" aria-hidden>
-                    ›
-                  </span>
+                  <Icon name="chevron" className="size-5 shrink-0 text-ink-muted" />
                 </button>
               </li>
             );

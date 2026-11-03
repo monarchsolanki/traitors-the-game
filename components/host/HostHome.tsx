@@ -10,7 +10,7 @@ import { browserClient } from "@/lib/client/supabase";
 import type { Phase } from "@/lib/game/types";
 import { Button } from "@/components/ui/Button";
 import { Card, Notice, TextField } from "@/components/ui/Field";
-import { Diya } from "@/components/ui/Diya";
+import { Keyhole } from "@/components/ui/Keyhole";
 import { ErrorLine } from "@/components/player/shared";
 
 interface GameRow {
@@ -77,10 +77,10 @@ export function HostHome() {
   };
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-5 pt-10 pb-12">
+    <main data-surface="operate" className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-5 pt-10 pb-12">
       <div className="flex flex-col items-center gap-2 text-center">
-        <Diya className="size-20" />
-        <h1 className="font-display text-5xl font-semibold text-gold">Host</h1>
+        <Keyhole className="size-20" />
+        <h1 className="font-display text-[3rem] leading-none">Host</h1>
         <p className="text-ink-muted">Run the game from here.</p>
       </div>
       {state === "loading" ? <p className="text-center text-ink-muted">Checking your sign-in…</p> : null}
@@ -120,12 +120,12 @@ export function HostHome() {
           <ErrorLine message={error} />
           {games.length ? (
             <Card>
-              <p className="mb-3 font-semibold text-gold">Your games</p>
-              <ul className="flex flex-col divide-y divide-gold/10">
+              <p className="mb-3 font-display text-xl text-accent">Your games</p>
+              <ul className="flex flex-col divide-y divide-line/10">
                 {games.map((g) => (
                   <li key={g.code}>
                     <Link href={`/host/${g.code}`} className="flex items-center justify-between py-3">
-                      <span className="font-mono text-xl tracking-widest text-ink">{g.code}</span>
+                      <span className="font-display text-xl tracking-widest text-ink">{g.code}</span>
                       <span className="text-sm text-ink-muted">
                         {PHASE_TITLE[g.phase]}
                         {g.day ? ` · Day ${g.day}` : ""}
@@ -151,7 +151,7 @@ function PresetStarter({ busy, onStart }: { busy: boolean; onStart: (presetId: s
   if (!presets?.length) return null;
   return (
     <Card>
-      <p className="mb-3 font-semibold text-gold">Or start from a preset</p>
+      <p className="mb-3 font-display text-xl text-accent">Or start from a preset</p>
       <ul className="flex flex-col gap-2">
         {presets.map((p) => (
           <li key={p.id}>

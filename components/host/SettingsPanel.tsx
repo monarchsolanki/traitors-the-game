@@ -55,10 +55,10 @@ export function SettingsPanel({ game }: { game: GameHandle }) {
   const clock = (v: number) => formatClock(v * 1000);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start">
       <ErrorLine message={error} />
       <Card>
-        <p className="mb-1 font-semibold text-gold">Rules</p>
+        <p className="mb-1 font-display text-xl text-accent">Rules</p>
         <Stepper label={SETTING_META.traitorCount.label} hint={help("traitorCount")} value={s.traitorCount} min={1} max={Math.max(1, maxTraitors(Math.max(n, 3)))} disabled={locked("traitorCount")} onChange={(v) => set("traitorCount", v)} />
         <Segmented
           label={SETTING_META.endCondition.label}
@@ -107,7 +107,7 @@ export function SettingsPanel({ game }: { game: GameHandle }) {
         <Toggle label={SETTING_META.eliminatedWinWithTeam.label} hint={help("eliminatedWinWithTeam")} checked={s.eliminatedWinWithTeam} disabled={locked("eliminatedWinWithTeam")} onChange={(v) => set("eliminatedWinWithTeam", v)} />
       </Card>
       <Card>
-        <p className="mb-1 font-semibold text-gold">Night and ghosts</p>
+        <p className="mb-1 font-display text-xl text-accent">Night and ghosts</p>
         <Toggle label={SETTING_META.suspectPoll.label} hint={help("suspectPoll")} checked={s.suspectPoll} onChange={(v) => set("suspectPoll", v)} />
         <Toggle label={SETTING_META.ghostVote.label} hint={help("ghostVote")} checked={s.ghostVote} disabled={locked("ghostVote")} onChange={(v) => set("ghostVote", v)} />
         {GHOST_GAME_LABELS.map(([k, label, hint]) => (
@@ -115,7 +115,7 @@ export function SettingsPanel({ game }: { game: GameHandle }) {
         ))}
       </Card>
       <Card>
-        <p className="mb-1 font-semibold text-gold">Each day</p>
+        <p className="mb-1 font-display text-xl text-accent">Each day</p>
         <Toggle label={SETTING_META.privateTalks.label} hint={SETTING_META.privateTalks.help} checked={s.privateTalks} onChange={(v) => set("privateTalks", v)} />
         {s.privateTalks ? (
           <Stepper label={SETTING_META.privateTalksSeconds.label} value={s.privateTalksSeconds} min={60} max={1800} step={60} format={clock} onChange={(v) => set("privateTalksSeconds", v)} />
@@ -132,7 +132,7 @@ export function SettingsPanel({ game }: { game: GameHandle }) {
       </Card>
       <GhostScoring game={game} />
       <Card>
-        <p className="mb-1 font-semibold text-gold">Big screen</p>
+        <p className="mb-1 font-display text-xl text-accent">Big screen</p>
         <Toggle label={SETTING_META.breakfastEntrance.label} hint={SETTING_META.breakfastEntrance.help} checked={s.breakfastEntrance} onChange={(v) => set("breakfastEntrance", v)} />
         {s.breakfastEntrance ? (
           <Stepper label={SETTING_META.entranceSeconds.label} value={s.entranceSeconds} min={5} max={60} step={5} format={(v) => `${v} s`} onChange={(v) => set("entranceSeconds", v)} />
@@ -140,7 +140,7 @@ export function SettingsPanel({ game }: { game: GameHandle }) {
         <Narration game={game} />
       </Card>
       <Card>
-        <p className="mb-1 font-semibold text-gold">Timers (change any time)</p>
+        <p className="mb-1 font-display text-xl text-accent">Timers (change any time)</p>
         <Stepper label={SETTING_META.debateSeconds.label} value={s.debateSeconds} min={60} max={1800} step={60} format={clock} onChange={(v) => set("debateSeconds", v)} />
         <Stepper label={SETTING_META.voteSeconds.label} value={s.voteSeconds} min={30} max={600} step={30} format={clock} onChange={(v) => set("voteSeconds", v)} />
         <Stepper label={SETTING_META.nightSeconds.label} value={s.nightSeconds} min={60} max={600} step={30} format={clock} onChange={(v) => set("nightSeconds", v)} />
@@ -161,7 +161,7 @@ function GhostScoring({ game }: { game: GameHandle }) {
   const points = (k: keyof GameSettings["ghostPoints"], v: number) => send({ type: "updateSettings", patch: { ghostPoints: { ...s.ghostPoints, [k]: v } } });
   return (
     <Card>
-      <p className="mb-1 font-semibold text-gold">Ghost game points</p>
+      <p className="mb-1 font-display text-xl text-accent">Ghost game points</p>
       <Stepper label="Right banishment bet" value={s.ghostPoints.banishBet} min={0} max={20} onChange={(v) => points("banishBet", v)} />
       <Stepper label="Right murder bet" value={s.ghostPoints.murderBet} min={0} max={20} onChange={(v) => points("murderBet", v)} />
       <Stepper label="Right Traitor call" value={s.ghostPoints.traitorCall} min={0} max={20} onChange={(v) => points("traitorCall", v)} />

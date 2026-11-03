@@ -2,45 +2,143 @@
 
 @custom-variant short (@media (max-height: 700px));
 
+/* Registered so the house lights can fade between acts instead of snapping. */
+@property --ground { syntax: "<color>"; inherits: true; initial-value: #00474c; }
+@property --surface { syntax: "<color>"; inherits: true; initial-value: #025359; }
+@property --surface-2 { syntax: "<color>"; inherits: true; initial-value: #055c62; }
+@property --ink { syntax: "<color>"; inherits: true; initial-value: #f6efe3; }
+@property --ink-muted { syntax: "<color>"; inherits: true; initial-value: #bcd6cf; }
+@property --accent { syntax: "<color>"; inherits: true; initial-value: #f3a98f; }
+@property --on-accent { syntax: "<color>"; inherits: true; initial-value: #052a2d; }
+@property --line { syntax: "<color>"; inherits: true; initial-value: #a7c8c0; }
+
+/* Day: peacock lacquer, rose sandstone, nickel, terrazzo ivory. */
 :root {
-  --night: #140a0f;
-  --surface: #1f1218;
-  --surface-2: #2b1a22;
-  --ink: #fbf3e4;
-  --ink-muted: #c8b6a2;
-  --gold: #f2c14e;
-  --gold-deep: #a8701a;
-  --marigold: #f08a24;
-  --kumkum: #c8283e;
-  --leaf: #6b8f3a;
-  --ghost: #a99bc4;
+  --ground: #00474c;
+  --surface: #025359;
+  --surface-2: #055c62;
+  --ink: #f6efe3;
+  --ink-muted: #bcd6cf;
+  --accent: #f3a98f;
+  --on-accent: #052a2d;
+  --line: #a7c8c0;
+  --danger: #c5301c;
+  --on-danger: #fff6ee;
+  --danger-ink: #ffa18d;
+  --danger-bright: #ff7f66;
+  --notice: #f7c9b8;
+  --jade: #86d9ae;
+  --ghost: #c9ccf2;
+  --act-day: #0f6a6f;
+  --act-circle: #7a1a2e;
+  --act-night: #2a3185;
+  --act-innocents: #8f5a48;
+  --act-traitors: #8f1d10;
+  --on-notice: #052a2d;
+  --on-tone: #f6efe3;
+  --tone-1: #0a6a70;
+  --tone-2: #6d1a2c;
+  --tone-3: #2a3185;
+  --tone-4: #8a4a3a;
+  --tone-5: #3f6b70;
+  --tone-6: #5a2540;
+  --house: 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: --ground var(--house), --surface var(--house), --surface-2 var(--house), --ink var(--house), --ink-muted var(--house),
+    --accent var(--house), --on-accent var(--house), --line var(--house);
+}
+
+/* The Circle: oxblood leather. */
+:root[data-act="circle"] {
+  --ground: #430d1a;
+  --surface: #521223;
+  --surface-2: #62192c;
+  --ink: #f8efe4;
+  --ink-muted: #e4c6c1;
+  --line: #d3b1aa;
+  --danger: #cf3520;
+  --danger-ink: #ff9d88;
+  --danger-bright: #ff8a73;
+}
+
+/* Night: midnight indigo. Every phone and the TV, whatever the role. */
+:root[data-act="night"] {
+  --ground: #0f1440;
+  --surface: #161c50;
+  --surface-2: #1f2661;
+  --ink: #f1eee8;
+  --ink-muted: #bcc2e8;
+  --line: #a6acdc;
+}
+
+/* The final reveal floods the room. */
+:root[data-act="innocents"] {
+  --ground: #f3a98f;
+  --surface: #f6bba6;
+  --surface-2: #f9cdbc;
+  --ink: #052a2d;
+  --ink-muted: #1f4648;
+  --accent: #00474c;
+  --on-accent: #f6efe3;
+  --line: #025359;
+  --danger: #a8230f;
+  --danger-ink: #8a1a08;
+  --danger-bright: #8a1a08;
+  --notice: #052a2d;
+  --on-notice: #f6efe3;
+  --jade: #0a4d33;
+  --ghost: #2b2f6b;
+}
+
+:root[data-act="traitors"] {
+  --ground: #8f1d10;
+  --surface: #a02517;
+  --surface-2: #ad2e1f;
+  --ink: #fff3ea;
+  --ink-muted: #f8d4c8;
+  --accent: #f6efe3;
+  --on-accent: #5e1209;
+  --line: #f4c8bb;
+  --danger: #5e1209;
+  --danger-ink: #fff3ea;
+  --danger-bright: #fff3ea;
+  --notice: #fff3ea;
+  --on-notice: #5e1209;
+  --jade: #d6f2e2;
+  --ghost: #e8e9ff;
 }
 
 @theme inline {
-  --color-night: var(--night);
+  --color-ground: var(--ground);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-ink: var(--ink);
   --color-ink-muted: var(--ink-muted);
-  --color-gold: var(--gold);
-  --color-gold-deep: var(--gold-deep);
-  --color-marigold: var(--marigold);
-  --color-kumkum: var(--kumkum);
-  --color-leaf: var(--leaf);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-line: var(--line);
+  --color-danger: var(--danger);
+  --color-on-danger: var(--on-danger);
+  --color-danger-ink: var(--danger-ink);
+  --color-danger-bright: var(--danger-bright);
+  --color-notice: var(--notice);
+  --color-jade: var(--jade);
+  --color-on-notice: var(--on-notice);
+  --color-on-tone: var(--on-tone);
   --color-ghost: var(--ghost);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-cormorant);
+  --font-sans: var(--font-jost);
+  --font-display: var(--font-federo);
+  --font-sign: var(--font-limelight);
 
-  --animate-flicker: flicker 2.6s ease-in-out infinite;
-  --animate-glow: glow 3.2s ease-in-out infinite;
-  --animate-spin-slow: spin 180s linear infinite;
-  --animate-arrive: arrive 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-arrive: arrive 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-float-up: float-up 4.2s ease-out forwards;
-  --animate-flip-in: flip-in 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-flip-in: flip-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-rise: rise 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-settle: settle 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-draw: draw 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-call: call 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 
   @keyframes arrive {
-    from { opacity: 0; transform: translateY(4vh) scale(0.85); }
+    from { opacity: 0; transform: translateY(4vh) scale(0.9); }
     to { opacity: 1; transform: none; }
   }
 
@@ -55,55 +153,166 @@
     to { opacity: 1; transform: perspective(60vw) rotateY(0deg); }
   }
 
-  @keyframes flicker {
-    0%, 100% { transform: scale(1, 1) skewX(0deg); }
-    25% { transform: scale(0.97, 1.04) skewX(-1.5deg); }
-    50% { transform: scale(1.02, 0.97) skewX(1deg); }
-    75% { transform: scale(0.98, 1.03) skewX(-0.5deg); }
+  @keyframes rise {
+    from { transform: translateY(100%); }
+    to { transform: none; }
   }
 
-  @keyframes glow {
-    0%, 100% { opacity: 0.55; }
-    50% { opacity: 0.85; }
+  @keyframes settle {
+    from { opacity: 0; transform: translateY(1.5vh); }
+    to { opacity: 1; transform: none; }
   }
+
+  @keyframes draw {
+    from { stroke-dashoffset: 1; }
+    to { stroke-dashoffset: 0; }
+  }
+
+  @keyframes call {
+    from { opacity: 0.9; transform: scale(0.7); }
+    to { opacity: 0; transform: scale(1.5); }
+  }
+
 }
 
 html {
   color-scheme: dark;
   -webkit-text-size-adjust: 100%;
+  scrollbar-color: var(--line) transparent;
+  scrollbar-width: thin;
 }
 
 body {
-  background-color: var(--night);
-  background-image: radial-gradient(
-    ellipse 90% 55% at 50% 32%,
-    rgb(240 138 36 / 0.13),
-    transparent 70%
-  );
+  background-color: var(--ground);
   color: var(--ink);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-jost), system-ui, sans-serif;
   font-size: 18px;
-  line-height: 1.5;
+  line-height: 1.45;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
-.flame {
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .animate-flicker,
-  .animate-glow,
-  .animate-spin-slow,
-  .animate-arrive,
-  .animate-flip-in {
-    animation: none;
+input,
+textarea {
+  caret-color: var(--accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* In the components layer, so a page can still override these with utilities. */
+@layer components {
+  /* The one corner: two set-backs, whose step sets the frame's rhythm. */
+  .step {
+    --s: 7px;
+    clip-path: polygon(
+      calc(var(--s) * 2) 0, calc(100% - var(--s) * 2) 0,
+      calc(100% - var(--s) * 2) var(--s), calc(100% - var(--s)) var(--s),
+      calc(100% - var(--s)) calc(var(--s) * 2), 100% calc(var(--s) * 2),
+      100% calc(100% - var(--s) * 2), calc(100% - var(--s)) calc(100% - var(--s) * 2),
+      calc(100% - var(--s)) calc(100% - var(--s)), calc(100% - var(--s) * 2) calc(100% - var(--s)),
+      calc(100% - var(--s) * 2) 100%, calc(var(--s) * 2) 100%,
+      calc(var(--s) * 2) calc(100% - var(--s)), var(--s) calc(100% - var(--s)),
+      var(--s) calc(100% - var(--s) * 2), 0 calc(100% - var(--s) * 2),
+      0 calc(var(--s) * 2), var(--s) calc(var(--s) * 2),
+      var(--s) var(--s), calc(var(--s) * 2) var(--s)
+    );
+  }
+
+  /* A clipped box can't draw an outside ring, so keyboard focus sits inside it. */
+  .step:focus-visible {
+    outline-offset: -6px;
+  }
+
+  /* A stepped hairline: the box paints the line, its ::before paints the fill one pixel in. */
+  .frame {
+    position: relative;
+    isolation: isolate;
+    background: var(--line);
+    background: color-mix(in srgb, var(--line) var(--frame-strength, 45%), var(--ground));
+  }
+
+  .frame::before {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    z-index: -1;
+    background: var(--frame-fill, var(--surface));
+    clip-path: inherit;
+    transition: background-color 0.15s ease;
+  }
+
+  .speed-lines {
+    height: 13px;
+    background: repeating-linear-gradient(to bottom, var(--line) 0 1px, transparent 1px 6px);
+    opacity: 0.6;
+  }
+
+  .tower {
+    --set: calc(var(--cell) * 0.2);
+    width: calc(var(--cell) * 1.24);
+    background: var(--accent);
+    color: var(--on-accent);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding-top: calc(var(--set) * 3.4);
+    padding-bottom: calc(var(--cell) * 0.12);
+    clip-path: polygon(
+      0 0, 38% 0, 38% var(--set), 62% var(--set), 62% calc(var(--set) * 2),
+      82% calc(var(--set) * 2), 82% calc(var(--set) * 3), 100% calc(var(--set) * 3), 100% 100%, 0 100%
+    );
+  }
+
+  .tower span {
+    display: block;
+    height: var(--cell);
+    font-family: var(--font-limelight), serif;
+    font-size: calc(var(--cell) * 0.98);
+    line-height: 1;
+    text-align: center;
+  }
+
+  /* Lift doors: part while held, and the secret underneath is gone before they close. */
+  .door {
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .door-l.open {
+    transform: translateX(-101%);
+  }
+
+  .door-r.open {
+    transform: translateX(101%);
   }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(1.5vh) scale(0.97); }
-  to { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Working panels: the world lends type, palette and density; controls stay plain rectangles. */
+[data-surface="operate"] .step,
+[data-surface="operate"] .frame::before {
+  clip-path: none;
+}
+
+[data-surface="operate"] .step:focus-visible {
+  outline-offset: 2px;
+}
+
+[data-surface="operate"] .speed-lines {
+  display: none;
 }

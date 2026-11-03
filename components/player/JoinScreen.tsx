@@ -12,7 +12,7 @@ import { ErrorLine, gridPlayers, playerById } from "./shared";
 function PinInput({ value, onChange, label, autoFocus }: { value: string; onChange: (v: string) => void; label: string; autoFocus?: boolean }) {
   return (
     <label className="flex flex-col gap-2 text-center">
-      <span className="text-base text-ink-muted">{label}</span>
+      <span className="text-lg text-ink-muted">{label}</span>
       <input
         type="password"
         inputMode="numeric"
@@ -22,7 +22,7 @@ function PinInput({ value, onChange, label, autoFocus }: { value: string; onChan
         autoFocus={autoFocus}
         value={value}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, 4))}
-        className="mx-auto h-16 w-48 rounded-2xl border border-gold/30 bg-night text-center font-mono text-4xl tracking-[0.6em] text-gold focus:border-gold focus:outline-none"
+        className="mx-auto h-16 w-48 border border-line/50 bg-ground text-center text-4xl tracking-[0.5em] text-accent focus:border-accent focus:outline-none"
         aria-label={label}
       />
     </label>
@@ -67,8 +67,9 @@ export function JoinScreen({ game, code }: { game: GameHandle; code: string }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="text-center">
-        <h2 className="font-display text-4xl font-semibold text-gold">Tap your photo</h2>
-        <p className="mt-1 text-ink-muted">Room {view.code}</p>
+        <h2 className="font-display text-[2.6rem] leading-none">Tap your photo</h2>
+        <div className="speed-lines mx-auto my-3 w-16" aria-hidden />
+        <p className="text-lg text-ink-muted">Room {view.code}</p>
       </div>
       <PlayerGrid
         players={gridPlayers(game, view.players, (p) => ({ ghost: false, note: p.seatClaimed ? "Taken" : undefined }))}
@@ -77,8 +78,8 @@ export function JoinScreen({ game, code }: { game: GameHandle; code: string }) {
       <Sheet open={!!picked} onClose={close}>
         {picked ? (
           <div className="flex flex-col items-center gap-5">
-            <Avatar name={picked.displayName} url={game.photoFor(picked.photoPath)} size={112} />
-            <h2 className="text-center font-display text-3xl font-semibold text-gold">
+            <Avatar name={picked.displayName} url={game.photoFor(picked.photoPath)} size={132} tall />
+            <h2 className="text-center font-display text-3xl leading-tight">
               {returning ? `Welcome back, ${picked.displayName}` : `Are you ${picked.displayName}?`}
             </h2>
             <p className="-mt-3 text-center text-ink-muted">

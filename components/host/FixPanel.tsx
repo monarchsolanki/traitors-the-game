@@ -212,7 +212,7 @@ function VoteFix({ game }: { game: GameHandle }) {
   const existing = round.ballots.find((b) => b.voterId === voter);
   return (
     <Card className="flex flex-col gap-3">
-      <p className="font-semibold text-gold">Fix the vote</p>
+      <p className="font-display text-xl text-accent">Fix the vote</p>
       {canEnter ? (
         <Button variant="secondary" onClick={() => setSheet("ballot")}>
           Enter or correct a ballot
@@ -271,7 +271,7 @@ function NightFix({ game }: { game: GameHandle }) {
   const alive = view.players.filter((p) => p.status === "alive");
   return (
     <Card className="flex flex-col gap-3">
-      <p className="font-semibold text-gold">Fix the night</p>
+      <p className="font-display text-xl text-accent">Fix the night</p>
       <Button variant="secondary" onClick={() => setOpen(true)}>
         Decide the night by hand
       </Button>
@@ -347,13 +347,13 @@ function RuleFix({ game }: { game: GameHandle }) {
   }
   return (
     <Card className="flex flex-col gap-1">
-      <p className="mb-1 font-semibold text-gold">Change a frozen rule</p>
-      <ul className="flex flex-col divide-y divide-gold/10">
+      <p className="mb-1 font-display text-xl text-accent">Change a frozen rule</p>
+      <ul className="flex flex-col divide-y divide-line/10">
         {RULE_KEYS.map((k) => (
           <li key={k}>
             <button type="button" onClick={() => pick(k)} className="flex w-full items-center justify-between py-3 text-left">
               <span>{SETTING_META[k].label}</span>
-              <span className="text-gold">{show(k, s)}</span>
+              <span className="text-accent">{show(k, s)}</span>
             </button>
           </li>
         ))}
@@ -427,14 +427,14 @@ export function FixPanel({ game }: { game: GameHandle }) {
   return (
     <div className="flex flex-col gap-4">
       <Card className="flex flex-col gap-3">
-        <p className="font-semibold text-gold">Paper fallback</p>
+        <p className="font-display text-xl text-accent">Paper fallback</p>
         <p className="text-ink-muted">Save every role and blank ballot slips to this device, in case the internet drops for everyone. Keep it private.</p>
         <Button variant="secondary" onClick={() => downloadPaperFallback(view)}>
           Download the offline copy of roles
         </Button>
       </Card>
       <Card className="flex flex-col gap-3">
-        <p className="font-semibold text-gold">Fix a player</p>
+        <p className="font-display text-xl text-accent">Fix a player</p>
         <PlayerGrid players={gridPlayers(game, view.players)} onSelect={setPlayerId} size={52} />
       </Card>
       <VoteFix game={game} />

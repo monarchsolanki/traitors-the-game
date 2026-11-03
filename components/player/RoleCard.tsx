@@ -25,25 +25,25 @@ export function RoleCard({ game }: { game: GameHandle }) {
   return (
     <HoldToReveal onReveal={onReveal}>
       <div className="flex flex-col items-center gap-3">
-        <span className="text-sm tracking-[0.3em] text-ink-muted uppercase">{me.isGhost ? "You were" : "You are"}</span>
-        <span className={`font-display text-6xl font-semibold ${traitor ? "text-kumkum" : "text-gold"}`}>
+        <span className="text-lg text-ink-muted">{me.isGhost ? "You were" : "You are"}</span>
+        <span className={`font-display text-[3.4rem] leading-none ${traitor ? "text-danger-bright" : "text-ink"}`}>
           {traitor ? "a Traitor" : "Innocent"}
         </span>
-        <span className="max-w-xs text-base text-ink">
+        <span className="max-w-xs text-lg text-ink">
           {traitor
             ? "Murder at night. Survive to the end without being caught."
             : "Find the Traitors and banish them at the Circle."}
         </span>
         {traitor && fellows.length ? (
-          <span className="text-base text-ink-muted">
+          <span className="text-lg text-ink-muted">
             Fellow Traitors: <span className="text-ink">{fellows.join(", ")}</span>
           </span>
         ) : null}
         {held.length ? (
           <ul className="mt-2 flex flex-col gap-1 text-left">
             {held.map((i) => (
-              <li key={i.id} className="text-sm text-ink">
-                <span className="font-semibold text-gold">{itemLabel(i.type)}:</span> {itemHelp(i.type, view.settings.daggerWeight)}
+              <li key={i.id} className="text-lg text-ink">
+                <span className="font-semibold text-accent">{itemLabel(i.type)}:</span> {itemHelp(i.type, view.settings.daggerWeight)}
               </li>
             ))}
           </ul>

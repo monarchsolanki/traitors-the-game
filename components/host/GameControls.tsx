@@ -9,6 +9,7 @@ import type { ItemType, VoteRound } from "@/lib/game/types";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card, Notice, Segmented, Toggle } from "@/components/ui/Field";
+import { Icon } from "@/components/ui/Icon";
 import { PlayerGrid } from "@/components/ui/PlayerGrid";
 import { Sheet } from "@/components/ui/Sheet";
 import { ErrorLine, gridPlayers, playerById } from "@/components/player/shared";
@@ -130,7 +131,7 @@ export function RolesList({ game }: { game: GameHandle }) {
             <li key={p.id} className="flex items-center gap-2">
               <Avatar name={p.displayName} url={game.photoFor(p.photoPath)} size={32} ghost={p.status !== "alive"} />
               <span className="truncate">{p.displayName}</span>
-              <span className={`ml-auto text-sm ${p.role === "traitor" ? "text-kumkum" : "text-ink-muted"}`}>
+              <span className={`ml-auto text-sm ${p.role === "traitor" ? "text-danger-ink" : "text-ink-muted"}`}>
                 {p.role === "traitor" ? "Traitor" : "Innocent"}
               </span>
             </li>
@@ -184,7 +185,7 @@ function MissionControls({ game }: { game: GameHandle }) {
   return (
     <div className="flex flex-col gap-4">
       <Card>
-        <p className="font-display text-2xl text-gold">{mission?.name}</p>
+        <p className="font-display text-2xl text-accent">{mission?.name}</p>
         <p className="text-ink-muted">{mission?.kind === "ghost" ? "Ghost challenge" : mission?.kind === "team" ? "Team game" : "Individual game"}</p>
         {mission?.howItWorks ? <p className="mt-2 text-ink-muted">{mission.howItWorks}</p> : null}
         {mission?.winRule ? <p className="mt-2">To win: {mission.winRule}</p> : null}
@@ -192,7 +193,7 @@ function MissionControls({ game }: { game: GameHandle }) {
       </Card>
       {rewardOpen ? (
         <Card className="flex flex-col gap-3">
-          <p className="font-semibold text-gold">Winners are voting for the {rewardOpen.itemType}</p>
+          <p className="font-display text-xl text-accent">Winners are voting for the {rewardOpen.itemType}</p>
           <p className="text-ink-muted">
             {rewardOpen.ballots.length} of {rewardOpen.eligibleVoterIds.length} voted. Waiting on:{" "}
             {names(game, rewardOpen.eligibleVoterIds.filter((id) => !rewardOpen.ballots.some((b) => b.voterId === id))) || "nobody"}
@@ -205,7 +206,7 @@ function MissionControls({ game }: { game: GameHandle }) {
         <GhostReward game={game} />
       ) : (
         <Card className="flex flex-col gap-4">
-          <p className="font-semibold text-gold">Reward the winners (private)</p>
+          <p className="font-display text-xl text-accent">Reward the winners (private)</p>
           <Segmented
             label="Ability"
             value={itemType}
@@ -283,7 +284,7 @@ function GhostReward({ game }: { game: GameHandle }) {
   const holding = (id: string) => host.items.some((i) => i.holderId === id && i.type === itemType && i.state === "held");
   return (
     <Card className="flex flex-col gap-4">
-      <p className="font-semibold text-gold">If the ghosts won</p>
+      <p className="font-display text-xl text-accent">If the ghosts won</p>
       <p className="text-sm text-ink-muted">They give the ability to any living player they choose, in private. If they lost, just move on.</p>
       <Segmented
         label="Ability"
@@ -355,7 +356,7 @@ function VotingControls({ game, round }: { game: GameHandle; round: VoteRound })
     <div className="flex flex-col gap-4">
       <Card>
         <p className="text-lg">
-          <span className="font-semibold text-gold">{living.length - waiting.length}</span> of {living.length} living players have voted
+          <span className="font-semibold text-accent">{living.length - waiting.length}</span> of {living.length} living players have voted
           {round.ballots.some((b) => b.ghost) ? ` (+${round.ballots.filter((b) => b.ghost).length} ghost)` : ""}.
         </p>
         <p className="mt-1 text-ink-muted">{waiting.length ? `Waiting on: ${namesWithPresence(game, waiting)}` : "Every living vote is in."}</p>
@@ -397,7 +398,7 @@ function RevealControls({ game, round }: { game: GameHandle; round: VoteRound })
         <ul className="flex flex-col gap-1">
           {shown.map((b) => (
             <li key={b.voterId}>
-              {name(b.voterId)} → <span className="font-semibold text-gold">{b.choice ? (b.choice === "end" ? "End" : "Banish") : name(b.targetId)}</span>
+              {name(b.voterId)} <Icon name="arrow" className="inline size-4 align-[-2px] text-ink-muted" /> <span className="font-semibold text-accent">{b.choice ? (b.choice === "end" ? "End" : "Banish") : name(b.targetId)}</span>
               {b.usedDagger ? ` ×${b.weight}` : ""}
               {b.ghost ? " (ghost)" : ""}
             </li>
@@ -508,15 +509,15 @@ function NightControls({ game }: { game: GameHandle }) {
   return (
     <div className="flex flex-col gap-4">
       <Card>
-        <p className="mb-2 font-semibold text-gold">Traitors&apos; picks (only you see this)</p>
+        <p className="mb-2 font-display text-xl text-accent">Traitors&apos; picks (only you see this)</p>
         <ul className="flex flex-col gap-1">
           {traitors.map((t) => (
             <li key={t.id}>
-              {t.displayName} → {night?.picks[t.id] ? playerById(view, night.picks[t.id])?.displayName : <span className="text-ink-muted">choosing…</span>}
+              {t.displayName} <Icon name="arrow" className="inline size-4 align-[-2px] text-ink-muted" /> {night?.picks[t.id] ? playerById(view, night.picks[t.id])?.displayName : <span className="text-ink-muted">choosing…</span>}
             </li>
           ))}
         </ul>
-        {night?.blackmail ? <p className="mt-2 text-kumkum">Tonight is a blackmail night.</p> : null}
+        {night?.blackmail ? <p className="mt-2 text-danger-ink">Tonight is a blackmail night.</p> : null}
         {night?.refused.map((r) => (
           <p key={r.targetId} className="mt-2 text-ink-muted">
             Recruit offer to {playerById(view, r.targetId)?.displayName}: {r.answer === "refused" ? "refused" : "no answer"}
@@ -581,7 +582,7 @@ function BreakfastControls({ game }: { game: GameHandle }) {
     <div className="flex flex-col gap-4">
       <Card>
         <p className="text-sm text-ink-muted">Only you see this until you reveal it:</p>
-        <p className="font-display text-3xl text-gold">{victim ? `${victim.displayName} was murdered` : "Nobody died"}</p>
+        <p className="font-display text-3xl text-accent">{victim ? `${victim.displayName} was murdered` : "Nobody died"}</p>
         {night?.reason ? <p className="text-ink-muted">{REASON[night.reason]}</p> : null}
       </Card>
       <Button onClick={() => setConfirm(true)}>Reveal to everyone</Button>
@@ -629,17 +630,17 @@ function LobbyControls({ game }: { game: GameHandle; }) {
     <div className="flex flex-col gap-4">
       <Card className="flex flex-col items-center gap-1 text-center">
         <p className="text-ink-muted">Players open</p>
-        <p className="font-mono text-base break-all text-ink">{joinUrl}</p>
+        <p className="font-display text-base break-all text-ink">{joinUrl}</p>
         <p className="text-ink-muted">or go to the home page and enter the room code</p>
-        <p className="font-mono text-5xl tracking-[0.25em] text-gold">{view.code}</p>
-        <a href={`/screen/${view.code}`} target="_blank" rel="noreferrer" className="mt-2 text-gold underline underline-offset-4">
+        <p className="font-display text-5xl tracking-[0.25em] text-accent">{view.code}</p>
+        <a href={`/screen/${view.code}`} target="_blank" rel="noreferrer" className="mt-1 inline-block min-h-12 py-3 text-accent underline underline-offset-4">
           Open the big screen (QR code for everyone)
         </a>
       </Card>
       <Card>
         <p className="text-lg">
-          <span className="font-semibold text-gold">{claimed.length}</span> of {view.players.length} seats taken,{" "}
-          <span className="font-semibold text-gold">{claimed.length - unconfirmed.length}</span> confirmed.
+          <span className="font-semibold text-accent">{claimed.length}</span> of {view.players.length} seats taken,{" "}
+          <span className="font-semibold text-accent">{claimed.length - unconfirmed.length}</span> confirmed.
         </p>
         {open.length ? <p className="mt-1 text-ink-muted">Waiting on: {names(game, open.map((p) => p.id))}</p> : null}
         {claimed.length ? (
@@ -687,7 +688,7 @@ function FinaleControls({ game }: { game: GameHandle }) {
     <div className="flex flex-col gap-4">
       <Card className="text-center">
         {!revealed ? <p className="text-sm text-ink-muted">Only you see this. Everyone else sees &ldquo;Hold on&rdquo;.</p> : null}
-        <p className={`font-display text-4xl ${f.winner === "traitors" ? "text-kumkum" : "text-gold"}`}>
+        <p className={`font-display text-4xl ${f.winner === "traitors" ? "text-danger-ink" : "text-accent"}`}>
           {f.winner === "traitors" ? "The Traitors win" : "The Innocents win"}
         </p>
         <p className="text-ink-muted">{f.reason}</p>
@@ -695,14 +696,14 @@ function FinaleControls({ game }: { game: GameHandle }) {
       </Card>
       {f.ghostScores.some((g) => g.total > 0) ? (
         <Card>
-          <p className="mb-2 font-semibold text-gold">Best Ghost</p>
+          <p className="mb-2 font-display text-xl text-accent">Best Ghost</p>
           <ol className="flex flex-col gap-1">
             {f.ghostScores.filter((g) => g.total > 0).map((g, i) => (
               <li key={g.playerId} className="flex justify-between gap-2">
                 <span>
                   {i + 1}. {playerById(view, g.playerId)?.displayName}
                 </span>
-                <span className="font-mono text-gold">{g.total}</span>
+                <span className="font-display text-accent">{g.total}</span>
               </li>
             ))}
           </ol>
@@ -818,14 +819,18 @@ export function GameControls({ game }: { game: GameHandle }) {
       break;
   }
   return (
-    <div className="flex flex-col gap-4">
-      <TimerControls game={game} />
-      {body}
-      {view.startingPlayerCount && view.phase !== "FINALE" ? <BlackmailCard game={game} /> : null}
-      {view.startingPlayerCount && !(view.phase === "FINALE") ? <UndoButton game={game} /> : null}
-      <BigScreenCard game={game} />
-      <BotRunner game={game} />
-      <RolesList game={game} />
+    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-6">
+      <div className="flex flex-col gap-4">
+        <TimerControls game={game} />
+        {body}
+        {view.startingPlayerCount && view.phase !== "FINALE" ? <BlackmailCard game={game} /> : null}
+        {view.startingPlayerCount && !(view.phase === "FINALE") ? <UndoButton game={game} /> : null}
+      </div>
+      <div className="flex flex-col gap-4">
+        <BigScreenCard game={game} />
+        <BotRunner game={game} />
+        <RolesList game={game} />
+      </div>
     </div>
   );
 }
