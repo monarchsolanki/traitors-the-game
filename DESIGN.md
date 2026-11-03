@@ -392,7 +392,7 @@ Confident, flat, and impossible to miss.
 A photo in a stepped plate, tall at 5:6 and framed high on the face. Small square plates zoom to 150% on the face. Without a photo, a tone fill with Federo initials. Selection adds a 3 px rose ring, and in grids a small stepped check block at the top left. Ghosted players fade to greyscale over one second. Names sit below in Jost, turning accent and semibold when chosen.
 
 ### Lift Doors
-The hold-to-reveal panel. Two nickel-patterned chevron doors, surface-2 with a hairline where they meet, part sideways over 0.45 seconds while pressed. The secret is rendered only while held, so it is gone before the doors close. A shorter version guards recruit and blackmail offers, labelled "You have a private message", with neutral answer buttons that appear only after the first peek.
+The hold-to-reveal panel. Two nickel-patterned chevron doors, surface-2 with a hairline where they meet, part sideways over 0.45 seconds while pressed. The secret is rendered only while held, so it is gone before the doors close. A shorter version guards recruit and blackmail offers, labelled "You have a private message", with neutral answer buttons that appear only after the first peek and ask once before sending. It keeps its held height, so nothing below moves under a finger.
 
 ### The Ring
 The Circle on the TV: portraits seated on a fine circle, with each revealed vote drawn across it as a curve over 0.9 seconds. The newest stroke is accent and thicker, weighted further by a dagger; voter and target wear the selection ring; older strokes fade back. The current names sit in the centre.

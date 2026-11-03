@@ -19,6 +19,8 @@ export function Rotunda({ game, round }: { game: GameHandle; round: RoundView })
     return { x: Math.cos(a) * R, y: Math.sin(a) * R };
   };
   const latest = round.ballots[round.ballots.length - 1];
+  // Square seats on a ring: past 12 players they shrink so neighbours don't overlap (the maximum is 20).
+  const seat = `calc(${RING} * ${Math.min(0.15, 0.59 * Math.sin(Math.PI / seats.length))})`;
   const name = (id: string | null) => seats.find((p) => p.id === id)?.displayName;
   return (
     <div className="relative aspect-square shrink-0" style={{ width: RING }}>
@@ -49,7 +51,7 @@ export function Rotunda({ game, round }: { game: GameHandle; round: RoundView })
         const lit = latest && (p.id === latest.voterId || p.id === latest.targetId);
         return (
           <div key={p.id} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${50 + pos.x / 2}%`, top: `${50 + pos.y / 2}%` }}>
-            <Avatar name={p.displayName} url={game.photoFor(p.photoPath)} size={`calc(${RING} * 0.15)`} ghost={p.status !== "alive"} ring={!!lit} />
+            <Avatar name={p.displayName} url={game.photoFor(p.photoPath)} size={seat} ghost={p.status !== "alive"} ring={!!lit} />
           </div>
         );
       })}

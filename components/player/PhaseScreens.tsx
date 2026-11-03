@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { describeEvent } from "@/lib/client/feed";
 import type { GameHandle } from "@/lib/client/useGame";
-import type { RoundView } from "@/lib/game/view";
+import type { PlayerView, RoundView } from "@/lib/game/view";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Countdown } from "@/components/ui/Countdown";
@@ -353,6 +353,82 @@ function ChatSheet({ game, open, onClose }: { game: GameHandle; open: boolean; o
   );
 }
 
+function SuspectPoll({ game, others }: { game: GameHandle; others: PlayerView[] }) {
+  const { error, send } = useSend(game);
+  return (
+    <>
+      <PlayerGrid
+        players={gridPlayers(game, others)}
+        selectedId={game.view!.me!.suspectPoll!.myAnswer}
+        onSelect={(id) => void send({ type: "suspectAnswer", targetId: id })}
+      />
+      <ErrorLine message={error} />
+      <p className="text-center text-lg text-ink-muted">Who do you suspect? Answers stay secret until the final reveal.</p>
+    </>
+  );
+}
+
+/**
+ * Owner, 4 November: an offer is a secret like a role. It stays behind the doors, the answer buttons wait for
+ * the first peek and use neutral words, each answer asks once, and the poll stays below so the phone still
+ * looks like the others.
+ */
+function RecruitOffer({ game, offer, children }: { game: GameHandle; offer: { deadline: number; blackmail: boolean }; children: React.ReactNode }) {
+  const me = game.view!.me!;
+  const { busy, error, send } = useSend(game);
+  const [peeked, setPeeked] = useState(false);
+  const [answering, setAnswering] = useState<"join" | "refuse" | null>(null);
+  const { blackmail, deadline } = offer;
+  const shielded = me.items.some((i) => i.type === "shield" && i.state === "held");
+  // The doors sit above the poll, so an offer that lands mid-scroll would otherwise go unseen.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+  const refuseTitle = blackmail && !shielded ? "Refuse and die?" : "Refuse?";
+  const refuseBody = !blackmail ? "They can't ask you again tonight." : shielded ? "Only your shield can save you now." : "You die tonight. This can't be undone.";
+  return (
+    <div className="flex flex-col gap-5">
+      <Heading title="Night falls" help={children ? "Tap a player. Only you see your choice." : undefined} />
+      <HoldToReveal compact label="You have a private message. Hold to read it." onReveal={() => setPeeked(true)}>
+        <span className="flex flex-col items-center gap-3">
+          <span className="font-display text-3xl leading-tight text-danger-bright">{blackmail ? "Join the Traitors or die" : "The Traitors want you"}</span>
+          <span className="text-lg leading-snug text-ink">
+            {!blackmail
+              ? "Join them and become a Traitor, or refuse. Nobody else sees your answer."
+              : shielded
+                ? "The Traitors have chosen you. Join them, or refuse and trust your shield. No answer counts as refusing."
+                : "The Traitors have chosen you. Join them, or refuse and die tonight. No answer counts as refusing."}
+          </span>
+          <Countdown deadline={deadline} pausedRemainingMs={null} now={game.now} className="text-3xl" />
+        </span>
+      </HoldToReveal>
+      {peeked ? (
+        <div className="flex gap-2">
+          <Button variant="secondary" size="md" className="flex-1" onClick={() => setAnswering("join")}>
+            Yes, join
+          </Button>
+          <Button variant="secondary" size="md" className="flex-1" onClick={() => setAnswering("refuse")}>
+            No, refuse
+          </Button>
+        </div>
+      ) : null}
+      {children}
+      <Sheet open={!!answering} onClose={() => setAnswering(null)} title={answering === "join" ? "Join the Traitors?" : refuseTitle}>
+        <div className="flex flex-col gap-3">
+          <p className="text-center text-ink-muted">{answering === "join" ? "You become a Traitor. This can't be undone." : refuseBody}</p>
+          <ErrorLine message={error} />
+          <Button variant="danger" busy={busy} onClick={() => send({ type: "answerRecruit", accept: answering === "join" })}>
+            {answering === "join" ? "Yes, join" : "Yes, refuse"}
+          </Button>
+          <Button variant="quiet" size="md" onClick={() => setAnswering(null)}>
+            Go back
+          </Button>
+        </div>
+      </Sheet>
+    </div>
+  );
+}
+
 /** Night looks the same for everyone at a glance: one title, one grid of photos. */
 export function NightScreen({ game }: { game: GameHandle }) {
   const view = game.view!;
@@ -362,74 +438,11 @@ export function NightScreen({ game }: { game: GameHandle }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [recruitMode, setRecruitMode] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [refusing, setRefusing] = useState(false);
-  const [peekedAt, setPeekedAt] = useState<number | null>(null);
-  const offerDeadline = me.recruitOffer?.deadline;
-  // The doors sit above the poll, so an offer that lands mid-scroll would otherwise go unseen.
-  useEffect(() => {
-    if (offerDeadline) window.scrollTo(0, 0);
-  }, [offerDeadline]);
   const others = view.players.filter((p) => p.status === "alive" && p.id !== me.playerId);
 
-  const poll = me.suspectPoll ? (
-    <>
-      <PlayerGrid
-        players={gridPlayers(game, others)}
-        selectedId={me.suspectPoll.myAnswer}
-        onSelect={(id) => void send({ type: "suspectAnswer", targetId: id })}
-      />
-      <p className="text-center text-lg text-ink-muted">Who do you suspect? Answers stay secret until the final reveal.</p>
-    </>
-  ) : null;
+  const poll = me.suspectPoll ? <SuspectPoll game={game} others={others} /> : null;
 
-  // Owner, 4 November: an offer is a secret like a role. It stays behind the doors, the answer buttons wait
-  // for the first peek and use neutral words, and the poll stays below so the phone still looks like the others.
-  if (me.recruitOffer) {
-    const { blackmail, deadline } = me.recruitOffer;
-    const shielded = me.items.some((i) => i.type === "shield" && i.state === "held");
-    return (
-      <div className="flex flex-col gap-5">
-        <Heading title="Night falls" help={poll ? "Tap a player. Only you see your choice." : undefined} />
-        <HoldToReveal compact label="You have a private message. Hold to read it." onReveal={() => setPeekedAt(deadline)}>
-          <span className="flex flex-col items-center gap-3">
-            <span className="font-display text-3xl leading-tight text-danger-bright">{blackmail ? "Join the Traitors or die" : "The Traitors want you"}</span>
-            <span className="text-lg leading-snug text-ink">
-              {!blackmail
-                ? "Join them and become a Traitor, or refuse. Nobody else sees your answer."
-                : shielded
-                  ? "The Traitors have chosen you. Join them, or refuse and trust your shield. No answer counts as refusing."
-                  : "The Traitors have chosen you. Join them, or refuse and die tonight. No answer counts as refusing."}
-            </span>
-            <Countdown deadline={deadline} pausedRemainingMs={null} now={game.now} className="text-3xl" />
-          </span>
-        </HoldToReveal>
-        {peekedAt === deadline ? (
-          <div className="flex gap-2">
-            <Button variant="secondary" size="md" className="flex-1" busy={busy} onClick={() => send({ type: "answerRecruit", accept: true })}>
-              Yes, join
-            </Button>
-            <Button variant="secondary" size="md" className="flex-1" busy={busy} onClick={() => (blackmail ? setRefusing(true) : send({ type: "answerRecruit", accept: false }))}>
-              No, refuse
-            </Button>
-          </div>
-        ) : null}
-        <ErrorLine message={error} />
-        {poll}
-        <Sheet open={refusing} onClose={() => setRefusing(false)} title={shielded ? "Refuse?" : "Refuse and die?"}>
-          <div className="flex flex-col gap-3">
-            <p className="text-center text-ink-muted">{shielded ? "Only your shield can save you now." : "You die tonight. This can't be undone."}</p>
-            <ErrorLine message={error} />
-            <Button variant="danger" busy={busy} onClick={() => send({ type: "answerRecruit", accept: false })}>
-              Yes, refuse
-            </Button>
-            <Button variant="quiet" size="md" onClick={() => setRefusing(false)}>
-              Go back
-            </Button>
-          </div>
-        </Sheet>
-      </div>
-    );
-  }
+  if (me.recruitOffer) return <RecruitOffer game={game} offer={me.recruitOffer}>{poll}</RecruitOffer>;
 
   if (tv?.night) {
     const night = tv.night;
@@ -523,7 +536,6 @@ export function NightScreen({ game }: { game: GameHandle }) {
       <div className="flex flex-col gap-5">
         <Heading title="Night falls" help="Tap a player. Only you see your choice." />
         {poll}
-        <ErrorLine message={error} />
       </div>
     );
   }

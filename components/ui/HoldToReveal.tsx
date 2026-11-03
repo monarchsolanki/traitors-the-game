@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
 
 function DoorPanel({ side, open }: { side: "l" | "r"; open: boolean }) {
@@ -29,12 +29,17 @@ export function HoldToReveal({
   children,
 }: {
   label?: string;
-  /** Shorter doors, for a screen that has a grid to fit below them. */
+  /** Shorter doors, for a screen with more below them. They keep their held height, so nothing below moves under a finger. */
   compact?: boolean;
   onReveal?: () => void;
   children: ReactNode;
 }) {
   const [held, setHeld] = useState(false);
+  const box = useRef<HTMLButtonElement>(null);
+  const [keptHeight, setKeptHeight] = useState(0);
+  useLayoutEffect(() => {
+    if (compact && held && box.current) setKeptHeight((h) => Math.max(h, box.current!.offsetHeight));
+  }, [compact, held]);
   const start = () => {
     setHeld(true);
     onReveal?.();
@@ -42,6 +47,7 @@ export function HoldToReveal({
   const stop = () => setHeld(false);
   return (
     <button
+      ref={box}
       type="button"
       onPointerDown={start}
       onPointerUp={stop}
@@ -52,7 +58,7 @@ export function HoldToReveal({
       onKeyUp={stop}
       onBlur={stop}
       className={`step frame relative flex w-full touch-none ${compact ? "min-h-48" : "min-h-80"} flex-col items-center justify-center overflow-hidden p-6 text-center select-none [--frame-fill:var(--ground)] [--s:6px]`}
-      style={{ WebkitTouchCallout: "none" }}
+      style={{ WebkitTouchCallout: "none", minHeight: keptHeight || undefined }}
     >
       {held ? <span className="animate-settle">{children}</span> : null}
       <DoorPanel side="l" open={held} />
