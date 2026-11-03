@@ -91,5 +91,8 @@ export async function withRetries<T>(send: () => Promise<T>, delaysMs: number[] 
 }
 
 export function newKey(): string {
-  return crypto.randomUUID();
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  // randomUUID needs HTTPS and a newer browser: a test over local Wi-Fi or an older phone falls back to the same shape.
+  const hex = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }

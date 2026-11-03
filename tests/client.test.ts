@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { newKey } from "@/lib/client/api";
 import { paperFallbackHtml } from "@/lib/client/paper";
 import { viewFor } from "@/lib/game/view";
 import { ONLINE_MS, presence } from "@/components/host/SeatDot";
@@ -52,5 +53,19 @@ describe("connection badges", () => {
   it("bots and empty seats", () => {
     expect(presence(seat({ isBot: true }), now)).toBe("bot");
     expect(presence(undefined, now)).toBe("none");
+  });
+});
+
+describe("newKey", () => {
+  it("still makes unique, UUID-shaped keys where crypto.randomUUID is missing (plain HTTP, older phones)", () => {
+    const original = crypto.randomUUID;
+    Object.defineProperty(crypto, "randomUUID", { value: undefined, configurable: true });
+    try {
+      const a = newKey();
+      expect(a).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+      expect(newKey()).not.toBe(a);
+    } finally {
+      Object.defineProperty(crypto, "randomUUID", { value: original, configurable: true });
+    }
   });
 });
