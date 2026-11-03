@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { describeEvent } from "@/lib/client/feed";
 import type { GameHandle } from "@/lib/client/useGame";
 import type { RoundView } from "@/lib/game/view";
@@ -11,6 +11,7 @@ import { Card, Notice, Segmented, Toggle } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { PlayerGrid } from "@/components/ui/PlayerGrid";
 import { Sheet } from "@/components/ui/Sheet";
+import { HoldToReveal } from "@/components/ui/HoldToReveal";
 import { GhostGames } from "./GhostGames";
 import { RoleCard } from "./RoleCard";
 import { ErrorLine, gridPlayers, playerById } from "./shared";
@@ -362,32 +363,58 @@ export function NightScreen({ game }: { game: GameHandle }) {
   const [recruitMode, setRecruitMode] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [refusing, setRefusing] = useState(false);
+  const [peekedAt, setPeekedAt] = useState<number | null>(null);
+  const offerDeadline = me.recruitOffer?.deadline;
+  // The doors sit above the poll, so an offer that lands mid-scroll would otherwise go unseen.
+  useEffect(() => {
+    if (offerDeadline) window.scrollTo(0, 0);
+  }, [offerDeadline]);
   const others = view.players.filter((p) => p.status === "alive" && p.id !== me.playerId);
 
+  const poll = me.suspectPoll ? (
+    <>
+      <PlayerGrid
+        players={gridPlayers(game, others)}
+        selectedId={me.suspectPoll.myAnswer}
+        onSelect={(id) => void send({ type: "suspectAnswer", targetId: id })}
+      />
+      <p className="text-center text-lg text-ink-muted">Who do you suspect? Answers stay secret until the final reveal.</p>
+    </>
+  ) : null;
+
+  // Owner, 4 November: an offer is a secret like a role. It stays behind the doors, the answer buttons wait
+  // for the first peek and use neutral words, and the poll stays below so the phone still looks like the others.
   if (me.recruitOffer) {
-    const blackmail = me.recruitOffer.blackmail;
+    const { blackmail, deadline } = me.recruitOffer;
     const shielded = me.items.some((i) => i.type === "shield" && i.state === "held");
     return (
       <div className="flex flex-col gap-5">
-        <Heading title="Night falls" />
-        <Card className="flex flex-col items-center gap-4 text-center">
-          <p className="font-display text-3xl leading-tight">{blackmail ? "Join the Traitors or die" : "The Traitors want you"}</p>
-          <p className="text-ink">
-            {!blackmail
-              ? "Join them and become a Traitor, or refuse. Nobody else sees your answer."
-              : shielded
-                ? "The Traitors have chosen you. Join them, or refuse and trust your shield. No answer counts as refusing."
-                : "The Traitors have chosen you. Join them, or refuse and die tonight. No answer counts as refusing."}
-          </p>
-          <Countdown deadline={me.recruitOffer.deadline} pausedRemainingMs={null} now={game.now} className="text-3xl" />
-          <ErrorLine message={error} />
-          <Button variant="danger" busy={busy} onClick={() => send({ type: "answerRecruit", accept: true })}>
-            Join the Traitors
-          </Button>
-          <Button variant="secondary" busy={busy} onClick={() => (blackmail ? setRefusing(true) : send({ type: "answerRecruit", accept: false }))}>
-            {blackmail && !shielded ? "Refuse and die" : "Refuse"}
-          </Button>
-        </Card>
+        <Heading title="Night falls" help={poll ? "Tap a player. Only you see your choice." : undefined} />
+        <HoldToReveal compact label="You have a private message. Hold to read it." onReveal={() => setPeekedAt(deadline)}>
+          <span className="flex flex-col items-center gap-3">
+            <span className="font-display text-3xl leading-tight text-danger-bright">{blackmail ? "Join the Traitors or die" : "The Traitors want you"}</span>
+            <span className="text-lg leading-snug text-ink">
+              {!blackmail
+                ? "Join them and become a Traitor, or refuse. Nobody else sees your answer."
+                : shielded
+                  ? "The Traitors have chosen you. Join them, or refuse and trust your shield. No answer counts as refusing."
+                  : "The Traitors have chosen you. Join them, or refuse and die tonight. No answer counts as refusing."}
+            </span>
+            <Countdown deadline={deadline} pausedRemainingMs={null} now={game.now} className="text-3xl" />
+          </span>
+        </HoldToReveal>
+        {peekedAt === deadline ? (
+          <div className="flex gap-2">
+            <Button variant="secondary" size="md" className="flex-1" busy={busy} onClick={() => send({ type: "answerRecruit", accept: true })}>
+              Yes, join
+            </Button>
+            <Button variant="secondary" size="md" className="flex-1" busy={busy} onClick={() => (blackmail ? setRefusing(true) : send({ type: "answerRecruit", accept: false }))}>
+              No, refuse
+            </Button>
+          </div>
+        ) : null}
+        <ErrorLine message={error} />
+        {poll}
         <Sheet open={refusing} onClose={() => setRefusing(false)} title={shielded ? "Refuse?" : "Refuse and die?"}>
           <div className="flex flex-col gap-3">
             <p className="text-center text-ink-muted">{shielded ? "Only your shield can save you now." : "You die tonight. This can't be undone."}</p>
@@ -491,17 +518,12 @@ export function NightScreen({ game }: { game: GameHandle }) {
     );
   }
 
-  if (me.suspectPoll) {
+  if (poll) {
     return (
       <div className="flex flex-col gap-5">
         <Heading title="Night falls" help="Tap a player. Only you see your choice." />
-        <PlayerGrid
-          players={gridPlayers(game, others)}
-          selectedId={me.suspectPoll.myAnswer}
-          onSelect={(id) => void send({ type: "suspectAnswer", targetId: id })}
-        />
+        {poll}
         <ErrorLine message={error} />
-        <p className="text-center text-lg text-ink-muted">Who do you suspect? Answers stay secret until the final reveal.</p>
       </div>
     );
   }

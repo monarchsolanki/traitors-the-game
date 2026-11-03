@@ -24,10 +24,13 @@ function DoorPanel({ side, open }: { side: "l" | "r"; open: boolean }) {
  */
 export function HoldToReveal({
   label = "Hold to see your role",
+  compact = false,
   onReveal,
   children,
 }: {
   label?: string;
+  /** Shorter doors, for a screen that has a grid to fit below them. */
+  compact?: boolean;
   onReveal?: () => void;
   children: ReactNode;
 }) {
@@ -48,7 +51,7 @@ export function HoldToReveal({
       onKeyDown={(e) => (e.key === " " || e.key === "Enter") && start()}
       onKeyUp={stop}
       onBlur={stop}
-      className="step frame relative flex min-h-80 w-full touch-none flex-col items-center justify-center overflow-hidden p-6 text-center select-none [--frame-fill:var(--ground)] [--s:6px]"
+      className={`step frame relative flex w-full touch-none ${compact ? "min-h-48" : "min-h-80"} flex-col items-center justify-center overflow-hidden p-6 text-center select-none [--frame-fill:var(--ground)] [--s:6px]`}
       style={{ WebkitTouchCallout: "none" }}
     >
       {held ? <span className="animate-settle">{children}</span> : null}
