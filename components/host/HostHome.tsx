@@ -11,6 +11,7 @@ import type { Phase } from "@/lib/game/types";
 import { Button } from "@/components/ui/Button";
 import { Card, Notice, TextField } from "@/components/ui/Field";
 import { Keyhole } from "@/components/ui/Keyhole";
+import { Sheet } from "@/components/ui/Sheet";
 import { ErrorLine } from "@/components/player/shared";
 
 interface GameRow {
@@ -118,30 +119,73 @@ export function HostHome() {
           </Button>
           <PresetStarter busy={busy} onStart={(id) => create(id)} />
           <ErrorLine message={error} />
-          {games.length ? (
-            <Card>
-              <p className="mb-3 font-display text-xl text-accent">Your games</p>
-              <ul className="flex flex-col divide-y divide-line/10">
-                {games.map((g) => (
-                  <li key={g.code}>
-                    <Link href={`/host/${g.code}`} className="flex items-center justify-between py-3">
-                      <span className="font-display text-xl tracking-widest text-ink">{g.code}</span>
-                      <span className="text-sm text-ink-muted">
-                        {PHASE_TITLE[g.phase]}
-                        {g.day ? ` · Day ${g.day}` : ""}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ) : null}
+          {games.length ? <YourGames games={games} onDeleted={(code) => setGames((list) => list.filter((g) => g.code !== code))} /> : null}
           <Button variant="quiet" size="md" onClick={() => auth.signOut().then(() => setState("signedOut"))}>
             Sign out
           </Button>
         </>
       ) : null}
     </main>
+  );
+}
+
+/** The host's games: open one, or delete it for good after asking once. */
+export function YourGames({ games, onDeleted }: { games: GameRow[]; onDeleted: (code: string) => void }) {
+  const [target, setTarget] = useState<GameRow | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const close = () => {
+    setTarget(null);
+    setError(null);
+  };
+  const remove = async () => {
+    if (!target) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/api/games?code=${target.code}`, { kind: "host", method: "DELETE" });
+      onDeleted(target.code);
+      close();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't delete the game.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const inPlay = !!target && target.phase !== "LOBBY" && target.phase !== "FINALE";
+  return (
+    <Card>
+      <p className="mb-3 font-display text-xl text-accent">Your games</p>
+      <ul className="flex flex-col divide-y divide-line/10">
+        {games.map((g) => (
+          <li key={g.code} className="flex items-center gap-2">
+            <Link href={`/host/${g.code}`} className="flex min-h-12 min-w-0 flex-1 items-center justify-between gap-3 py-3">
+              <span className="font-display text-xl tracking-widest text-ink">{g.code}</span>
+              <span className="text-right text-sm text-ink-muted">
+                {PHASE_TITLE[g.phase]}
+                {g.day ? ` · Day ${g.day}` : ""}
+              </span>
+            </Link>
+            <Button variant="quiet" size="sm" aria-label={`Delete game ${g.code}`} onClick={() => setTarget(g)}>
+              Delete
+            </Button>
+          </li>
+        ))}
+      </ul>
+      <Sheet open={!!target} onClose={close} title={target ? `Delete game ${target.code}?` : undefined}>
+        <div className="flex flex-col gap-4">
+          {inPlay ? <Notice tone="warn" title="This game is still being played">It&apos;s at {PHASE_TITLE[target.phase]}. Every phone and screen in it stops working.</Notice> : null}
+          <p className="text-center text-ink-muted">Its players, votes, log and photos are gone for good. This can&apos;t be undone. Your saved presets aren&apos;t affected.</p>
+          <ErrorLine message={error} />
+          <Button variant="danger" busy={busy} onClick={remove}>
+            Delete game
+          </Button>
+          <Button variant="quiet" size="md" onClick={close}>
+            Keep it
+          </Button>
+        </div>
+      </Sheet>
+    </Card>
   );
 }
 

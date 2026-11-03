@@ -108,6 +108,43 @@ describe("creating and listing games", () => {
     expect((await call(gamesRoute.GET as Handler, { token: "host-a" })).status).toBe(200);
   });
 
+  it("only this game's host can delete it", async () => {
+    for (const token of [undefined, "stranger", "account", "phone-1", "host-b"]) {
+      const res = await call(gamesRoute.DELETE as Handler, { token, method: "DELETE", query: `?code=${code}` });
+      expect(res.status).toBe(token ? 403 : 401);
+    }
+    expect(globalThis.__fakeDb.tables.games.some((g) => g.code === code)).toBe(true);
+  });
+
+  it("deleting a game removes it, its photos and its room code, and leaves other games and presets alone", async () => {
+    const other = await call(gamesRoute.POST as Handler, { token: "host-a", body: {} });
+    const form = new FormData();
+    form.set("playerId", "p1");
+    form.set("file", new Blob([new Uint8Array(10)], { type: "image/jpeg" }), "a.jpg");
+    expect((await call(photoRoute.POST, { token: "host-a", form })).status).toBe(200);
+    const preset = await call(presetsRoute.POST as Handler, { token: "host-a", body: { code, name: "Keep me" } });
+    expect(preset.status).toBe(201);
+    const db = globalThis.__fakeDb;
+    const id = db.tables.games.find((g) => g.code === code)!.id as string;
+    expect(db.storage["player-photos"].filter((p) => p.startsWith(`${id}/`))).toHaveLength(1);
+    const presetCopies = db.storage["player-photos"].filter((p) => p.startsWith("presets/"));
+    expect(presetCopies).toHaveLength(1);
+
+    expect((await call(gamesRoute.DELETE as Handler, { token: "host-a", method: "DELETE", query: `?code=${code}` })).status).toBe(200);
+
+    expect(db.tables.games.some((g) => g.code === code)).toBe(false);
+    expect(db.storage["player-photos"].filter((p) => p.startsWith(`${id}/`))).toEqual([]);
+    expect(db.storage["player-photos"].filter((p) => p.startsWith("presets/"))).toEqual(presetCopies);
+    expect((await call(viewRoute.GET, { token: "host-a", query: "?as=host" })).status).toBe(404);
+    expect((await call(gamesRoute.DELETE as Handler, { token: "host-a", method: "DELETE", query: `?code=${code}` })).status).toBe(404);
+    const list = await call(gamesRoute.GET as Handler, { token: "host-a" });
+    expect((list.body.games as Array<{ code: string }>).map((g) => g.code)).toEqual([other.body.code]);
+  });
+
+  it("deleting needs a room code", async () => {
+    expect((await call(gamesRoute.DELETE as Handler, { token: "host-a", method: "DELETE" })).status).toBe(400);
+  });
+
   it("/api/me says who's a host", async () => {
     expect((await call(meRoute.GET as Handler, {})).body).toEqual({ user: null, isHost: false });
     expect((await call(meRoute.GET as Handler, { token: "stranger" })).body.isHost).toBe(false);

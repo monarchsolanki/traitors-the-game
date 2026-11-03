@@ -3,7 +3,7 @@ import { randomBytes, randomInt } from "node:crypto";
 import { applyGameAction, createGame, normaliseState, type CreateGameOptions } from "@/lib/game/engine";
 import type { ActionPayload, Actor, GameState } from "@/lib/game/types";
 import { HttpError } from "./http";
-import { adminClient } from "./supabase";
+import { adminClient, PHOTO_BUCKET } from "./supabase";
 
 export interface StoredGame {
   id: string;
@@ -61,6 +61,21 @@ export async function listHostGames(hostUserId: string) {
     .limit(20);
   if (error) throw error;
   return data;
+}
+
+/**
+ * Deletes a game for good. Its seats, moves, pings and reactions go with it (foreign keys, on delete cascade);
+ * its players' photos are removed here. Presets keep their own copies of photos, so they aren't affected.
+ */
+export async function deleteStoredGame(game: StoredGame): Promise<void> {
+  const db = adminClient();
+  const { error } = await db.from("games").delete().eq("id", game.id);
+  if (error) throw error;
+  const photos = game.state.players.map((p) => p.photoPath).filter((p): p is string => !!p && p.startsWith(`${game.id}/`));
+  if (!photos.length) return;
+  const { error: photoError } = await db.storage.from(PHOTO_BUCKET).remove(photos);
+  // The game is already gone, so this can't fail the request; the log shows any photos left behind.
+  if (photoError) console.error(`Couldn't remove photos of deleted game ${game.code}:`, photoError);
 }
 
 export type RunResult =
