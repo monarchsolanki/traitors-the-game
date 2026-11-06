@@ -10,19 +10,35 @@ const clone = <T>(v: T): T => structuredClone(v);
 
 export class FakeSupabase {
   tables: Record<string, Row[]> = { games: [], seats: [], game_actions: [], game_pings: [], hosts: [], presets: [], game_reactions: [] };
-  users = new Map<string, { sub: string; is_anonymous: boolean }>();
+  users = new Map<string, { sub: string; is_anonymous: boolean; app_metadata?: Record<string, unknown> }>();
+  /** Accounts made through auth.admin.createUser, by email. */
+  accounts = new Map<string, { id: string; password: string; app_metadata: Record<string, unknown> }>();
   storage: Record<string, string[]> = { "player-photos": [] };
   private nextId = 1;
 
   /** Registers a fake signed-in user; requests send `Bearer <token>`. */
-  addUser(token: string, sub: string, anonymous: boolean) {
-    this.users.set(token, { sub, is_anonymous: anonymous });
+  addUser(token: string, sub: string, anonymous: boolean, appMetadata?: Record<string, unknown>) {
+    this.users.set(token, { sub, is_anonymous: anonymous, app_metadata: appMetadata });
   }
 
   auth = {
     getClaims: async (token: string) => {
       const u = this.users.get(token);
       return u ? { data: { claims: u }, error: null } : { data: null, error: { message: "invalid JWT" } };
+    },
+    admin: {
+      createUser: async (o: { email: string; password: string; app_metadata?: Record<string, unknown> }) => {
+        if (this.accounts.has(o.email)) {
+          return { data: { user: null }, error: { code: "email_exists", message: "A user with this email address has already been registered" } };
+        }
+        const id = `u-acct-${this.nextId++}`;
+        this.accounts.set(o.email, { id, password: o.password, app_metadata: o.app_metadata ?? {} });
+        return { data: { user: { id } }, error: null };
+      },
+      deleteUser: async (id: string) => {
+        for (const [email, a] of this.accounts) if (a.id === id) this.accounts.delete(email);
+        return { data: null, error: null };
+      },
     },
   };
 

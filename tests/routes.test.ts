@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createGame } from "@/lib/game/engine";
 import { findLeaks } from "@/lib/game/leaks";
+import { DEFAULT_ROSTER } from "@/lib/game/settings";
 import type { GameState, Viewer } from "@/lib/game/types";
 import { viewFor } from "@/lib/game/view";
 import { FakeSupabase } from "./fakes/supabase";
@@ -27,6 +29,7 @@ import * as seatsRoute from "@/app/api/games/[code]/seats/route";
 import * as undoRoute from "@/app/api/games/[code]/undo/route";
 import * as viewRoute from "@/app/api/games/[code]/view/route";
 import * as gamesRoute from "@/app/api/games/route";
+import * as hostsRoute from "@/app/api/hosts/route";
 import * as meRoute from "@/app/api/me/route";
 
 type Handler = (req: Request, ctx: { params: Promise<{ code: string }> }) => Promise<Response>;
@@ -97,6 +100,9 @@ beforeEach(async () => {
   const created = await call(gamesRoute.POST as Handler, { token: "host-a", body: {} });
   expect(created.status).toBe(201);
   code = created.body.code as string;
+  // New games start with no players (owner, 6 November); these tests seat the usual table of 12.
+  expect((state() as GameState).players).toEqual([]);
+  db.tables.games.find((g) => g.code === code)!.state = createGame({ code, seed: "route-tests", at: Date.now(), roster: DEFAULT_ROSTER });
 });
 
 describe("creating and listing games", () => {
@@ -259,6 +265,39 @@ describe("action route: who may do what", () => {
     const r = await act("phone-2", "player", { type: "castVote", targetId: "p3" });
     expect(r.status).toBe(422);
     expectExactView({ status: 200, body: r.body }, { kind: "player", playerId: "p2" });
+  });
+});
+
+describe("anyone can make a host account (owner, 6 November)", () => {
+  const signUp = (body: unknown) => call(hostsRoute.POST as Handler, { body });
+
+  it("creates a confirmed, listed host whose games start with no players", async () => {
+    const res = await signUp({ name: "  Riya ", email: "Riya@Example.com", password: "long-enough" });
+    expect(res.status).toBe(201);
+    const db = globalThis.__fakeDb;
+    const acct = db.accounts.get("riya@example.com")!;
+    expect(acct.app_metadata).toEqual({ self_serve: true });
+    expect(db.tables.hosts).toContainEqual(expect.objectContaining({ user_id: acct.id, display_name: "Riya" }));
+    db.addUser("riya", acct.id, false, acct.app_metadata);
+    expect((await call(meRoute.GET as Handler, { token: "riya" })).body.isHost).toBe(true);
+    const made = await call(gamesRoute.POST as Handler, { token: "riya", body: {} });
+    expect(made.status).toBe(201);
+    const game = db.tables.games.find((g) => g.code === made.body.code)!;
+    expect((game.state as GameState).players).toEqual([]);
+    // The new host can't touch the owner's games.
+    expect((await call(gamesRoute.DELETE as Handler, { token: "riya", method: "DELETE", query: `?code=${code}` })).status).toBe(403);
+  });
+
+  it("refuses a taken email, a short password, a bad email and a missing name", async () => {
+    expect((await signUp({ name: "A", email: "a@b.co", password: "long-enough" })).status).toBe(201);
+    const again = await signUp({ name: "B", email: "A@B.co", password: "long-enough" });
+    expect(again.status).toBe(409);
+    expect(again.body.error).toMatch(/already has an account/);
+    expect((await signUp({ name: "C", email: "c@d.co", password: "short" })).body.error).toMatch(/8 characters/);
+    expect((await signUp({ name: "C", email: "not-an-email", password: "long-enough" })).body.error).toMatch(/email/);
+    expect((await signUp({ name: " ", email: "c@d.co", password: "long-enough" })).body.error).toMatch(/name/);
+    expect((await signUp(null)).status).toBe(400);
+    expect(globalThis.__fakeDb.accounts.size).toBe(1);
   });
 });
 
@@ -575,6 +614,7 @@ describe("presets (Step 5)", () => {
     const other = await call(gamesRoute.POST as Handler, { token: "host-a", body: {} });
     const first = code;
     code = other.body.code as string;
+    globalThis.__fakeDb.tables.games.find((g) => g.code === code)!.state = createGame({ code, seed: "route-tests-2", at: Date.now(), roster: DEFAULT_ROSTER });
     expect(state().settings.voteSeconds).toBe(120);
     expect((await call(presetRoute.POST, { token: "host-b", body: { presetId, key: "apply-key-1" } })).status).toBe(403);
     const applied = await call(presetRoute.POST, { token: "host-a", body: { presetId, key: "apply-key-1" } });

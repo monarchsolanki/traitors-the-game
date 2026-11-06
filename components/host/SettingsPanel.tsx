@@ -47,6 +47,8 @@ export function SettingsPanel({ game }: { game: GameHandle }) {
   const s = view.settings;
   const dealt = view.startingPlayerCount !== null;
   const n = view.startingPlayerCount ?? view.players.length;
+  // Before dealing the table can still grow, so limits use the most it can hold; dealing checks the real count.
+  const room = dealt ? n : MAX_PLAYERS;
   const { error, send } = useHostSend(game);
   const locked = (k: SettingKey) => dealt && SETTING_META[k].afterDealing !== "anyTime";
   const set = <K extends SettingKey>(k: K, v: GameSettings[K]) => send({ type: "updateSettings", patch: { [k]: v } });
@@ -59,7 +61,7 @@ export function SettingsPanel({ game }: { game: GameHandle }) {
       <ErrorLine message={error} />
       <Card>
         <p className="mb-1 font-display text-xl text-accent">Rules</p>
-        <Stepper label={SETTING_META.traitorCount.label} hint={help("traitorCount")} value={s.traitorCount} min={1} max={Math.max(1, maxTraitors(Math.max(n, 3)))} disabled={locked("traitorCount")} onChange={(v) => set("traitorCount", v)} />
+        <Stepper label={SETTING_META.traitorCount.label} hint={help("traitorCount")} value={s.traitorCount} min={1} max={Math.max(1, maxTraitors(room))} disabled={locked("traitorCount")} onChange={(v) => set("traitorCount", v)} />
         <Segmented
           label={SETTING_META.endCondition.label}
           hint={help("endCondition")}
@@ -85,7 +87,7 @@ export function SettingsPanel({ game }: { game: GameHandle }) {
           hint={help("endGameThreshold")}
           value={threshold}
           min={2}
-          max={Math.max(2, Math.min(MAX_PLAYERS - 1, n - 1))}
+          max={Math.max(2, Math.min(MAX_PLAYERS - 1, room - 1))}
           disabled={locked("endGameThreshold") || s.endGameThreshold === "auto"}
           onChange={(v) => set("endGameThreshold", v)}
         />

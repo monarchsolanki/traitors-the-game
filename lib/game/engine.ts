@@ -571,7 +571,7 @@ function updateSettings(ctx: Ctx, a: ActionOf<"updateSettings">): void {
     next[key] = v.value;
   }
   if (!s.frozen && (keys.includes("traitorCount") || keys.includes("endGameThreshold"))) {
-    const v = validateSettings(next, s.players.length);
+    const v = validateSettings(next, playersToCheck(s));
     if (!v.ok) fail(v.errors.join(" "));
   }
   s.settings = settingsSchema.parse(next);
@@ -626,6 +626,11 @@ function resetSeat(ctx: Ctx, a: ActionOf<"resetSeat">): void {
   p.seatConfirmed = false;
   emit(ctx, "seatReset", PUBLIC, { playerId: p.id });
   log(ctx, `Reset ${p.displayName}'s seat`);
+}
+
+/** Games start empty, so lobby settings are checked against the most players a game can have; dealing checks the real count. */
+function playersToCheck(s: GameState): number {
+  return s.phase === "LOBBY" ? MAX_PLAYERS : s.players.length;
 }
 
 function dealRoles(ctx: Ctx): void {
@@ -2035,7 +2040,7 @@ function applyPreset(ctx: Ctx, a: ActionOf<"applyPreset">): void {
   requireHost(ctx);
   requirePhase(ctx, "LOBBY");
   const { s } = ctx;
-  const v = validateSettings(withDefaults(a.settings), s.players.length);
+  const v = validateSettings(withDefaults(a.settings), playersToCheck(s));
   if (!v.ok) fail(v.errors.join(" "));
   if (!Array.isArray(a.missions) || a.missions.length > MISSION_LIMITS.max) fail("The preset's missions aren't valid.");
   const missions = a.missions.map((t) => cleanTemplate(t, typeof t.id === "string" && t.id ? t.id : newId(s, "t")));

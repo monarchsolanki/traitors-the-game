@@ -369,7 +369,7 @@ describe("presets and older saved games", () => {
     g.host({ type: "applyPreset", settings: { ...DEFAULT_SETTINGS, debateSeconds: 300 }, missions: [{ ...template, id: "x1" }] });
     expect(g.state.settings.debateSeconds).toBe(300);
     expect(g.state.missionCatalogue.map((t) => t.name)).toEqual(["Pumpkin Bowling"]);
-    expect(g.no(HOST, { type: "applyPreset", settings: { ...DEFAULT_SETTINGS, traitorCount: 5 }, missions: [] })).toMatch(/Traitors/);
+    expect(g.no(HOST, { type: "applyPreset", settings: { ...DEFAULT_SETTINGS, traitorCount: 7 }, missions: [] })).toMatch(/traitorCount/);
     const d = dealt();
     expect(d.no(HOST, { type: "applyPreset", settings: DEFAULT_SETTINGS, missions: [] })).toMatch(/after the|You can't do that/);
   });

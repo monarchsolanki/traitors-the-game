@@ -28,6 +28,8 @@ export function HostHome() {
   const [state, setState] = useState<"loading" | "signedOut" | "notHost" | "host">("loading");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [signingUp, setSigningUp] = useState(false);
   const [games, setGames] = useState<GameRow[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +67,25 @@ export function HostHome() {
     await check();
   };
 
+  // Owner, 6 November: anyone can make a host account; the server creates it ready to use, then we sign in.
+  const signUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await api("/api/hosts", { kind: "host", body: { name, email, password } });
+    } catch (err) {
+      setBusy(false);
+      return setError(err instanceof Error ? err.message : "Couldn't create the account.");
+    }
+    const { error: err } = await auth.signInWithPassword({ email: email.trim(), password });
+    setBusy(false);
+    if (err) return setError("Your account is made, but signing in didn't work. Try Sign in.");
+    setPassword("");
+    setSigningUp(false);
+    await check();
+  };
+
   const create = async (presetId?: string) => {
     setBusy(true);
     setError(null);
@@ -87,19 +108,32 @@ export function HostHome() {
       {state === "loading" ? <p className="text-center text-ink-muted">Checking your sign-in…</p> : null}
       {state === "signedOut" ? (
         <Card>
-          <form className="flex flex-col gap-4" onSubmit={signIn}>
+          <form className="flex flex-col gap-4" onSubmit={signingUp ? signUp : signIn}>
+            {signingUp ? <TextField label="Your name" autoComplete="name" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} required /> : null}
             <TextField label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             <TextField
               label="Password"
               type="password"
-              autoComplete="current-password"
+              autoComplete={signingUp ? "new-password" : "current-password"}
+              hint={signingUp ? "At least 8 characters." : undefined}
+              minLength={signingUp ? 8 : undefined}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
             <ErrorLine message={error} />
             <Button type="submit" busy={busy}>
-              Sign in
+              {signingUp ? "Create my host account" : "Sign in"}
+            </Button>
+            <Button
+              variant="quiet"
+              size="md"
+              onClick={() => {
+                setSigningUp((v) => !v);
+                setError(null);
+              }}
+            >
+              {signingUp ? "I already have an account" : "New here? Create a host account"}
             </Button>
           </form>
         </Card>

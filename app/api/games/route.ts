@@ -14,7 +14,7 @@ export async function POST(req: Request) {
   return handle(async () => {
     const host = await requireListedHost(req);
     const body = (await req.json().catch(() => null)) as { presetId?: unknown } | null;
-    const game = typeof body?.presetId === "string" ? await createGameFromPreset(host.id, body.presetId) : await createStoredGame(host.id);
+    const game = typeof body?.presetId === "string" ? await createGameFromPreset(host.id, body.presetId) : await createStoredGame(host.id, { roster: [] });
     return json({ code: game.code }, 201);
   });
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyGameAction, createGame } from "@/lib/game/engine";
 import { DEFAULT_ROSTER } from "@/lib/game/settings";
-import { HOST, T0, as, dealt, lobby } from "./helpers";
+import { G, HOST, T0, as, dealt, lobby } from "./helpers";
 
 describe("creating a game", () => {
   it("starts in the lobby with the default party roster and settings", () => {
@@ -99,9 +99,10 @@ describe("settings editor", () => {
     const g = lobby(12);
     g.host({ type: "updateSettings", patch: { daggerWeight: 3, traitorCount: 4, debateSeconds: 600 } });
     expect(g.state.settings.daggerWeight).toBe(3);
-    expect(g.no(HOST, { type: "updateSettings", patch: { traitorCount: 5 } })).toMatch(/at most 4/);
+    // In the lobby the table can still grow, so limits are for the most a game can hold (20); dealing checks the real count.
+    expect(g.no(HOST, { type: "updateSettings", patch: { traitorCount: 7 } })).toMatch(/traitorCount/);
     expect(g.no(HOST, { type: "updateSettings", patch: { voteSeconds: 5 } })).toMatch(/voteSeconds/);
-    expect(g.no(HOST, { type: "updateSettings", patch: { endGameThreshold: 12 } })).toMatch(/between 2 and 11/);
+    expect(g.no(HOST, { type: "updateSettings", patch: { endGameThreshold: 20 } })).toMatch(/endGameThreshold/);
   });
 
   it("freezes rule settings when roles are dealt; timers and anyTime settings still change", () => {
@@ -209,3 +210,19 @@ describe("dealing roles (section 5.1 ROLES)", () => {
     expect(g.state.version).toBe(v + 1);
   });
 });
+
+describe("games start empty (owner, 6 November)", () => {
+  it("lobby settings and presets work before any player is added; dealing checks the real count", () => {
+    const g = new G(createGame({ code: "EMPTY", seed: "s", at: T0, roster: [] }));
+    expect(g.state.players).toEqual([]);
+    g.host({ type: "updateSettings", patch: { traitorCount: 3 } });
+    g.host({ type: "applyPreset", settings: { ...g.state.settings, traitorCount: 4 }, missions: [] });
+    for (const name of ["Asha", "Bala", "Chitra", "Dev", "Esha", "Farid"]) g.host({ type: "addPlayer", name });
+    g.seatAll();
+    expect(g.no(HOST, { type: "dealRoles" })).toMatch(/Traitors: at most 2 for 6 players/);
+    g.host({ type: "updateSettings", patch: { traitorCount: 2 } });
+    g.host({ type: "dealRoles" });
+    expect(g.phase).toBe("ROLES");
+  });
+});
+
