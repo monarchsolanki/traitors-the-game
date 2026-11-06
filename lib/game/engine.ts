@@ -233,6 +233,7 @@ function dispatch(ctx: Ctx): void {
     case "spinTie": return spinTie(ctx);
     case "decideTie": return decideTie(ctx, a);
     case "noBanishment": return noBanishment(ctx);
+    case "startNight": return startNightByHost(ctx);
     case "setBlackmail": return setBlackmail(ctx, a);
     case "nightPick": return nightPick(ctx, a);
     case "answerRecruit": return answerRecruit(ctx, a);
@@ -1366,7 +1367,8 @@ function afterBanishment(ctx: Ctx): void {
     s.endgameStarted = true;
     return startEndgameVote(ctx, first);
   }
-  startNight(ctx);
+  // Owner, 6 November: the result and every vote stay on the screens until the host starts the night
+  // (startNightByHost), so the night timer doesn't start the moment the votes are counted.
 }
 
 function startEndgameVote(ctx: Ctx, first: boolean): void {
@@ -1412,6 +1414,15 @@ function startNight(ctx: Ctx): void {
   setTimer(s, ctx.at, s.settings.nightSeconds);
   emit(ctx, "nightFell", PUBLIC, { nightId: n.id });
   if (blackmail) log(ctx, "Tonight is a blackmail night");
+}
+
+/** After the vote reveal: the host starts the night once the room has seen the result and every vote. */
+function startNightByHost(ctx: Ctx): void {
+  requireHost(ctx);
+  requirePhase(ctx, "CIRCLE_REVEAL");
+  if (currentRound(ctx.s)) fail("Finish the vote reveal first.");
+  log(ctx, "Started the night");
+  startNight(ctx);
 }
 
 /** The host chooses blackmail for tonight (with a lone Traitor and no offer out) or for the next lone-Traitor night. */

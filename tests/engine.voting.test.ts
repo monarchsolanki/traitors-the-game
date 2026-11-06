@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { checkInvariants } from "@/lib/game/invariants";
 import { viewFor } from "@/lib/game/view";
 import { HOST, as, dealt } from "./helpers";
 
@@ -20,6 +21,41 @@ describe("Circle flow (section 5.1)", () => {
     expect(g.p("p4").status).toBe("banished");
     expect(g.p("p4").eliminatedDay).toBe(1);
     expect(g.phase).toBe("NIGHT");
+  });
+
+  it("owner, 6 November: the result and every vote stay up until the host starts the night", () => {
+    const g = base();
+    g.vote(Object.fromEntries(g.alive().map((id) => [id, id === "p4" ? "p5" : "p4"])));
+    g.host({ type: "finishReveal" });
+    expect(g.p("p4").status).toBe("banished");
+    // Held at the result: no night yet, so no night timer and no picks.
+    expect(g.phase).toBe("CIRCLE_REVEAL");
+    expect(g.state.currentRoundId).toBeNull();
+    expect(g.state.deadline).toBeNull();
+    expect(g.state.nights).toHaveLength(0);
+    expect(g.no(as("p1"), { type: "nightPick", targetId: "p5" })).toBeTruthy();
+    expect(checkInvariants(g.state)).toEqual([]);
+    // Every screen can show the result with every ballot.
+    for (const v of [viewFor(g.state, { kind: "screen" }), viewFor(g.state, { kind: "player", playerId: "p6" })]) {
+      const shown = v.pastRounds[v.pastRounds.length - 1];
+      expect(v.round).toBeNull();
+      expect(shown.result).toMatchObject({ outcome: "banish", playerId: "p4" });
+      expect(shown.ballots).toHaveLength(12);
+    }
+    // Only the host starts it.
+    expect(g.no(as("p1"), { type: "startNight" })).toMatch(/host/i);
+    g.host({ type: "startNight" });
+    expect(g.phase).toBe("NIGHT");
+    expect(g.state.deadline).toBe(g.now + g.state.settings.nightSeconds * 1000);
+    expect(g.state.events.at(-1)?.type).toBe("nightFell");
+    expect(g.no(HOST, { type: "startNight" })).toBeTruthy();
+  });
+
+  it("the night can't be started while the votes are still being revealed", () => {
+    const g = base();
+    g.vote(Object.fromEntries(g.alive().map((id) => [id, id === "p4" ? "p5" : "p4"])));
+    expect(g.phase).toBe("CIRCLE_REVEAL");
+    expect(g.no(HOST, { type: "startNight" })).toMatch(/reveal/i);
   });
 
   it("the debate timer running out opens voting", () => {
@@ -168,7 +204,7 @@ describe("ties (section 5.5)", () => {
     const banished = g.state.players.filter((p) => p.status === "banished").map((p) => p.id);
     expect(banished).toHaveLength(1);
     expect(["p5", "p6"]).toContain(banished[0]);
-    expect(g.phase).toBe("NIGHT");
+    expect(g.phase).toBe("CIRCLE_REVEAL");
   });
 
   it("revote: when the host chooses to vote again, it stays the host's choice after every further tie", () => {
@@ -216,7 +252,7 @@ describe("ties (section 5.5)", () => {
     g.reveal();
     expect(g.round().result).toMatchObject({ method: "spin" });
     g.host({ type: "spinTie" });
-    expect(g.phase).toBe("NIGHT");
+    expect(g.phase).toBe("CIRCLE_REVEAL");
   });
 
   it("hostDecides: the host picks among the tied players, logged", () => {

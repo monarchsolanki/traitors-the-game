@@ -182,7 +182,7 @@ export function hostProgress(s: GameState, rand: Rand, o: Required<Pick<SimOptio
     case "ENDGAME_VOTE":
     case "ENDGAME_BANISH": {
       const r = currentRound(s);
-      if (!r) return [];
+      if (!r) return s.phase === "CIRCLE_REVEAL" ? [{ type: "startNight" }] : [];
       if (r.status === "open") return rand() < 0.08 ? [{ type: "lockVoting" }] : [];
       if (r.status === "revealing") {
         return rand() < 0.6 && r.revealedCount < r.ballots.length ? [{ type: "revealNextBallot" }] : [{ type: "finishReveal" }];
@@ -361,6 +361,7 @@ export function simulate(opts: SimOptions): SimResult {
       { type: "lockRewardVote" },
       { type: "resolveNight" },
       { type: "finishReveal" },
+      { type: "startNight" },
       { type: "rerunVote", reason: "Recovering a stuck tie" },
     ];
     if (forcing.some((f) => apply(HOST, f))) continue;

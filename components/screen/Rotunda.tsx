@@ -19,6 +19,8 @@ export function Rotunda({ game, round }: { game: GameHandle; round: RoundView })
     return { x: Math.cos(a) * R, y: Math.sin(a) * R };
   };
   const latest = round.ballots[round.ballots.length - 1];
+  // Once the result is in, every vote is drawn alike and the centre says who goes.
+  const result = round.status === "done" ? round.result : null;
   // Square seats on a ring: past 12 players they shrink so neighbours don't overlap (the maximum is 20).
   const seat = `calc(${RING} * ${Math.min(0.15, 0.59 * Math.sin(Math.PI / seats.length))})`;
   const name = (id: string | null) => seats.find((p) => p.id === id)?.displayName;
@@ -30,7 +32,7 @@ export function Rotunda({ game, round }: { game: GameHandle; round: RoundView })
           const from = at(b.voterId);
           const to = at(b.targetId);
           if (!from || !to) return null;
-          const newest = b === latest;
+          const newest = !result && b === latest;
           return (
             <path
               key={b.voterId}
@@ -48,7 +50,7 @@ export function Rotunda({ game, round }: { game: GameHandle; round: RoundView })
       </svg>
       {seats.map((p) => {
         const pos = at(p.id)!;
-        const lit = latest && (p.id === latest.voterId || p.id === latest.targetId);
+        const lit = result ? result.outcome === "banish" && p.id === result.playerId : latest && (p.id === latest.voterId || p.id === latest.targetId);
         return (
           <div key={p.id} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${50 + pos.x / 2}%`, top: `${50 + pos.y / 2}%` }}>
             <Avatar name={p.displayName} url={game.photoFor(p.photoPath)} size={seat} ghost={p.status !== "alive"} ring={!!lit} />
@@ -57,9 +59,13 @@ export function Rotunda({ game, round }: { game: GameHandle; round: RoundView })
       })}
       <div className="absolute inset-[20%] flex flex-col items-center justify-center gap-[0.8vh] text-center">
         <p className="bg-ground px-[0.5vw] text-[min(1.7vw,1.7rem)] text-ink-muted">
-          Vote {round.ballots.length} of {round.ballotCount ?? round.ballots.length}
+          {result ? `All ${round.ballots.length} votes` : `Vote ${round.ballots.length} of ${round.ballotCount ?? round.ballots.length}`}
         </p>
-        {latest ? (
+        {result ? (
+          <p className="bg-ground px-[0.5vw] font-display text-[min(3.4vw,3.4rem)] leading-tight">
+            {result.outcome === "banish" ? `${name(result.playerId)} is banished` : "Nobody is banished"}
+          </p>
+        ) : latest ? (
           <div key={latest.voterId} className="flex animate-settle flex-col items-center gap-[0.4vh] font-display text-[min(2.8vw,2.8rem)] leading-tight">
             <span className="bg-ground px-[0.5vw]">{name(latest.voterId)}</span>
             {latest.ghost ? <span className="bg-ground px-[0.5vw] text-[min(1.5vw,1.5rem)] text-ghost">ghost vote</span> : null}

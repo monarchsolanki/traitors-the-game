@@ -504,10 +504,12 @@ describe("banish nobody on a tie (owner, 30 October)", () => {
     return g;
   }
 
-  it("the host lets the tie stand: nobody leaves and the night begins", () => {
+  it("the host lets the tie stand: nobody leaves, and the night begins when the host starts it", () => {
     const g = tied({ ghostGames: ALL_GHOST_GAMES });
     expect(g.no(as("p1"), { type: "noBanishment" })).toMatch(/host/);
     g.host({ type: "noBanishment" });
+    expect(g.phase).toBe("CIRCLE_REVEAL");
+    g.host({ type: "startNight" });
     expect(g.phase).toBe("NIGHT");
     expect(g.alive()).toHaveLength(12);
     expect(g.lastRound()).toMatchObject({ status: "done", result: { outcome: "nobody", tiedIds: ["p5", "p6"] } });
@@ -523,9 +525,11 @@ describe("banish nobody on a tie (owner, 30 October)", () => {
     g.vote({ p1: "p5", p2: "p6" });
     g.reveal();
     g.host({ type: "noBanishment" });
-    expect(g.phase).toBe("NIGHT");
+    expect(g.phase).toBe("CIRCLE_REVEAL");
     const spin = tied({ tieRule: "spin" });
     spin.host({ type: "noBanishment" });
+    expect(spin.phase).toBe("CIRCLE_REVEAL");
+    spin.host({ type: "startNight" });
     expect(spin.phase).toBe("NIGHT");
   });
 

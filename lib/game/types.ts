@@ -335,6 +335,7 @@ export type ActionPayload =
   | { type: "spinTie" }
   | { type: "decideTie"; playerId: string; reason?: string }
   | { type: "noBanishment" }
+  | { type: "startNight" }
   | { type: "setBlackmail"; on: boolean }
   // Night
   | { type: "nightPick"; targetId: string; mode?: "murder" | "recruit" }

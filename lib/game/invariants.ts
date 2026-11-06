@@ -68,8 +68,9 @@ export function checkInvariants(s: GameState, prev: GameState | null = null): st
       if (!round || round.status !== "open" || !kindIs("circle", "revote")) bad("CIRCLE_VOTE without an open Circle round");
       break;
     case "CIRCLE_REVEAL":
-      if (!round || !["revealing", "tied"].includes(round.status) || !kindIs("circle", "revote")) {
-        bad("CIRCLE_REVEAL without a round to reveal");
+      // With no round left, the result is in and the screens hold it until the host starts the night.
+      if (round ? !["revealing", "tied"].includes(round.status) || !kindIs("circle", "revote") : !s.rounds.some((r) => (r.kind === "circle" || r.kind === "revote") && r.status === "done" && r.day === s.day)) {
+        bad("CIRCLE_REVEAL without a round to reveal or a result to show");
       }
       break;
     case "ENDGAME_VOTE":

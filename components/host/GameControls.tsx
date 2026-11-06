@@ -431,13 +431,13 @@ function RevealControls({ game, round }: { game: GameHandle; round: VoteRound })
           ) : null}
           {round.kind === "circle" || round.kind === "revote" ? (
             <Button variant="secondary" busy={busy} onClick={() => setNobody(true)}>
-              Banish nobody and start the night
+              Banish nobody
             </Button>
           ) : null}
           <Confirm
             open={nobody}
             title="Banish nobody?"
-            body="The tie stands: nobody leaves the game, and the night begins."
+            body="The tie stands: nobody leaves the game. You start the night next."
             action="Banish nobody"
             busy={busy}
             error={error}
@@ -492,6 +492,25 @@ function RevealControls({ game, round }: { game: GameHandle; round: VoteRound })
           </Button>
         </>
       )}
+      <ErrorLine message={error} />
+    </div>
+  );
+}
+
+/** Owner, 6 November: after the result, every screen shows it with all the votes until the host starts the night. */
+function NightStartControls({ game }: { game: GameHandle }) {
+  const view = game.view!;
+  const { busy, error, send } = useHostSend(game);
+  const result = view.pastRounds[view.pastRounds.length - 1]?.result;
+  const who = result?.outcome === "banish" ? playerById(view, result.playerId)?.displayName : null;
+  return (
+    <div className="flex flex-col gap-4">
+      <Notice title={who ? `${who} is banished` : "Nobody is banished"}>
+        Every screen shows the result and all the votes. The night, and the Traitors&apos; timer, start when you tap below.
+      </Notice>
+      <Button busy={busy} onClick={() => send({ type: "startNight" }, true)}>
+        Start the night
+      </Button>
       <ErrorLine message={error} />
     </div>
   );
@@ -806,7 +825,7 @@ export function GameControls({ game }: { game: GameHandle }) {
     case "CIRCLE_REVEAL":
     case "ENDGAME_VOTE":
     case "ENDGAME_BANISH":
-      body = !round ? <Notice>Waiting…</Notice> : round.status === "open" ? <VotingControls game={game} round={round} /> : <RevealControls game={game} round={round} />;
+      body = !round ? view.phase === "CIRCLE_REVEAL" ? <NightStartControls game={game} /> : <Notice>Waiting…</Notice> : round.status === "open" ? <VotingControls game={game} round={round} /> : <RevealControls game={game} round={round} />;
       break;
     case "NIGHT":
       body = <NightControls game={game} />;

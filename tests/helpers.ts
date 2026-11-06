@@ -121,8 +121,10 @@ export class G {
     if (r && r.status === "open") this.host({ type: "lockVoting" });
   }
 
+  /** Shows the result, then starts the night if the host would (a result with no tie or End Game). */
   reveal() {
     this.host({ type: "finishReveal" });
+    if (this.state.phase === "CIRCLE_REVEAL" && !this.state.currentRoundId) this.host({ type: "startNight" });
   }
 
   /** Everyone alive votes for `target`, except `target`, who votes for `fallback`. */

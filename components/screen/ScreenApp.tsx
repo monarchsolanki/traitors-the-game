@@ -294,7 +294,8 @@ function Stage({ game }: { game: GameHandle }) {
   if (held && view.phase !== "CIRCLE_VOTE" && view.phase !== "ENDGAME_BANISH") return <ResultCard game={game} event={held} />;
 
   const alive = view.players;
-  const round = view.round;
+  // After the reveal the result has no current round: the screen keeps showing it, with every vote.
+  const round = view.round ?? (view.phase === "CIRCLE_REVEAL" ? (view.pastRounds[view.pastRounds.length - 1] ?? null) : null);
   switch (view.phase) {
     case "LOBBY":
       return <Lobby game={game} />;
