@@ -19,7 +19,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/games/[code]/re
     const user = await requireUser(req);
     const body = (await readJson(req)) as { emoji?: unknown } | null;
     const game = await loadGame(code);
-    const seat = await seatForUser(game.id, user.id);
+    const seat = await seatForUser(game, user.id);
     if (!seat) throw new HttpError(403, "Tap your photo to take your seat first.");
     const emoji = typeof body?.emoji === "string" ? body.emoji : "";
     const refusal = reactionRefusal(game.state, seat.player_id, emoji);

@@ -24,7 +24,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/games/[code]/ac
       const user = await requestUser(req);
       if (user && body.as === "host" && game.hostUserId === user.id) viewer = { kind: "host" };
       if (user && (body.as === "player" || body.as === "cohost")) {
-        const seat = await seatForUser(game.id, user.id);
+        const seat = await seatForUser(game, user.id);
         if (seat && body.as === "cohost" && game.state.cohostId === seat.player_id) viewer = { kind: "cohost" };
         else if (seat && body.as === "player") viewer = { kind: "player", playerId: seat.player_id };
       }
@@ -36,13 +36,13 @@ export async function POST(req: Request, ctx: RouteContext<"/api/games/[code]/ac
         actor = { kind: "host" };
         viewer = { kind: "host" };
       } else if (body.as === "player") {
-        const seat = await seatForUser(game.id, user.id);
+        const seat = await seatForUser(game, user.id);
         if (!seat) throw new HttpError(403, "Tap your photo to take your seat first.");
         if (!PLAYER_ACTIONS.has(body.action.type)) throw new HttpError(403, "Only the host can do that.");
         actor = { kind: "player", playerId: seat.player_id };
         viewer = { kind: "player", playerId: seat.player_id };
       } else if (body.as === "cohost") {
-        const seat = await seatForUser(game.id, user.id);
+        const seat = await seatForUser(game, user.id);
         if (!seat || game.state.cohostId !== seat.player_id) throw new HttpError(403, "Only the co-host can do that.");
         if (!COHOST_ACTIONS.has(body.action.type)) throw new HttpError(403, "Only the host can do that.");
         actor = { kind: "cohost", playerId: seat.player_id };

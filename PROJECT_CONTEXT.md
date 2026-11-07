@@ -207,7 +207,7 @@ Timer defaults are proposals. The run sheet's 5-minute night slot leaves room fo
 
 | Area | Host can |
 | --- | --- |
-| Players | Add, remove, rename, change a photo, reset a PIN, unlock a seat, mark eliminated, revive |
+| Players | Add one, or paste a whole guest list in the lobby; remove, rename, change a photo, reset a PIN, unlock a seat, mark eliminated, revive |
 | Roles | See every role; reassign before dealing; after dealing only by logged override |
 | Items | Give, move or remove a shield or dagger |
 | Phases | Start, pause, extend or shorten a timer, skip, undo the last step |
@@ -222,6 +222,8 @@ Every change after dealing gets a confirm step and an action-log entry (who, whe
 **How it's built (Step 3, 27 October).** The host screen has five tabs: Game, Players, Fix, Log, Settings. **Fix** (after dealing) holds every override, each with a required reason: a player (mark out as murdered, banished or left; bring back; change role; give, move or remove a shield or dagger), the current vote (enter or correct a ballot; rerun it), tonight (decide the night by hand, or nobody), a frozen rule, a late player (with a role), end the game now, and the paper fallback. **Log** lists every action newest first with time, day, phase, who and the reason, with a filter for host fixes. Undo was built on 27 October (5.10).
 
 **How it's built (Step 5, 27 October).** **Missions:** "Run a mission" opens the catalogue (section 7, team games first), shows how each works, its props and Traitor angle, marks the ones already played, and lets the host tweak the rules before starting; the host (or co-host) adds, edits and removes catalogue entries in the app. **Co-host:** in the Players tab, "Make … co-host" on any player (and "Stop being co-host"). **Big screen:** a "Big-screen message" card on the Game tab (and on the co-host's page) shows a line of text on the big screen until cleared. **Settings tab:** the ghost games with what each does, ghost game points, the Bhoot Bingo moments (one per line), the breakfast entrance and its length, the narrator lines, and **Presets** (save this game's settings, players with photos, and mission list under a name; use a preset's settings and missions in a game still in the lobby; delete). The host home page can start a new game from a preset (its players, photos, settings and missions). **Final reveal:** the host's card lists Best Ghost scores before the reveal.
+
+**The lobby in one place (7 November).** Before dealing, the Game tab holds the whole lobby: an invite card (QR code, join link, room code, Copy link, Share where the phone offers it, and Open the big screen); "X of N joined · Y confirmed" with phones connected; an "Add a guest" field that adds on Enter (commas add several); "Paste a guest list" (one name per line or comma; numbering and bullets are dropped); the roster with each seat's state, a "no photo" note and an inline Confirm for a claimed seat (tap a row for photo, names, reset or remove); and "Before you deal", which says in plain words what still blocks the deal, with a one-tap "Use N Traitors" when the Traitor count is too high for the players. Deal roles stays off until nothing blocks it; the engine checks it all again. A pasted list is one engine action, `addPlayers` (host, lobby only): names are trimmed, cut to fit (40 characters, shown as the first 24), names already in are skipped and named in the log, and anything past 20 players is left out; it is one log line and one undo step. Empty states: phones say the host hasn't added the guest list yet, and the big screen says guests appear as the host adds them. The Players tab keeps the same roster for after dealing.
 
 ### 4.4 Default roster for 31 October
 
@@ -700,7 +702,7 @@ One web app, three synced views, all updated live: the host's control panel, eac
 
 | View | Route (proposed) | Used by | Main screens |
 | --- | --- | --- | --- |
-| Host control | `/host/[code]` and `/host/[code]/settings` | The host, on a phone or laptop | Lobby, settings and roster editor, God view of all roles, phase controls with timers and a "waiting on" checklist, run-or-skip mission choice and awards to one or more players, vote reveal button, undo, edit-anything panel, action log |
+| Host control | `/host/[code]` and `/host/[code]/settings` | The host, on a phone or laptop | Lobby on the Game tab (invite QR and link, add or paste guests, who has joined, inline Confirm, what still blocks the deal; 4.3), settings and roster editor, God view of all roles, phase controls with timers and a "waiting on" checklist, run-or-skip mission choice and awards to one or more players, vote reveal button, undo, edit-anything panel, action log |
 | Player phone | `/play/[code]` | Each player (10 to 12 at the party) | Tap your photo to join, PIN, hold-to-peek role card, current phase, voting, my items (shield, dagger), night screen (Traitor picks or suspect poll), ghost mode |
 | Traitors' tower | inside `/play/[code]` | Traitors only | Private chat, private victim pick, recruitment choice and the recruit's offer |
 | Big screen | `/screen/[code]` (built in Step 3; public, no sign-in) | A laptop or TV everyone can see | QR join code and photo wall in the lobby, phase title and timer (no timer at night, 2 November), mission card, vote count, vote-by-vote reveal with ×2/×3 and ghost badges and a running tally, tie screen, spin animation, banishment and murder cards (held for 20 seconds after they happen), night screen, final reveal with every role and the suspicion meter; keeps the screen awake; full-screen button. Step 5: breakfast entrance, Live reactions, the big-screen message, narrator lines, Bingo announcements, roles flipping in turn at the final reveal with the suspicion meter and Best Ghost, and sounds (heartbeat while votes are open or revealed, a chime per ballot, a gong on results; a Sound button turns them on) |
@@ -744,6 +746,7 @@ One web app, three synced views, all updated live: the host's control panel, eac
 - A seat is bound to a session; a refresh or a new tab rejoins with the PIN.
 - **How it's built (Step 2, 26 October).** Each phone signs in anonymously with Supabase Auth the first time it opens a game; the session lives in the browser's local storage, separately for the host and for players, so one laptop can be the host in one tab and a player in another. Every request to the server sends the session's access token; the server verifies it (`getClaims`) and works out who is asking: the game's host, a seated player (looked up in `seats`), or nobody. There are no cookies and no proxy.
 - **Taking a seat:** tap your photo, choose a 4-digit PIN and type it again. If the seat is already taken, entering its PIN moves the seat to this phone (a refresh, a new phone, a closed tab). Wrong PINs count; at `pinMaxAttempts` the seat locks until the host unlocks it. One phone holds at most one seat per game. The host can reset a seat (clears the phone and the PIN).
+- **Removing a player whose seat was taken (7 November).** The phone is freed, not stuck: on its next request the server finds its seat belongs to a player who is gone, deletes that seat row and treats the phone as not seated, so it can tap another photo. Undoing the removal brings the player back as taken; if their phone was already freed, the host resets the seat. The removed player's photo stays in storage until the game is deleted, so an undo keeps it.
 
 ### 9.6 Reliability
 
@@ -1094,6 +1097,7 @@ All decisions dated 26 October 2026 unless noted.
 | Player names and photos (26 Oct) | Uploaded later by the host in the roster editor, any time; initials avatars until then | Owner's instruction |
 | Anyone can make a host account (6 Nov; replaces "Host sign-in: only accounts listed in `hosts`" for new accounts) | On /host, "New here? Create a host account" takes a name, email and password (8+ characters). `POST /api/hosts` creates the Supabase account already confirmed (no email is sent, no Supabase setting needed), lists it in `hosts`, and the page signs in. Each host sees and deletes only their own games and presets | Owner's request: let others run their own games with their own names and photos. Owner chose open sign-up over an invite code, accepting that strangers can make accounts and upload photos (section 20) |
 | Every new game starts with no players (6 Nov; replaces the default roster in 4.4 for new games) | "Create a new game" starts an empty lobby for every host, the owner included; hosts add each player, their photo and name, in the Players tab, and the Players and Game tabs show who has joined. Lobby settings and presets are checked against the most players a game can hold (20), and dealing checks the real count | Owner's request: add players himself. Presets still bring a saved roster |
+| The lobby in one place, and removed players free their phone (7 Nov; replaces "add players in the Players tab" from the 6 Nov empty-start row) | The Game tab holds the whole lobby before dealing (4.3): invite card, add a guest or paste a list (`addPlayers`, one undo step, names already in skipped), who has joined, inline Confirm, and "Before you deal" with plain reasons and "Use N Traitors". Removing a player whose seat was taken frees that phone instead of leaving it stuck on an error (9.5) | Owner chose the bug fix and lobby upgrade from the mafia-online study: every game now starts empty, so adding guests and watching them join is the first thing every host does |
 | Result holds until the host starts the night (6 Nov; replaces "go straight to the night" after a banishment or a banish-nobody tie) | After the votes are counted (revealed one by one or skipped), the game stays in `CIRCLE_REVEAL` with no current round: the big screen shows the result for 20 seconds, then every vote on the ring with "X is banished" and the tally; phones show every ballot and the result. The host taps Start the night (`startNight`, host only, refused while ballots are still being revealed) and only then does `NIGHT` begin with its timer. Wins and the End Game still follow at once | Owner's request: the Traitors' timer was starting the moment the votes were done, before the room had seen them |
 | Host can delete a game (4 Nov) | "Delete" beside each game on the host page, asking once, with a warning if the game is still being played. `DELETE /api/games?code=` is limited to that game's host and removes the game for good: seats, moves, pings and reactions by database cascade, and its photos from storage. Presets keep their own photo copies. Not logged or undoable, because the log goes with the game | Owner's request: old test and finished games piled up with no way to clear them |
 | Action keys without HTTPS (4 Nov) | `newKey` falls back to `crypto.getRandomValues` where `crypto.randomUUID` is missing, keeping the same shape | Plain HTTP on local Wi-Fi and older phones lack `randomUUID`, so every tap failed there; needed to test on real phones before pushing |
@@ -1190,6 +1194,27 @@ From research across GitHub, Slack bots, LinkedIn, board games, live Traitors ve
 | Private chats per group | [Dash](https://www.dash.app/blog/the-traitors-workplace-game), [Battersea Arts Centre](https://cityam.com/?p=2301881), [werewolf-slack](https://github.com/hjwylde/werewolf-slack) | Confirms the Traitors' private chat and a separate space for eliminated players | Already in the plan | In |
 | Skip vote or a minimum vote share | [Among Us](https://among-us.fandom.com/wiki/Ejection), [Blood on the Clocktower](https://wiki.bloodontheclocktower.com/Rules_Explanation) | Players could vote Skip, or a banishment could need a minimum share of votes | Skip: it slows a 3-hour game | Skip |
 | Emergency meeting button | [Among Us](https://among-us.fandom.com/wiki/File:Options_screenshot_outdated.png) | One extra Circle call per game | Skip: it breaks the run sheet | Skip |
+
+### Upgrade plan from the mafia-online study (7 November)
+
+Compared with Omertà (the owner's mafia-online repo). Sizes: S under half a day, M 1 to 2 days, L 3 days or more. Each needs the owner's yes first.
+
+| Upgrade | Size | Status |
+| --- | --- | --- |
+| The lobby in one place, and the removed-player seat fix | M | Built, 7 November (4.3, 9.5) |
+| Guardrails for open sign-up: a rate limit on `POST /api/hosts`, per-host caps on games and presets (owner exempt), a 1 MB photo limit with a file check, a consent line at sign-up | S to M | Later |
+| Same players again: "New game with these players" after a game, and a preset's players added into an open lobby | M | Later |
+| Checks on GitHub (lint, tests, build on every push) | S | Later |
+| Daily clean-up of old games and photos (lobbies after 7 days, other games after 30), which also keeps the free Supabase project awake | M | Later |
+| Host password recovery with a code shown once at sign-up | M | Later |
+| Keep photo links steady, so phones and the TV don't download every photo again | S, a fix | Later |
+| Delete my account (a host's games, presets and photos) | S to M | Later |
+| "This isn't me" for a player in the lobby, before the host confirms | S | Later |
+| Add to Home Screen (manifest and icons, no service worker) | S | Later |
+| Owner overview: a saved SQL query for hosts, games and photos | S | Later |
+| Plain-words setup check from `/api/health` | S | Later |
+| Decide what the `PHOTOS/` folder of 12 portraits is for, or take it out of the repo | S | Later |
+| Players add themselves with a name and selfie, and the host approves | M to L | Needs a decision: changes "The host pre-loads the roster" (9.5) |
 
 ---
 

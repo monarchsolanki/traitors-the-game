@@ -6,7 +6,7 @@ import type { GameHandle } from "@/lib/client/useGame";
 import type { PlayerView } from "@/lib/game/view";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
-import { Card, TextField } from "@/components/ui/Field";
+import { Card, Notice, TextField } from "@/components/ui/Field";
 import { Icon } from "@/components/ui/Icon";
 import { Sheet } from "@/components/ui/Sheet";
 import { ErrorLine } from "@/components/player/shared";
@@ -167,29 +167,21 @@ function EditPlayer({ game, player, onClose }: { game: GameHandle; player: Playe
   );
 }
 
-export function PlayersPanel({ game }: { game: GameHandle }) {
+/** The roster rows and the edit sheet, shared by the Players tab and the lobby on the Game tab. */
+export function Roster({ game, onConfirm, busy }: { game: GameHandle; onConfirm?: (playerId: string) => void; busy?: boolean }) {
   const view = game.view!;
   const [editing, setEditing] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
-  const [name, setName] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const { busy, error, send } = useHostSend(game);
   const player = view.players.find((p) => p.id === editing);
+  const lobby = view.phase === "LOBBY";
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-ink-muted">Tap a player to add their photo, rename them, or fix their seat.</p>
-      <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-muted">
-        <span className="flex items-center gap-1.5"><SeatDot state="online" /> phone connected</span>
-        <span className="flex items-center gap-1.5"><SeatDot state="offline" /> not connected</span>
-        <span className="flex items-center gap-1.5"><SeatDot state="bot" /> bot</span>
-      </p>
+    <>
       <Card className="p-2">
         <ul className="flex flex-col divide-y divide-line/10">
           {view.players.map((p) => {
             const seat = seatLabel(game, p);
             return (
-              <li key={p.id}>
-                <button type="button" onClick={() => setEditing(p.id)} className="flex w-full items-center gap-3 px-2 py-3 text-left">
+              <li key={p.id} className="flex items-center gap-2 pr-2">
+                <button type="button" onClick={() => setEditing(p.id)} className="flex min-w-0 flex-1 items-center gap-3 px-2 py-3 text-left">
                   <Avatar name={p.displayName} url={game.photoFor(p.photoPath)} size={52} ghost={p.status !== "alive"} />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2 text-lg">
@@ -200,23 +192,48 @@ export function PlayersPanel({ game }: { game: GameHandle }) {
                     <span className={`text-sm ${seat.tone}`}>
                       {p.status !== "alive" ? `${p.status === "left" ? "Left" : p.status === "murdered" ? "Murdered" : "Banished"} · ` : ""}
                       {seat.text}
+                      {lobby && !p.photoPath ? <span className="text-ink-muted"> · no photo</span> : null}
                     </span>
                   </span>
-                  <Icon name="chevron" className="size-5 shrink-0 text-ink-muted" />
+                  {onConfirm && p.seatClaimed && !p.seatConfirmed ? null : <Icon name="chevron" className="size-5 shrink-0 text-ink-muted" />}
                 </button>
+                {onConfirm && p.seatClaimed && !p.seatConfirmed ? (
+                  <Button variant="secondary" size="sm" busy={busy} aria-label={`Confirm ${p.displayName}'s seat`} onClick={() => onConfirm(p.id)}>
+                    Confirm
+                  </Button>
+                ) : null}
               </li>
             );
           })}
         </ul>
       </Card>
+      <Sheet open={!!player} onClose={() => setEditing(null)} title={player?.displayName}>
+        {player ? <EditPlayer key={player.id} game={game} player={player} onClose={() => setEditing(null)} /> : null}
+      </Sheet>
+    </>
+  );
+}
+
+export function PlayersPanel({ game }: { game: GameHandle }) {
+  const view = game.view!;
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const { busy, error, send } = useHostSend(game);
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-ink-muted">Tap a player to add their photo, rename them, or fix their seat.</p>
+      <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-muted">
+        <span className="flex items-center gap-1.5"><SeatDot state="online" /> phone connected</span>
+        <span className="flex items-center gap-1.5"><SeatDot state="offline" /> not connected</span>
+        <span className="flex items-center gap-1.5"><SeatDot state="bot" /> bot</span>
+      </p>
+      {view.players.length ? <Roster game={game} /> : <Notice>No players yet. Add them on the Game tab, or below.</Notice>}
       {view.phase === "LOBBY" ? (
         <Button variant="secondary" onClick={() => setAdding(true)}>
           Add a player
         </Button>
       ) : null}
-      <Sheet open={!!player} onClose={() => setEditing(null)} title={player?.displayName}>
-        {player ? <EditPlayer key={player.id} game={game} player={player} onClose={() => setEditing(null)} /> : null}
-      </Sheet>
       <Sheet open={adding} onClose={() => setAdding(false)} title="Add a player">
         <div className="flex flex-col gap-4">
           <TextField label="Full name" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />

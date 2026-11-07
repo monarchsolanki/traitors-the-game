@@ -201,6 +201,7 @@ function dispatch(ctx: Ctx): void {
   const a = ctx.a;
   switch (a.type) {
     case "addPlayer": return addPlayer(ctx, a);
+    case "addPlayers": return addPlayers(ctx, a);
     case "removePlayer": return removePlayer(ctx, a);
     case "editPlayer": return editPlayer(ctx, a);
     case "setPhoto": return setPhoto(ctx, a);
@@ -504,6 +505,36 @@ function addPlayer(ctx: Ctx, a: ActionOf<"addPlayer">): void {
   }
   emit(ctx, "playerAdded", PUBLIC, { playerId: p.id });
   log(ctx, `Added ${displayName}${s.frozen ? ` as ${s.roles[p.id]}` : ""}`, { reason, override: !!s.frozen });
+}
+
+/** A typed or pasted list, as one step (owner, 7 November): names already in are skipped, not refused. */
+function addPlayers(ctx: Ctx, a: ActionOf<"addPlayers">): void {
+  requireHost(ctx);
+  const { s } = ctx;
+  if (s.phase !== "LOBBY") fail("Add a list of players only in the lobby. After dealing, add one at a time with a reason.");
+  const added: string[] = [];
+  const skipped: string[] = [];
+  let noRoom = 0;
+  for (const raw of a.names) {
+    const name = raw.trim().replace(/\s+/g, " ").slice(0, NAME_MAX).trim();
+    if (!name) continue;
+    const displayName = name.slice(0, DISPLAY_NAME_MAX).trim();
+    if (s.players.some((p) => p.displayName.toLowerCase() === displayName.toLowerCase())) {
+      skipped.push(name);
+      continue;
+    }
+    if (s.players.length >= MAX_PLAYERS) {
+      noRoom++;
+      continue;
+    }
+    const p = newPlayer(newId(s, "p"), name, displayName, Math.max(0, ...s.players.map((x) => x.seat)) + 1);
+    s.players.push(p);
+    added.push(p.id);
+    emit(ctx, "playerAdded", PUBLIC, { playerId: p.id });
+  }
+  if (!added.length) fail(skipped.length ? `Nobody new to add: ${skipped.join(", ")} already in.` : noRoom ? `A game can have at most ${MAX_PLAYERS} players.` : "Nobody new to add.");
+  const notes = [skipped.length ? `skipped ${skipped.join(", ")} (already in)` : "", noRoom ? `no room for ${noRoom}` : ""].filter(Boolean);
+  log(ctx, [`Added ${added.length} ${added.length === 1 ? "player" : "players"}`, ...notes].join("; "));
 }
 
 function removePlayer(ctx: Ctx, a: ActionOf<"removePlayer">): void {

@@ -36,6 +36,7 @@ const settingsPatch = z
  */
 export const clientActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("addPlayer"), name: text(60), displayName: text(40).optional(), role: role.optional(), reason: reason.optional() }),
+  z.object({ type: z.literal("addPlayers"), names: z.array(text(60)).min(1).max(40) }),
   z.object({ type: z.literal("removePlayer"), playerId: id }),
   z.object({ type: z.literal("editPlayer"), playerId: id, name: text(60).optional(), displayName: text(40).optional() }),
   z.object({ type: z.literal("updateSettings"), patch: settingsPatch }),

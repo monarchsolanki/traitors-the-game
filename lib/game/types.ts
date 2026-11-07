@@ -299,6 +299,7 @@ type WithReason = { reason: string };
 export type ActionPayload =
   // Lobby and roster
   | { type: "addPlayer"; name: string; displayName?: string; role?: Role; reason?: string }
+  | { type: "addPlayers"; names: string[] }
   | { type: "removePlayer"; playerId: string }
   | { type: "editPlayer"; playerId: string; name?: string; displayName?: string }
   | { type: "setPhoto"; playerId: string; photoPath: string | null }

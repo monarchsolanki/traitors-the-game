@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { newKey } from "@/lib/client/api";
+import { splitNames } from "@/lib/client/labels";
 import { paperFallbackHtml } from "@/lib/client/paper";
 import { viewFor } from "@/lib/game/view";
 import { ONLINE_MS, presence } from "@/components/host/SeatDot";
@@ -67,5 +68,11 @@ describe("newKey", () => {
     } finally {
       Object.defineProperty(crypto, "randomUUID", { value: original, configurable: true });
     }
+  });
+});
+
+describe("pasting a guest list", () => {
+  it("takes one name per line or comma and drops numbering and bullets", () => {
+    expect(splitNames("1. Asha\n2) Bala Rao\n- Chitra, Dev ;  • Esha\n\n  ")).toEqual(["Asha", "Bala Rao", "Chitra", "Dev", "Esha"]);
   });
 });

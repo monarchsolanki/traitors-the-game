@@ -71,10 +71,14 @@ export function JoinScreen({ game, code }: { game: GameHandle; code: string }) {
         <div className="speed-lines mx-auto my-3 w-16" aria-hidden />
         <p className="text-lg text-ink-muted">Room {view.code}</p>
       </div>
-      <PlayerGrid
-        players={gridPlayers(game, view.players, (p) => ({ ghost: false, note: p.seatClaimed ? "Taken" : undefined }))}
-        onSelect={setPickedId}
-      />
+      {view.players.length ? (
+        <PlayerGrid
+          players={gridPlayers(game, view.players, (p) => ({ ghost: false, note: p.seatClaimed ? "Taken" : undefined }))}
+          onSelect={setPickedId}
+        />
+      ) : (
+        <p className="text-center text-lg text-ink-muted">The host hasn&apos;t added the guest list yet. Your photo appears here by itself.</p>
+      )}
       <Sheet open={!!picked} onClose={close}>
         {picked ? (
           <div className="flex flex-col items-center gap-5">

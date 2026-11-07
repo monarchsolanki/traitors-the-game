@@ -42,15 +42,19 @@ export async function seatsFor(gameId: string): Promise<SeatRow[]> {
   return data as SeatRow[];
 }
 
-export async function seatForUser(gameId: string, userId: string): Promise<SeatRow | null> {
-  const { data, error } = await adminClient()
-    .from("seats")
-    .select(SEAT_COLUMNS)
-    .eq("game_id", gameId)
-    .eq("user_id", userId)
-    .maybeSingle();
+/**
+ * This phone's seat in the game. A seat whose player the host removed in the lobby is deleted and
+ * counts as none, so that phone can pick another photo instead of being stuck.
+ */
+export async function seatForUser(game: StoredGame, userId: string): Promise<SeatRow | null> {
+  const db = adminClient();
+  const { data, error } = await db.from("seats").select(SEAT_COLUMNS).eq("game_id", game.id).eq("user_id", userId).maybeSingle();
   if (error) throw error;
-  return (data as SeatRow | null) ?? null;
+  const seat = (data as SeatRow | null) ?? null;
+  if (!seat || game.state.players.some((p) => p.id === seat.player_id)) return seat;
+  const { error: delError } = await db.from("seats").delete().eq("game_id", game.id).eq("player_id", seat.player_id);
+  if (delError) throw delError;
+  return null;
 }
 
 async function seatRow(gameId: string, playerId: string): Promise<SeatRow | null> {
@@ -86,7 +90,7 @@ export async function claimOrRejoin(
 ): Promise<{ rejoined: boolean }> {
   const player = game.state.players.find((p) => p.id === playerId);
   if (!player) throw new HttpError(404, "That player isn't in this game.");
-  const mine = await seatForUser(game.id, user.id);
+  const mine = await seatForUser(game, user.id);
   if (mine && mine.player_id !== playerId) {
     const other = game.state.players.find((p) => p.id === mine.player_id);
     throw new HttpError(409, `This phone already holds ${other?.displayName ?? "another"}'s seat. Ask the host to reset it.`);

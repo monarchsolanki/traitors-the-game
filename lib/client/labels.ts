@@ -24,3 +24,11 @@ export function itemHelp(type: "shield" | "dagger", daggerWeight: number): strin
     ? "Protects you from tonight's murder. It lasts one night."
     : `At one standard Circle, your vote counts ×${daggerWeight}. One use.`;
 }
+
+/** A typed or pasted guest list: one name per line or comma, with numbering and bullets dropped. */
+export function splitNames(text: string): string[] {
+  return text
+    .split(/[\n,;]+/)
+    .map((line) => line.replace(/^\s*(?:\d+[.)]|[-*•])\s*/, "").trim())
+    .filter(Boolean);
+}

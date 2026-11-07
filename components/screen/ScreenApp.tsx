@@ -69,10 +69,16 @@ function Lobby({ game }: { game: GameHandle }) {
         <p className="font-display text-[min(6.4vw,6.5rem)] leading-none tracking-[0.14em] text-accent">{view.code}</p>
       </div>
       <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-[2vh]">
-        <p className="font-display text-[min(2.6vw,2.6rem)] text-ink">
-          {joined} of {view.players.length} joined
-        </p>
-        <PhotoWall game={game} players={view.players} size="sm" lobby />
+        {view.players.length ? (
+          <>
+            <p className="font-display text-[min(2.6vw,2.6rem)] text-ink">
+              {joined} of {view.players.length} joined
+            </p>
+            <PhotoWall game={game} players={view.players} size="sm" lobby />
+          </>
+        ) : (
+          <p className="max-w-[30vw] text-center text-[min(2vw,2rem)] text-ink-muted portrait:max-w-[70vw]">Guests appear here as the host adds them</p>
+        )}
       </div>
     </div>
   );

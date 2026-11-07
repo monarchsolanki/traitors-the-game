@@ -378,6 +378,16 @@ describe("seats and PINs", () => {
     expect(JSON.stringify(seat)).not.toContain('"4321"');
   });
 
+  it("removing a player whose photo was already taken frees that phone, with no error", async () => {
+    expect((await call(seatRoute.POST, { token: "phone-1", body: { playerId: "p1", pin: "1234" } })).status).toBe(200);
+    expect((await act("host-a", "host", { type: "removePlayer", playerId: "p1" })).status).toBe(200);
+    const view = await call(viewRoute.GET, { token: "phone-1", query: "?as=player" });
+    expect([view.status, view.body.seated]).toEqual([200, false]);
+    expect((await act("phone-1", "player", { type: "acknowledgeRole" })).status).toBe(403);
+    expect((await call(seatRoute.POST, { token: "phone-1", body: { playerId: "p2", pin: "1234" } })).status).toBe(200);
+    expect(globalThis.__fakeDb.tables.seats.some((s) => s.player_id === "p1")).toBe(false);
+  });
+
   it("a bot's seat can't be claimed by a phone", async () => {
     await call(seatsRoute.POST, { token: "host-a", body: { op: "fillBots" } });
     const r = await call(seatRoute.POST, { token: "phone-1", body: { playerId: "p1", pin: "1234" } });

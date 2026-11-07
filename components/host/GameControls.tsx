@@ -5,6 +5,7 @@ import type { ClientAction } from "@/lib/game/actions";
 import type { GameHandle } from "@/lib/client/useGame";
 import { api } from "@/lib/client/api";
 import { itemLabel } from "@/lib/client/labels";
+import { MIN_PLAYERS, maxTraitors, validateSettings } from "@/lib/game/settings";
 import type { ItemType, VoteRound } from "@/lib/game/types";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
@@ -17,6 +18,7 @@ import { downloadPaperFallback } from "@/lib/client/paper";
 import { OverrideSheet } from "./FixPanel";
 import { MissionPicker, ScreenMessageCard } from "./MissionCatalogue";
 import { presence } from "./SeatDot";
+import { LobbyRoster } from "./LobbyRoster";
 import { UndoButton } from "./UndoButton";
 
 export function useHostSend(game: GameHandle) {
@@ -624,10 +626,27 @@ function LobbyControls({ game }: { game: GameHandle; }) {
   const { busy, error, send, setError } = useHostSend(game);
   const [confirm, setConfirm] = useState(false);
   const [botBusy, setBotBusy] = useState(false);
+  const n = view.players.length;
   const claimed = view.players.filter((p) => p.seatClaimed);
   const unconfirmed = claimed.filter((p) => !p.seatConfirmed);
   const open = view.players.filter((p) => !p.seatClaimed);
-  const joinUrl = typeof window !== "undefined" ? `${window.location.origin}/play/${view.code}` : "";
+  // What still stops the deal, in plain words; the engine checks it all again when the host deals.
+  const blockers: Array<{ text: string; fix?: { label: string; action: ClientAction } }> = [];
+  if (n < MIN_PLAYERS) blockers.push({ text: `Add at least ${MIN_PLAYERS} players (${MIN_PLAYERS - n} more).` });
+  if (open.length) blockers.push({ text: `Waiting on ${open.length} to join: ${names(game, open.map((p) => p.id))}.` });
+  if (unconfirmed.length) blockers.push({ text: `Confirm ${unconfirmed.length} ${unconfirmed.length === 1 ? "seat" : "seats"}: ${names(game, unconfirmed.map((p) => p.id))}.` });
+  if (n >= MIN_PLAYERS) {
+    const v = validateSettings(view.settings, n);
+    if (!v.ok) {
+      for (const text of v.errors) {
+        const tooMany = view.settings.traitorCount > maxTraitors(n) && text.startsWith("Traitors:");
+        blockers.push({
+          text: tooMany ? `${view.settings.traitorCount} Traitors needs at least ${view.settings.traitorCount * 3} players.` : text,
+          fix: tooMany ? { label: `Use ${maxTraitors(n)} ${maxTraitors(n) === 1 ? "Traitor" : "Traitors"}`, action: { type: "updateSettings", patch: { traitorCount: maxTraitors(n) } } } : undefined,
+        });
+      }
+    }
+  }
 
   const confirmAll = async () => {
     for (const p of unconfirmed) if (!(await send({ type: "confirmSeat", playerId: p.id }))) break;
@@ -647,31 +666,27 @@ function LobbyControls({ game }: { game: GameHandle; }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="flex flex-col items-center gap-1 text-center">
-        <p className="text-ink-muted">Players open</p>
-        <p className="font-display text-base break-all text-ink">{joinUrl}</p>
-        <p className="text-ink-muted">or go to the home page and enter the room code</p>
-        <p className="font-display text-5xl tracking-[0.25em] text-accent">{view.code}</p>
-        <a href={`/screen/${view.code}`} target="_blank" rel="noreferrer" className="mt-1 inline-block min-h-12 py-3 text-accent underline underline-offset-4">
-          Open the big screen (QR code for everyone)
-        </a>
-      </Card>
-      <Card>
-        <p className="text-lg">
-          <span className="font-semibold text-accent">{claimed.length}</span> of {view.players.length} seats taken,{" "}
-          <span className="font-semibold text-accent">{claimed.length - unconfirmed.length}</span> confirmed.
-        </p>
-        {open.length ? <p className="mt-1 text-ink-muted">Waiting on: {names(game, open.map((p) => p.id))}</p> : null}
-        {claimed.length ? (
-          <p className="mt-1 text-sm text-ink-muted">
-            Phones connected: {claimed.filter((p) => presence(game.seats.find((s) => s.playerId === p.id), game.now()) !== "offline").length} of {claimed.length}
-          </p>
-        ) : null}
-        {unconfirmed.length ? <p className="mt-1 text-ink-muted">To confirm: {names(game, unconfirmed.map((p) => p.id))}</p> : null}
-      </Card>
-      {unconfirmed.length ? (
+      <LobbyRoster game={game} />
+      {blockers.length ? (
+        <Card className="flex flex-col gap-3">
+          <p className="font-display text-xl text-accent">Before you deal</p>
+          <ul className="flex flex-col gap-2">
+            {blockers.map((b) => (
+              <li key={b.text} className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-ink">{b.text}</span>
+                {b.fix ? (
+                  <Button variant="secondary" size="sm" busy={busy} onClick={() => send(b.fix!.action)}>
+                    {b.fix.label}
+                  </Button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ) : null}
+      {unconfirmed.length > 1 ? (
         <Button variant="secondary" busy={busy} onClick={confirmAll}>
-          Confirm {unconfirmed.length} claimed {unconfirmed.length === 1 ? "seat" : "seats"}
+          Confirm all {unconfirmed.length} claimed seats
         </Button>
       ) : null}
       {open.length ? (
@@ -679,7 +694,7 @@ function LobbyControls({ game }: { game: GameHandle; }) {
           Fill {open.length} empty {open.length === 1 ? "seat" : "seats"} with bots (for testing)
         </Button>
       ) : null}
-      <Button disabled={!!open.length || !!unconfirmed.length} onClick={() => setConfirm(true)}>
+      <Button disabled={!!blockers.length} onClick={() => setConfirm(true)}>
         Deal roles
       </Button>
       <ErrorLine message={error} />

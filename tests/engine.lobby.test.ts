@@ -226,3 +226,41 @@ describe("games start empty (owner, 6 November)", () => {
   });
 });
 
+
+describe("adding players in bulk (owner, 7 November)", () => {
+  const empty = () => new G(createGame({ code: "BULK", seed: "s", at: T0, roster: [] }));
+
+  it("adds a pasted list in order as one step, skipping blanks and names already in", () => {
+    const g = empty();
+    g.host({ type: "addPlayer", name: "Disha" });
+    const v = g.state.version;
+    g.host({ type: "addPlayers", names: ["  Asha  ", "", "disha", "Bala   Rao", "asha", "Chitra"] });
+    expect(g.state.players.map((p) => p.displayName)).toEqual(["Disha", "Asha", "Bala Rao", "Chitra"]);
+    expect(g.state.players.map((p) => p.seat)).toEqual([1, 2, 3, 4]);
+    expect(g.state.version).toBe(v + 1);
+    expect(g.state.log[g.state.log.length - 1].summary).toBe("Added 3 players; skipped disha, asha (already in)");
+  });
+
+  it("shortens long names to fit and stops at 20 players", () => {
+    const g = empty();
+    g.host({ type: "addPlayers", names: ["Rajkumari Indumati Saraswati Devi of Jaipur and Udaipur"] });
+    const p = g.state.players[0];
+    expect(p.name).toHaveLength(40);
+    expect(p.displayName).toBe("Rajkumari Indumati Saras");
+    g.host({ type: "addPlayers", names: Array.from({ length: 25 }, (_, i) => `Guest ${i + 1}`) });
+    expect(g.state.players).toHaveLength(20);
+    expect(g.state.log[g.state.log.length - 1].summary).toMatch(/^Added 19 players; no room for 6$/);
+  });
+
+  it("says so when nobody new is in the list", () => {
+    const g = empty();
+    g.host({ type: "addPlayer", name: "Asha" });
+    expect(g.no(HOST, { type: "addPlayers", names: ["asha", "  "] })).toMatch(/Nobody new to add/);
+  });
+
+  it("is the host's, and only in the lobby", () => {
+    expect(lobby(5).no(as("p1"), { type: "addPlayers", names: ["Sneaky"] })).toMatch(/Only the host/);
+    const g = dealt(6, { traitors: ["p1", "p2"], settings: { traitorCount: 2 } });
+    expect(g.no(HOST, { type: "addPlayers", names: ["Late"] })).toMatch(/lobby/);
+  });
+});
